@@ -9,7 +9,7 @@
     "resolveJsonModule": true,
     "types": ["node"],
     "outDir": "dist",
-    "rootDir": "engine/src"
+    "rootDir": "engine"
   },
-  "include": ["engine/src"]
+  "include": ["engine/src", "engine/tests"]
 }

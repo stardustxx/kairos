@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "compute": "tsx engine/src/cli.ts"
   },
   "keywords": [],
