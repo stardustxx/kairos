@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeAspects } from "../src/aspects.js";
+import { computeAspects, computeCrossAspects } from "../src/aspects.js";
 import type { PlanetPosition } from "../src/types.js";
 
 function p(name: string, longitude: number, speed: number): PlanetPosition {
@@ -25,5 +25,21 @@ describe("computeAspects", () => {
   it("ignores pairs outside any orb", () => {
     const aspects = computeAspects([p("Sun", 10, 1), p("Mars", 47, 0.5)]);
     expect(aspects.length).toBe(0);
+  });
+});
+
+describe("computeCrossAspects", () => {
+  it("labels transiting/natal aspects and detects an applying conjunction", () => {
+    // Transiting Sun at 10 deg moving 1/day toward fixed natal Mars at 14 deg:
+    // separation 4 deg shrinking -> applying conjunction within orb.
+    const transiting = [p("Sun", 10, 1)];
+    const natal = [p("Mars", 14, 0)];
+    const aspects = computeCrossAspects(transiting, natal);
+    const conj = aspects.find((a) => a.type === "conjunction");
+    expect(conj).toBeTruthy();
+    expect(conj!.a).toBe("t.Sun");
+    expect(conj!.b).toBe("n.Mars");
+    expect(conj!.orb).toBeCloseTo(4, 5);
+    expect(conj!.applying).toBe(true);
   });
 });
