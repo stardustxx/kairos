@@ -1,0 +1,33 @@
+{
+  "name": "kairos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "compute": "tsx engine/src/cli.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.5.1",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "dependencies": {
+    "luxon": "^3.7.2",
+    "sweph": "2.10.3-5",
+    "tz-lookup": "^6.1.25"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

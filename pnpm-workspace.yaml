@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - sweph
+  - esbuild
+allowBuilds:
+  sweph: true
+  esbuild: true
