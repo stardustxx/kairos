@@ -68,6 +68,9 @@ Use the JSON it prints. Do not alter the numbers.
   hard; a separating aspect or none leans no.
 - `moonVoidOfCourse === true` is a strong "nothing comes of it / no change" signal —
   lower confidence or lean no, regardless of other factors.
+- Each significator's house placement is in the output
+  (`querentSignificatorHouse` / `quesitedSignificatorHouse`), giving context on
+  where the querent and the matter currently "sit."
 - `moonNextAspect` and aspect `orb` hint at **timing**: a tight orb (small number)
   means sooner. Loosely map remaining degrees to the unit of the house matter
   (days/weeks/months) and state it as an estimate, not a promise.

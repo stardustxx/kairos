@@ -60,6 +60,10 @@ export interface Chart {
 export interface HoraryJudgment {
   querentSignificator: string;
   quesitedSignificator: string;
+  /** House (1..12) the querent's significator planet occupies; 0 if not found. */
+  querentSignificatorHouse: number;
+  /** House (1..12) the quesited's significator planet occupies; 0 if not found. */
+  quesitedSignificatorHouse: number;
   /** Major aspect forming between the two significators, if any. */
   significatorAspect: Aspect | null;
   moonVoidOfCourse: boolean;
