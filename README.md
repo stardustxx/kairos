@@ -35,7 +35,8 @@ project root, so keep the engine installed alongside it.
 ## Conventions
 
 - Western **tropical** zodiac.
-- Houses: **Placidus** default (`"P"`); pass `houseSystem` to change.
+- Houses: **Placidus** (`"P"`) for natal/transit, **Regiomontanus** (`"R"`) for
+  horary; pass `houseSystem` to override.
 - Computation: Swiss Ephemeris **Moshier mode** — no data files, sub-arcsecond
   accuracy for the modern era. To upgrade to full SWIEPH precision, install the
   `.se1` data files and switch the flags in `engine/src/constants.ts`.
