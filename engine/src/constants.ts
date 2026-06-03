@@ -5,6 +5,9 @@ export const CALC_FLAGS =
   sweph.constants.SEFLG_MOSEPH | sweph.constants.SEFLG_SPEED;
 export const HOUSE_FLAGS = sweph.constants.SEFLG_MOSEPH;
 
+export const DEGREES_PER_SIGN = 30;
+export const SIGN_COUNT = 12;
+
 export const SIGNS = [
   "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
   "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
