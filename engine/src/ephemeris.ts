@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import sweph from "sweph";
 
 /**
@@ -29,6 +29,15 @@ type Env = Record<string, string | undefined>;
  * calls sweph.set_ephe_path() so subsequent calc_ut/houses_ex2 calls find the
  * data files. Returns the base ephemeris flag (without SPEED).
  */
+/** True if `dir` contains at least one Swiss Ephemeris `.se1` data file. */
+function hasEphemerisFiles(dir: string): boolean {
+  try {
+    return readdirSync(dir).some((f) => f.toLowerCase().endsWith(".se1"));
+  } catch {
+    return false;
+  }
+}
+
 function resolveBaseFlag(env: Env): number {
   if (env.KAIROS_SWIEPH !== "1") return MOSEPH;
 
@@ -36,6 +45,16 @@ function resolveBaseFlag(env: Env): number {
   if (!path || !existsSync(path)) {
     console.error(
       "[kairos] KAIROS_SWIEPH enabled but KAIROS_EPHE_PATH not found or inaccessible; falling back to Moshier ephemeris.",
+    );
+    return MOSEPH;
+  }
+
+  // A directory that exists but holds no .se1 files would otherwise select
+  // SWIEPH and surface an opaque sweph runtime error on the first calc. Verify
+  // the data is actually present so we can fall back gracefully instead.
+  if (!hasEphemerisFiles(path)) {
+    console.error(
+      `[kairos] KAIROS_SWIEPH enabled but no .se1 ephemeris files found in ${path}; falling back to Moshier ephemeris.`,
     );
     return MOSEPH;
   }

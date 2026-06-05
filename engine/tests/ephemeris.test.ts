@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import sweph from "sweph";
 import { resolveCalcFlags, resolveHouseFlags } from "../src/ephemeris.js";
 
@@ -41,13 +44,32 @@ describe("resolveCalcFlags / resolveHouseFlags", () => {
     expect(String(errSpy.mock.calls[0][0])).toContain("KAIROS_EPHE_PATH");
   });
 
-  it("returns SWIEPH and sets the ephe path when SWIEPH=1 and the path exists", () => {
-    // Use an existing directory so existsSync passes without a real .se1 file.
-    const env = { KAIROS_SWIEPH: "1", KAIROS_EPHE_PATH: process.cwd() };
-    expect(resolveCalcFlags(env)).toBe(SWIEPH | SPEED);
-    expect(resolveHouseFlags(env)).toBe(SWIEPH);
-    expect(ephePathSpy).toHaveBeenCalledWith(process.cwd());
-    expect(errSpy).not.toHaveBeenCalled();
+  it("returns SWIEPH and sets the ephe path when SWIEPH=1 and .se1 files are present", () => {
+    const dir = mkdtempSync(join(tmpdir(), "kairos-ephe-"));
+    writeFileSync(join(dir, "seas_18.se1"), "stub");
+    try {
+      const env = { KAIROS_SWIEPH: "1", KAIROS_EPHE_PATH: dir };
+      expect(resolveCalcFlags(env)).toBe(SWIEPH | SPEED);
+      expect(resolveHouseFlags(env)).toBe(SWIEPH);
+      expect(ephePathSpy).toHaveBeenCalledWith(dir);
+      expect(errSpy).not.toHaveBeenCalled();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns MOSEPH and logs when the path exists but holds no .se1 files", () => {
+    const dir = mkdtempSync(join(tmpdir(), "kairos-ephe-empty-"));
+    try {
+      const env = { KAIROS_SWIEPH: "1", KAIROS_EPHE_PATH: dir };
+      expect(resolveCalcFlags(env)).toBe(MOSEPH | SPEED);
+      expect(resolveHouseFlags(env)).toBe(MOSEPH);
+      expect(ephePathSpy).not.toHaveBeenCalled();
+      expect(errSpy).toHaveBeenCalled();
+      expect(String(errSpy.mock.calls[0][0])).toContain(".se1");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("returns MOSEPH, logs, and does not crash when the path does not exist", () => {
