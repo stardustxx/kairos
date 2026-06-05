@@ -4,9 +4,36 @@ import { computePositions } from "./positions.js";
 import { resolveJulianDay } from "./time.js";
 import { computeCrossAspects } from "./aspects.js";
 import { judgeHorary } from "./horary.js";
+import { searchElectionalMoments } from "./electional.js";
 import type { ComputeRequest, ComputeResult } from "./types.js";
 
 export function runCompute(req: ComputeRequest): ComputeResult {
+  // Electional is window-based: it has no single chart, so handle it first.
+  if (req.kind === "electional") {
+    if (!req.window) throw new Error("electional request requires `window`");
+    if (req.stepMinutes == null) {
+      throw new Error("electional request requires `stepMinutes`");
+    }
+    if (!req.location) {
+      throw new Error("electional request requires `location`");
+    }
+    if (req.quesitedHouse == null) {
+      throw new Error("electional request requires `quesitedHouse` (2..12)");
+    }
+    return {
+      electional: searchElectionalMoments(
+        req.window,
+        req.stepMinutes,
+        req.location,
+        req.quesitedHouse,
+        req.significatorHints,
+      ),
+    };
+  }
+
+  if (!req.moment) {
+    throw new Error(`request of kind "${req.kind}" requires a \`moment\``);
+  }
   const chart = buildChart(req.kind, req.moment);
   const result: ComputeResult = { chart };
 
@@ -14,7 +41,11 @@ export function runCompute(req: ComputeRequest): ComputeResult {
     if (!req.natal) throw new Error("transit request requires a `natal` moment");
     const natalTime = resolveJulianDay(req.natal);
     const natalPlanets = computePositions(natalTime.julianDayUt);
-    result.transitAspects = computeCrossAspects(chart.planets, natalPlanets);
+    result.transitAspects = computeCrossAspects(
+      chart.planets,
+      natalPlanets,
+      chart.julianDayUt,
+    );
   }
 
   if (req.kind === "horary") {

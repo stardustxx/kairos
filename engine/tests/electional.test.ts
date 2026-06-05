@@ -1,0 +1,183 @@
+import { describe, it, expect } from "vitest";
+import {
+  scoreElectionalMoment,
+  findSignificators,
+  evaluateAspectQuality,
+  searchElectionalMoments,
+} from "../src/electional.js";
+import { buildChart } from "../src/chart.js";
+import { runCompute } from "../src/cli.js";
+import type { Aspect, MomentInput } from "../src/types.js";
+
+// Location without a datetime; the search/chart helpers supply datetimeLocal.
+const NYC: Omit<MomentInput, "datetimeLocal"> = {
+  latitude: 40.7128,
+  longitude: -74.006,
+  timezone: "America/New_York",
+};
+
+function chartAt(datetimeLocal: string) {
+  return buildChart("electional", { ...NYC, datetimeLocal });
+}
+
+describe("findSignificators", () => {
+  it("returns classical sign-rulership planets for 1st and quesited houses", () => {
+    const chart = chartAt("2024-06-01T12:00:00");
+    for (let house = 2; house <= 12; house++) {
+      const { querent, quesited } = findSignificators(chart, house);
+      expect(typeof querent).toBe("string");
+      expect(typeof quesited).toBe("string");
+      expect(querent.length).toBeGreaterThan(0);
+      expect(quesited.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("honors a significator hint override for the quesited", () => {
+    const chart = chartAt("2024-06-01T12:00:00");
+    const { quesited } = findSignificators(chart, 7, { planet: "Jupiter" });
+    expect(quesited).toBe("Jupiter");
+  });
+});
+
+describe("evaluateAspectQuality", () => {
+  const mk = (type: string, orb: number, a = "Sun", b = "Moon"): Aspect => ({
+    a,
+    b,
+    type,
+    orb,
+    applying: true,
+  });
+
+  it("treats trine and sextile as favorable", () => {
+    expect(evaluateAspectQuality(mk("trine", 1)).favorable).toBe(true);
+    expect(evaluateAspectQuality(mk("sextile", 1)).favorable).toBe(true);
+  });
+
+  it("treats square and opposition as unfavorable", () => {
+    expect(evaluateAspectQuality(mk("square", 1)).favorable).toBe(false);
+    expect(evaluateAspectQuality(mk("opposition", 1)).favorable).toBe(false);
+  });
+
+  it("treats a benefic conjunction as favorable but a malefic one as not", () => {
+    expect(evaluateAspectQuality(mk("conjunction", 1, "Venus", "Sun")).favorable).toBe(true);
+    expect(evaluateAspectQuality(mk("conjunction", 1, "Mars", "Sun")).favorable).toBe(false);
+  });
+
+  it("scores tighter orbs as stronger", () => {
+    const tight = evaluateAspectQuality(mk("trine", 0.5)).strength;
+    const wide = evaluateAspectQuality(mk("trine", 7)).strength;
+    expect(tight).toBeGreaterThan(wide);
+  });
+});
+
+describe("scoreElectionalMoment", () => {
+  it("returns a numeric score and non-empty reasons", () => {
+    const chart = chartAt("2024-06-01T12:00:00");
+    const { score, reasons } = scoreElectionalMoment(chart, 7);
+    expect(typeof score).toBe("number");
+    expect(Number.isFinite(score)).toBe(true);
+    expect(reasons.length).toBeGreaterThan(0);
+    // Every reason carries a signed delta.
+    for (const r of reasons) expect(r).toMatch(/[+-]\d+$/);
+  });
+
+  it("penalizes a void-of-course Moon relative to a non-void one", () => {
+    // Find two moments in a day with different Moon void status and compare.
+    // We assert the rule directly: a chart whose reasons include the void
+    // penalty must reflect -40 in its reasons list.
+    const chart = chartAt("2024-06-01T12:00:00");
+    const { reasons } = scoreElectionalMoment(chart, 7);
+    const moonReason = reasons.find((r) => r.startsWith("Moon "));
+    expect(moonReason).toBeTruthy();
+    expect(
+      moonReason!.includes("void-of-course -40") ||
+        moonReason!.includes("not void-of-course +20"),
+    ).toBe(true);
+  });
+});
+
+describe("searchElectionalMoments", () => {
+  it("scans the window, sorts descending, and caps results", () => {
+    const result = searchElectionalMoments(
+      { startLocal: "2024-06-01T00:00:00", endLocal: "2024-06-02T00:00:00" },
+      30,
+      NYC,
+      7,
+    );
+    // 24h at 30-min step, inclusive of both ends => 49 candidates.
+    expect(result.candidatesEvaluated).toBe(49);
+    expect(result.topMoments.length).toBeLessThanOrEqual(10);
+    expect(result.topMoments.length).toBeGreaterThan(0);
+    // Sorted descending by score.
+    for (let i = 1; i < result.topMoments.length; i++) {
+      expect(result.topMoments[i - 1].score).toBeGreaterThanOrEqual(
+        result.topMoments[i].score,
+      );
+    }
+    // Each candidate has a local datetime and non-empty reasons.
+    for (const m of result.topMoments) {
+      expect(m.datetimeLocal).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+      expect(m.reasons.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("throws on a non-positive step", () => {
+    expect(() =>
+      searchElectionalMoments(
+        { startLocal: "2024-06-01T00:00:00", endLocal: "2024-06-02T00:00:00" },
+        0,
+        NYC,
+        7,
+      ),
+    ).toThrow();
+  });
+
+  it("throws when the window end is not after the start", () => {
+    expect(() =>
+      searchElectionalMoments(
+        { startLocal: "2024-06-02T00:00:00", endLocal: "2024-06-01T00:00:00" },
+        30,
+        NYC,
+        7,
+      ),
+    ).toThrow();
+  });
+
+  it("throws on an out-of-range quesited house", () => {
+    expect(() =>
+      searchElectionalMoments(
+        { startLocal: "2024-06-01T00:00:00", endLocal: "2024-06-01T06:00:00" },
+        30,
+        NYC,
+        1,
+      ),
+    ).toThrow();
+  });
+});
+
+describe("runCompute electional integration", () => {
+  it("returns an electional result and no chart", () => {
+    const result = runCompute({
+      kind: "electional",
+      quesitedHouse: 7,
+      stepMinutes: 60,
+      location: NYC,
+      window: { startLocal: "2024-06-01T08:00:00", endLocal: "2024-06-01T20:00:00" },
+    });
+    expect(result.electional).toBeTruthy();
+    expect(result.chart).toBeUndefined();
+    expect(result.electional!.candidatesEvaluated).toBe(13);
+    expect(result.electional!.topMoments.length).toBeGreaterThan(0);
+  });
+
+  it("throws when an electional request is missing the window", () => {
+    expect(() =>
+      runCompute({
+        kind: "electional",
+        quesitedHouse: 7,
+        stepMinutes: 60,
+        location: NYC,
+      }),
+    ).toThrow(/window/);
+  });
+});

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kairos Chart Wheel</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Kairos Chart Wheel</h1>
+    <p class="subtitle">
+      Paste a <code>ComputeResult</code> JSON from the Kairos engine and render
+      its chart wheel.
+    </p>
+  </header>
+
+  <main class="layout">
+    <!-- Left / top: input controls -->
+    <section class="panel controls" aria-label="Input controls">
+      <label for="json-input" class="field-label">ComputeResult JSON</label>
+      <textarea
+        id="json-input"
+        class="json-input"
+        spellcheck="false"
+        placeholder='{ "chart": { "kind": "natal", "planets": [ ... ], "houses": { ... }, "aspects": [ ... ] } }'
+      ></textarea>
+
+      <div class="row file-row">
+        <label class="file-label">
+          <span>Upload .json</span>
+          <input id="file-input" type="file" accept="application/json,.json" />
+        </label>
+      </div>
+
+      <div class="row button-row">
+        <button id="render-btn" type="button" class="primary">Render Chart</button>
+        <button id="example-btn" type="button">Load Example</button>
+        <button id="clear-btn" type="button">Clear</button>
+      </div>
+
+      <p id="error" class="error" role="alert" hidden></p>
+
+      <fieldset class="toggles">
+        <legend>Display</legend>
+        <label><input id="toggle-aspects" type="checkbox" checked /> Aspect lines</label>
+        <label><input id="toggle-retrograde" type="checkbox" checked /> Retrograde (℞)</label>
+        <label><input id="toggle-cusps" type="checkbox" checked /> House cusps</label>
+        <label><input id="toggle-degrees" type="checkbox" checked /> Degree labels</label>
+      </fieldset>
+
+      <div id="metadata" class="metadata" hidden>
+        <h2>Chart</h2>
+        <dl>
+          <dt>Kind</dt><dd id="meta-kind">—</dd>
+          <dt>UTC</dt><dd id="meta-utc">—</dd>
+          <dt>Julian Day (UT)</dt><dd id="meta-jd">—</dd>
+          <dt>House system</dt><dd id="meta-system">—</dd>
+          <dt>Bodies</dt><dd id="meta-planets">—</dd>
+        </dl>
+        <p id="meta-extra" class="meta-extra" hidden></p>
+      </div>
+
+      <div class="legend">
+        <h2>Aspect colours</h2>
+        <ul>
+          <li><span class="swatch sw-conjunction"></span> Conjunction (0°)</li>
+          <li><span class="swatch sw-sextile"></span> Sextile (60°)</li>
+          <li><span class="swatch sw-square"></span> Square (90°)</li>
+          <li><span class="swatch sw-trine"></span> Trine (120°)</li>
+          <li><span class="swatch sw-opposition"></span> Opposition (180°)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Right / bottom: the wheel -->
+    <section class="panel wheel-wrap" aria-label="Chart wheel">
+      <svg
+        id="chart"
+        class="chart-svg"
+        viewBox="0 0 600 600"
+        role="img"
+        aria-label="Astrology chart wheel"
+        xmlns="http://www.w3.org/2000/svg"
+      ></svg>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>
+      Open this page directly (<code>file://</code>) or via any static server.
+      See <code>README.md</code> for details.
+    </p>
+  </footer>
+
+  <script src="chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

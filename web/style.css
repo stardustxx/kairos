@@ -1,0 +1,313 @@
+/* style.css — Kairos Chart Wheel UI
+ * Light/dark aware via CSS custom properties + prefers-color-scheme.
+ */
+
+:root {
+  --bg: #f7f7fa;
+  --panel-bg: #ffffff;
+  --fg: #1c1c22;
+  --muted: #6b6b76;
+  --border: #d9d9e0;
+  --accent: #5b4bd6;
+  --accent-fg: #ffffff;
+  --error: #c0341d;
+
+  /* Wheel geometry colours */
+  --ring-stroke: #444450;
+  --sign-divider: #b8b8c2;
+  --deg-tick: #c4c4cc;
+  --cusp: #9a9aa6;
+  --cusp-angular: #5a5a66;
+  --house-num: #9a9aa6;
+  --planet: #1c1c22;
+  --planet-tick: #b0b0ba;
+  --retro: #c0341d;
+  --deg-text: #6b6b76;
+  --angle-text: #5a5a66;
+
+  /* Aspect colours */
+  --asp-conjunction: #e0a100;
+  --asp-sextile: #2f9e44;
+  --asp-trine: #1b8a5a;
+  --asp-square: #d6443c;
+  --asp-opposition: #b02a37;
+  --asp-other: #8a8a94;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14141a;
+    --panel-bg: #1e1e26;
+    --fg: #e8e8ee;
+    --muted: #9a9aa6;
+    --border: #34343e;
+    --accent: #8a7bff;
+    --accent-fg: #14141a;
+    --error: #ff7a66;
+
+    --ring-stroke: #c8c8d2;
+    --sign-divider: #4a4a56;
+    --deg-tick: #3a3a44;
+    --cusp: #5a5a66;
+    --cusp-angular: #9a9aa6;
+    --house-num: #6b6b76;
+    --planet: #f0f0f6;
+    --planet-tick: #4a4a56;
+    --retro: #ff7a66;
+    --deg-text: #9a9aa6;
+    --angle-text: #b0b0ba;
+
+    --asp-conjunction: #ffcb47;
+    --asp-sextile: #51cf66;
+    --asp-trine: #38d9a9;
+    --asp-square: #ff6b6b;
+    --asp-opposition: #ff8787;
+    --asp-other: #6b6b76;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+.app-header {
+  padding: 1.25rem 1.5rem 0.5rem;
+}
+.app-header h1 { margin: 0; font-size: 1.5rem; }
+.subtitle { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.95rem; }
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  padding: 0.05em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 1rem 1.5rem 1.5rem;
+  align-items: flex-start;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.controls {
+  flex: 1 1 320px;
+  min-width: 300px;
+  max-width: 460px;
+}
+
+.wheel-wrap {
+  flex: 2 1 480px;
+  min-width: 320px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.field-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.json-input {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.row { margin-top: 0.75rem; }
+
+.file-label {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.button-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+button {
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.error {
+  margin: 0.75rem 0 0;
+  color: var(--error);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.toggles {
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+.toggles legend { font-size: 0.8rem; font-weight: 600; padding: 0 0.35rem; }
+.toggles label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+}
+
+.metadata { margin-top: 1rem; }
+.metadata h2, .legend h2 { font-size: 0.9rem; margin: 0 0 0.4rem; }
+.metadata dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.75rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+.metadata dt { color: var(--muted); }
+.metadata dd { margin: 0; font-variant-numeric: tabular-nums; }
+.meta-extra {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.legend { margin-top: 1rem; }
+.legend ul { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+.legend li { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem; }
+.swatch {
+  width: 1.6rem;
+  height: 0;
+  border-top-width: 3px;
+  border-top-style: solid;
+  display: inline-block;
+}
+.sw-conjunction { border-top-color: var(--asp-conjunction); }
+.sw-sextile { border-top-color: var(--asp-sextile); }
+.sw-square { border-top-color: var(--asp-square); }
+.sw-trine { border-top-color: var(--asp-trine); }
+.sw-opposition { border-top-color: var(--asp-opposition); }
+
+.chart-svg {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  display: block;
+}
+
+.app-footer {
+  padding: 0 1.5rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * SVG element styling (classes set in chart.js)
+ * ------------------------------------------------------------------ */
+
+.ring-circle {
+  fill: none;
+  stroke: var(--ring-stroke);
+  stroke-width: 1.5;
+}
+.sign-divider {
+  stroke: var(--sign-divider);
+  stroke-width: 1;
+}
+.deg-tick { stroke: var(--deg-tick); stroke-width: 0.75; }
+.deg-tick-major { stroke-width: 1; }
+
+.sign-glyph {
+  fill: var(--ring-stroke);
+  font-size: 22px;
+  font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif;
+}
+
+.cusp-line { stroke: var(--cusp); stroke-width: 0.75; }
+.cusp-line-angular { stroke: var(--cusp-angular); stroke-width: 1.75; }
+.house-number {
+  fill: var(--house-num);
+  font-size: 11px;
+  font-weight: 600;
+}
+.angle-label {
+  fill: var(--angle-text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.planet-tick { stroke: var(--planet-tick); stroke-width: 1; }
+.planet-glyph {
+  fill: var(--planet);
+  font-size: 20px;
+  font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif;
+}
+.deg-label {
+  fill: var(--deg-text);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.retro-label {
+  fill: var(--retro);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.aspect-line {
+  stroke-width: 1.25;
+  opacity: 0.7;
+}
+.aspect-line.aspect-applying { stroke-width: 1.75; opacity: 0.9; }
+.aspect-conjunction { stroke: var(--asp-conjunction); }
+.aspect-sextile { stroke: var(--asp-sextile); }
+.aspect-trine { stroke: var(--asp-trine); }
+.aspect-square { stroke: var(--asp-square); }
+.aspect-opposition { stroke: var(--asp-opposition); }
+.aspect-other { stroke: var(--asp-other); stroke-dasharray: 3 3; }
+
+/* Mobile: stack and shrink */
+@media (max-width: 720px) {
+  .layout { flex-direction: column; }
+  .controls { max-width: none; }
+}

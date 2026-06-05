@@ -2,6 +2,15 @@ import sweph from "sweph";
 import { PLANETS, SIGNS, CALC_FLAGS, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
 import type { PlanetPosition } from "./types.js";
 
+/**
+ * Compute all planet positions at an arbitrary Universal Time Julian Day.
+ * Thin alias of computePositions, named for clarity in timing/root-finding code
+ * that queries the ephemeris at trial times rather than the chart moment.
+ */
+export function computePositionsAtJd(julianDayUt: number): PlanetPosition[] {
+  return computePositions(julianDayUt);
+}
+
 export function computePositions(julianDayUt: number): PlanetPosition[] {
   return PLANETS.map((def) => {
     const res = sweph.calc_ut(julianDayUt, def.id, CALC_FLAGS);

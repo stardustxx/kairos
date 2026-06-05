@@ -1,6 +1,6 @@
 import type { Sign } from "./constants.js";
 
-export type ChartKind = "natal" | "transit" | "horary";
+export type ChartKind = "natal" | "transit" | "horary" | "electional";
 
 /** A moment + place the engine can compute for. */
 export interface MomentInput {
@@ -14,14 +14,54 @@ export interface MomentInput {
   houseSystem?: string;
 }
 
+/** Optional caller preferences steering electional significator choice / weighting. */
+export interface SignificatorHints {
+  /** Override the auto-derived significator planet for the matter. */
+  planet?: string;
+  /** 0..1 bias toward benefics over the default (default 0.5). Reserved for future tuning. */
+  beneficWeighting?: number;
+}
+
+/** Local-civil-time bounds (ISO without offset) for an electional search. */
+export interface ElectionalWindow {
+  startLocal: string;
+  endLocal: string;
+}
+
 export interface ComputeRequest {
   kind: ChartKind;
-  /** The chart's own moment. For "transit" this is "now"; natal supplied separately. */
-  moment: MomentInput;
+  /** The chart's own moment. For "transit" this is "now"; natal supplied separately.
+   *  Optional for "electional" (the window + location drive the search instead). */
+  moment?: MomentInput;
   /** Required only for kind "transit": the natal chart to compare against. */
   natal?: MomentInput;
-  /** Required only for kind "horary": the house of the matter asked about (2..12). */
+  /** Required for "horary"; reused by "electional" as the house of the matter (2..12). */
   quesitedHouse?: number;
+  /** Required for kind "electional": local-time window to scan. */
+  window?: ElectionalWindow;
+  /** Required for kind "electional": scan interval in minutes (e.g. 15). */
+  stepMinutes?: number;
+  /** Required for kind "electional": place to cast each candidate chart for.
+   *  `datetimeLocal` is ignored here — the window + stepMinutes drive the times. */
+  location?: Omit<MomentInput, "datetimeLocal"> & { datetimeLocal?: string };
+  /** Optional for kind "electional". */
+  significatorHints?: SignificatorHints;
+}
+
+export interface ElectionalCandidate {
+  /** The candidate moment in local civil time (ISO without offset). */
+  datetimeLocal: string;
+  /** Numeric ranking score; higher is better. */
+  score: number;
+  /** Human-readable signals behind the score, e.g. "Moon in Taurus (benefic) +15". */
+  reasons: string[];
+}
+
+export interface ElectionalResult {
+  /** Best candidates, sorted descending by score (top N). */
+  topMoments: ElectionalCandidate[];
+  /** Total number of moments scanned. */
+  candidatesEvaluated: number;
 }
 
 export interface PlanetPosition {
@@ -46,6 +86,13 @@ export interface Aspect {
   type: string;
   orb: number; // degrees from exact
   applying: boolean;
+  /**
+   * ISO 8601 UTC datetime when the aspect perfects exactly, found by
+   * root-finding on the bodies' real ephemeris motion. `null` when the aspect
+   * does not perfect within the search window (e.g. already separated, or
+   * stationary). Optional/additive: existing consumers are unaffected.
+   */
+  perfectsAtUtc?: string | null;
 }
 
 export interface Chart {
@@ -71,9 +118,12 @@ export interface HoraryJudgment {
 }
 
 export interface ComputeResult {
-  chart: Chart;
+  /** Present for chart-based kinds (natal/transit/horary); absent for electional. */
+  chart?: Chart;
   /** Present only when kind is "transit": aspects from transiting to natal planets. */
   transitAspects?: Aspect[];
   /** Present only when kind is "horary". */
   horary?: HoraryJudgment;
+  /** Present only when kind is "electional". */
+  electional?: ElectionalResult;
 }

@@ -1,0 +1,39 @@
+{
+  "chart": {
+    "kind": "natal",
+    "julianDayUt": 2448032.3125,
+    "utc": "1990-05-21T19:30:00Z",
+    "planets": [
+      { "name": "Sun",     "longitude": 60.42,  "sign": "Gemini",      "degInSign": 0.42,  "retrograde": false, "speed": 0.9712 },
+      { "name": "Moon",    "longitude": 312.18, "sign": "Aquarius",    "degInSign": 12.18, "retrograde": false, "speed": 13.1764 },
+      { "name": "Mercury", "longitude": 44.87,  "sign": "Taurus",      "degInSign": 14.87, "retrograde": false, "speed": 1.8423 },
+      { "name": "Venus",   "longitude": 28.55,  "sign": "Aries",       "degInSign": 28.55, "retrograde": false, "speed": 1.1503 },
+      { "name": "Mars",    "longitude": 333.04, "sign": "Pisces",      "degInSign": 3.04,  "retrograde": false, "speed": 0.6201 },
+      { "name": "Jupiter", "longitude": 98.71,  "sign": "Cancer",      "degInSign": 8.71,  "retrograde": false, "speed": 0.2055 },
+      { "name": "Saturn",  "longitude": 291.33, "sign": "Capricorn",   "degInSign": 21.33, "retrograde": true,  "speed": -0.0341 },
+      { "name": "Uranus",  "longitude": 278.65, "sign": "Capricorn",   "degInSign": 8.65,  "retrograde": true,  "speed": -0.0288 },
+      { "name": "Neptune", "longitude": 284.12, "sign": "Capricorn",   "degInSign": 14.12, "retrograde": true,  "speed": -0.0149 },
+      { "name": "Pluto",   "longitude": 226.78, "sign": "Scorpio",     "degInSign": 16.78, "retrograde": true,  "speed": -0.0203 },
+      { "name": "Node",    "longitude": 296.40, "sign": "Capricorn",   "degInSign": 26.40, "retrograde": true,  "speed": -0.0529 }
+    ],
+    "houses": {
+      "system": "P",
+      "cusps": [205.5, 233.1, 263.8, 296.2, 327.4, 357.9, 25.5, 53.1, 83.8, 116.2, 147.4, 177.9],
+      "ascendant": 205.5,
+      "mc": 116.2
+    },
+    "aspects": [
+      { "a": "Sun",     "b": "Mars",    "type": "square",      "orb": 2.62, "applying": true  },
+      { "a": "Sun",     "b": "Node",    "type": "trine",       "orb": 4.02, "applying": false },
+      { "a": "Moon",    "b": "Mercury", "type": "square",      "orb": 2.69, "applying": false },
+      { "a": "Mercury", "b": "Neptune", "type": "trine",       "orb": 0.75, "applying": true  },
+      { "a": "Mercury", "b": "Pluto",   "type": "opposition",  "orb": 1.91, "applying": false },
+      { "a": "Venus",   "b": "Node",    "type": "square",      "orb": 2.15, "applying": true  },
+      { "a": "Mars",    "b": "Jupiter", "type": "trine",       "orb": 5.67, "applying": false },
+      { "a": "Jupiter", "b": "Uranus",  "type": "opposition",  "orb": 0.06, "applying": true  },
+      { "a": "Saturn",  "b": "Neptune", "type": "conjunction", "orb": 7.21, "applying": false },
+      { "a": "Uranus",  "b": "Neptune", "type": "conjunction", "orb": 5.47, "applying": true  },
+      { "a": "Neptune", "b": "Pluto",   "type": "sextile",     "orb": 2.66, "applying": false }
+    ]
+  }
+}
