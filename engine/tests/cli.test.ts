@@ -12,8 +12,8 @@ describe("runCompute", () => {
         timezone: "America/New_York",
       },
     });
-    expect(result.chart.kind).toBe("natal");
-    expect(result.chart.planets.length).toBe(11);
+    expect(result.chart!.kind).toBe("natal");
+    expect(result.chart!.planets.length).toBe(11);
     expect(result.horary).toBeUndefined();
   });
 

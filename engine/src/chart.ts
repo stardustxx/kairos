@@ -16,6 +16,6 @@ export function buildChart(kind: ChartKind, moment: MomentInput): Chart {
     moment.longitude,
     moment.houseSystem ?? defaultHouseSystem,
   );
-  const aspects = computeAspects(planets);
+  const aspects = computeAspects(planets, julianDayUt);
   return { kind, julianDayUt, utc, planets, houses, aspects };
 }

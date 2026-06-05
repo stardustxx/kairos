@@ -1,4 +1,6 @@
 import { ASPECTS } from "./constants.js";
+import { computePositionsAtJd } from "./positions.js";
+import { julianDayToUtcString } from "./time.js";
 import type { Aspect, PlanetPosition } from "./types.js";
 
 /** Smallest angular distance (0..180) between two ecliptic longitudes. */
@@ -7,7 +9,109 @@ function separation(a: number, b: number): number {
   return d > 180 ? 360 - d : d;
 }
 
-export function computeAspects(planets: PlanetPosition[]): Aspect[] {
+/**
+ * Signed shortest angular path from lon1 to lon2, in (-180, 180].
+ * Positive means lon2 is "ahead of" lon1 in the direction of increasing
+ * longitude. Used so root-finding has a continuous function that changes sign
+ * as an aspect perfects, rather than the always-positive `separation`.
+ */
+function signedSeparation(lon1: number, lon2: number): number {
+  let d = (lon2 - lon1) % 360;
+  if (d > 180) d -= 360;
+  if (d < -180) d += 360;
+  return d;
+}
+
+const CONVERGENCE_DEG = 0.001; // ~3.6 arcsec; far tighter than any orb
+const MAX_ITERS = 60;
+
+/**
+ * Root-find the Julian Day at which the (signed) separation between two bodies
+ * equals one of the canonical aspect angles, via bisection.
+ *
+ * `lonAt(jd)` returns the two longitudes at a trial time. For a same-aspect the
+ * target separation magnitude is `aspectAngle`; because signed separation can
+ * approach the angle from either side (e.g. +120 or -120 for a trine), we build
+ * an error function whose sign flips at perfection and bracket a root in the
+ * search window.
+ *
+ * Returns the converged JD, or null if no sign change is bracketed within the
+ * window (aspect does not perfect there — already separated, or stationary).
+ *
+ * Cost: O(iterations) ephemeris lookups (~10-20 calls of 11 planets each).
+ */
+function findAspectPerfectionJd(
+  lonAt: (jd: number) => { lon1: number; lon2: number },
+  aspectAngle: number,
+  chartJd: number,
+  maxHourOffset: number,
+): number | null {
+  // Error function: distance-from-aspect, signed so it crosses zero at
+  // perfection. We use the magnitude of signed separation minus the angle,
+  // which is continuous away from the 0/180 wrap that signedSeparation handles.
+  const err = (jd: number): number => {
+    const { lon1, lon2 } = lonAt(jd);
+    return Math.abs(signedSeparation(lon1, lon2)) - aspectAngle;
+  };
+
+  const lo = chartJd - maxHourOffset / 24;
+  const hi = chartJd + maxHourOffset / 24;
+
+  // Sample the window to find a sub-interval that brackets a sign change.
+  // A coarse scan avoids missing roots when the endpoints share a sign but a
+  // perfection occurs in between (common for fast bodies / near-stations).
+  const SAMPLES = 48;
+  let prevJd = lo;
+  let prevErr = err(lo);
+  let aJd = NaN;
+  let bJd = NaN;
+  for (let i = 1; i <= SAMPLES; i++) {
+    const jd = lo + ((hi - lo) * i) / SAMPLES;
+    const e = err(jd);
+    if (prevErr === 0) {
+      return prevJd;
+    }
+    if (Math.sign(e) !== Math.sign(prevErr)) {
+      aJd = prevJd;
+      bJd = jd;
+      break;
+    }
+    prevJd = jd;
+    prevErr = e;
+  }
+  if (Number.isNaN(aJd)) return null;
+
+  // Bisection on the bracketed sub-interval.
+  let fa = err(aJd);
+  for (let i = 0; i < MAX_ITERS; i++) {
+    const mid = (aJd + bJd) / 2;
+    const fm = err(mid);
+    if (Math.abs(fm) < CONVERGENCE_DEG) return mid;
+    if (Math.sign(fm) === Math.sign(fa)) {
+      aJd = mid;
+      fa = fm;
+    } else {
+      bJd = mid;
+    }
+  }
+  return (aJd + bJd) / 2;
+}
+
+/**
+ * Compute aspects among a single set of bodies. When `chartJd` is supplied, each
+ * in-orb aspect is annotated with `perfectsAtUtc` (the exact UTC time it
+ * perfects) and the `applying` flag is derived from real ephemeris motion via
+ * root-finding rather than a one-day finite difference. Without `chartJd` the
+ * legacy one-day-step behaviour is used and `perfectsAtUtc` is omitted.
+ *
+ * `maxHourOffset` bounds the perfection search window (default ±30h covers
+ * mutual aspects of the classical planets, including near-stations).
+ */
+export function computeAspects(
+  planets: PlanetPosition[],
+  chartJd?: number,
+  maxHourOffset = 30,
+): Aspect[] {
   const out: Aspect[] = [];
   for (let i = 0; i < planets.length; i++) {
     for (let j = i + 1; j < planets.length; j++) {
@@ -17,26 +121,56 @@ export function computeAspects(planets: PlanetPosition[]): Aspect[] {
       for (const def of ASPECTS) {
         const orb = Math.abs(sepNow - def.angle);
         if (orb > def.orb) continue;
-        // Step both bodies forward one day; see if orb shrinks -> applying.
-        const sepNext = separation(A.longitude + A.speed, B.longitude + B.speed);
-        const orbNext = Math.abs(sepNext - def.angle);
-        out.push({
-          a: A.name,
-          b: B.name,
-          type: def.name,
-          orb,
-          applying: orbNext < orb,
-        });
+
+        let applying: boolean;
+        let perfectsAtUtc: string | null | undefined;
+
+        if (chartJd != null) {
+          // Real-motion timing: look the two bodies up at trial times.
+          const lonAt = (jd: number) => {
+            const ps = computePositionsAtJd(jd);
+            return {
+              lon1: ps.find((p) => p.name === A.name)!.longitude,
+              lon2: ps.find((p) => p.name === B.name)!.longitude,
+            };
+          };
+          const jd = findAspectPerfectionJd(lonAt, def.angle, chartJd, maxHourOffset);
+          perfectsAtUtc = jd != null ? julianDayToUtcString(jd) : null;
+          // Applying iff perfection lies in the future of the chart moment.
+          // Fall back to the finite-difference test if the root wasn't found.
+          if (jd != null) {
+            applying = jd >= chartJd;
+          } else {
+            const sepNext = separation(A.longitude + A.speed, B.longitude + B.speed);
+            applying = Math.abs(sepNext - def.angle) < orb;
+          }
+        } else {
+          // Legacy: step both bodies forward one day; orb shrinks -> applying.
+          const sepNext = separation(A.longitude + A.speed, B.longitude + B.speed);
+          applying = Math.abs(sepNext - def.angle) < orb;
+        }
+
+        const aspect: Aspect = { a: A.name, b: B.name, type: def.name, orb, applying };
+        if (chartJd != null) aspect.perfectsAtUtc = perfectsAtUtc ?? null;
+        out.push(aspect);
       }
     }
   }
   return out;
 }
 
-/** Aspects between two distinct sets of bodies (e.g. transiting vs natal). */
+/**
+ * Aspects between two distinct sets of bodies (e.g. transiting vs natal).
+ * When `chartJd` is supplied, in-orb aspects gain exact `perfectsAtUtc` timing
+ * (natal points are treated as fixed; only the transiting body moves) and a
+ * motion-derived `applying` flag. A wider default window (±7 days) suits the
+ * slower relative motion of transit-to-natal contacts.
+ */
 export function computeCrossAspects(
   transiting: PlanetPosition[],
   natal: PlanetPosition[],
+  chartJd?: number,
+  maxHourOffset = 24 * 7,
 ): Aspect[] {
   const out: Aspect[] = [];
   for (const T of transiting) {
@@ -45,15 +179,43 @@ export function computeCrossAspects(
       for (const def of ASPECTS) {
         const orb = Math.abs(sepNow - def.angle);
         if (orb > def.orb) continue;
-        // Natal points are fixed; only the transiting body moves.
-        const sepNext = separation(T.longitude + T.speed, N.longitude);
-        out.push({
+
+        let applying: boolean;
+        let perfectsAtUtc: string | null | undefined;
+
+        if (chartJd != null) {
+          // Natal longitude is fixed; only the transiting body is looked up.
+          const natalLon = N.longitude;
+          const lonAt = (jd: number) => {
+            const ps = computePositionsAtJd(jd);
+            return {
+              lon1: ps.find((p) => p.name === T.name)!.longitude,
+              lon2: natalLon,
+            };
+          };
+          const jd = findAspectPerfectionJd(lonAt, def.angle, chartJd, maxHourOffset);
+          perfectsAtUtc = jd != null ? julianDayToUtcString(jd) : null;
+          if (jd != null) {
+            applying = jd >= chartJd;
+          } else {
+            const sepNext = separation(T.longitude + T.speed, natalLon);
+            applying = Math.abs(sepNext - def.angle) < orb;
+          }
+        } else {
+          // Legacy: natal points are fixed; only the transiting body moves.
+          const sepNext = separation(T.longitude + T.speed, N.longitude);
+          applying = Math.abs(sepNext - def.angle) < orb;
+        }
+
+        const aspect: Aspect = {
           a: `t.${T.name}`,
           b: `n.${N.name}`,
           type: def.name,
           orb,
-          applying: Math.abs(sepNext - def.angle) < orb,
-        });
+          applying,
+        };
+        if (chartJd != null) aspect.perfectsAtUtc = perfectsAtUtc ?? null;
+        out.push(aspect);
       }
     }
   }

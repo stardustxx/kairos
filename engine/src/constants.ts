@@ -1,9 +1,12 @@
 import sweph from "sweph";
+import { resolveCalcFlags, resolveHouseFlags } from "./ephemeris.js";
 
-// Computation flags: Moshier analytical ephemeris (no data files), with speed.
-export const CALC_FLAGS =
-  sweph.constants.SEFLG_MOSEPH | sweph.constants.SEFLG_SPEED;
-export const HOUSE_FLAGS = sweph.constants.SEFLG_MOSEPH;
+// Computation flags, resolved once at module load from the environment.
+// Defaults to Moshier analytical ephemeris (no data files), with speed.
+// Set KAIROS_SWIEPH=1 + KAIROS_EPHE_PATH=<dir> to opt into full SWIEPH
+// precision; see engine/src/ephemeris.ts.
+export const CALC_FLAGS = resolveCalcFlags();
+export const HOUSE_FLAGS = resolveHouseFlags();
 
 export const DEGREES_PER_SIGN = 30;
 export const SIGN_COUNT = 12;
