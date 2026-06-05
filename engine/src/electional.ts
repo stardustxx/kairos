@@ -225,7 +225,13 @@ export function searchElectionalMoments(
       includeOffset: false,
       suppressMilliseconds: true,
     })!;
-    const chart = buildChart("electional", { ...location, datetimeLocal });
+    // Skip exact aspect-perfection root-finding: scoring only needs aspect type
+    // + applying/separating, and the timing pass dominates per-candidate cost.
+    const chart = buildChart(
+      "electional",
+      { ...location, datetimeLocal },
+      { aspectTiming: false },
+    );
     const { score, reasons } = scoreElectionalMoment(chart, quesitedHouse, hints);
     candidates.push({ datetimeLocal, score, reasons });
     evaluated++;
