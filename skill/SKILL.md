@@ -84,18 +84,30 @@ Use the JSON it prints. Do not alter the numbers.
 ## Step 4 — Judge and answer
 
 **Horary:**
-- A major **applying** aspect (`significatorAspect.applying === true`) between the
-  querent and quesited significators is the core "yes — it comes together" signal.
-  Conjunction/trine/sextile lean favorable; square/opposition lean favorable-but-
-  hard; a separating aspect or none leans no.
-- `moonVoidOfCourse === true` is a strong "nothing comes of it / no change" signal —
-  lower confidence or lean no, regardless of other factors.
-- Each significator's house placement is in the output
-  (`querentSignificatorHouse` / `quesitedSignificatorHouse`), giving context on
-  where the querent and the matter currently "sit."
-- `moonNextAspect` and aspect `orb` hint at **timing**: a tight orb (small number)
-  means sooner. Loosely map remaining degrees to the unit of the house matter
-  (days/weeks/months) and state it as an estimate, not a promise.
+- The engine now returns an **aggregated judgment** you should anchor on:
+  `lean` (`"favorable"` / `"unfavorable"` / `"uncertain"`), `confidence`
+  (`"low"` / `"medium"` / `"high"`), a numeric `score`, and a `testimonies[]`
+  array of signed factors (e.g. `"Significators perfect by applying trine (+40)"`,
+  `"Moon void of course … (-30)"`). Lead with `lean`/`confidence`, and quote the
+  `testimonies` as your supporting signals — they ARE the reasoning.
+- The score is a transparent heuristic, **not** an oracle: if it conflicts with a
+  signal you judge more important, say so and explain. Don't present the number
+  as the verdict; present the signals.
+- The contributing signals, each in the output:
+  - `significatorAspect` — applying conjunction/trine/sextile is the core "yes, it
+    comes together"; square/opposition = perfection but with friction/regret;
+    separating or none = not forming.
+  - `moonApplyingToQuesited` — the Moon (always co-significator of the querent)
+    applying to the quesited significator is a real perfecting testimony.
+  - `translationOfLight` / `collectionOfLight` — perfection via a third planet
+    (carrying or gathering the light). When present, the matter can still come
+    together indirectly even without a direct significator aspect; name the planet.
+  - `moonVoidOfCourse === true` — strong "nothing comes of it / no change" signal.
+- Each significator's house placement (`querentSignificatorHouse` /
+  `quesitedSignificatorHouse`) gives context on where the querent and matter "sit."
+- `moonNextAspect` and aspect `orb` hint at **timing**: a tight orb means sooner.
+  Loosely map remaining degrees to the house matter's unit (days/weeks/months) and
+  state it as an estimate, not a promise.
 
 **Transit:**
 - Read `transitAspects` from transiting planets to natal planets. Slow transiting

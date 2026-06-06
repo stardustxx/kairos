@@ -104,6 +104,31 @@ export interface Chart {
   aspects: Aspect[];
 }
 
+/** A faster planet carrying light between the two significators. */
+export interface TranslationOfLight {
+  /** The planet translating the light. */
+  translator: string;
+  /** Significator it is separating from. */
+  from: string;
+  /** Significator it is applying to. */
+  to: string;
+  /** Aspect type of the applying (completing) contact. */
+  aspect: string;
+}
+
+/** A heavier planet both significators apply to, gathering their light. */
+export interface CollectionOfLight {
+  /** The planet collecting the light. */
+  collector: string;
+  /** Aspect type the querent's significator makes to the collector. */
+  fromQuerent: string;
+  /** Aspect type the quesited's significator makes to the collector. */
+  fromQuesited: string;
+}
+
+export type Confidence = "low" | "medium" | "high";
+export type Lean = "favorable" | "unfavorable" | "uncertain";
+
 export interface HoraryJudgment {
   querentSignificator: string;
   quesitedSignificator: string;
@@ -115,6 +140,23 @@ export interface HoraryJudgment {
   significatorAspect: Aspect | null;
   moonVoidOfCourse: boolean;
   moonNextAspect: Aspect | null;
+  /** Moon (always co-significator of the querent) applying to the quesited
+   *  significator — a classic perfecting testimony. Null when none, or when the
+   *  Moon is itself one of the significators. */
+  moonApplyingToQuesited: Aspect | null;
+  /** Perfection via a third planet carrying light between the significators. */
+  translationOfLight: TranslationOfLight | null;
+  /** Perfection via a third planet both significators apply to. */
+  collectionOfLight: CollectionOfLight | null;
+  /** Aggregate testimony score (negative = unfavorable, positive = favorable).
+   *  A calibration aid for the skill, NOT a verdict on its own. */
+  score: number;
+  /** Confidence band derived from testimony strength + agreement. */
+  confidence: Confidence;
+  /** Overall lean from the aggregated testimonies. */
+  lean: Lean;
+  /** Human-readable factors behind the score (parallels electional reasons). */
+  testimonies: string[];
 }
 
 export interface ComputeResult {

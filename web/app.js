@@ -104,10 +104,17 @@
       }
     } else if (result.horary) {
       const h = result.horary;
-      extra = `Horary: querent ${h.querentSignificator} (house ` +
-        `${h.querentSignificatorHouse}), quesited ${h.quesitedSignificator} ` +
-        `(house ${h.quesitedSignificatorHouse}). Moon void: ` +
-        `${h.moonVoidOfCourse ? "yes" : "no"}.`;
+      const lean = h.lean ? h.lean.charAt(0).toUpperCase() + h.lean.slice(1) : "—";
+      extra = `Horary: ${lean}` +
+        (typeof h.score === "number" ? ` (score ${h.score}, ${h.confidence} confidence)` : "") +
+        `. Querent ${h.querentSignificator} (house ${h.querentSignificatorHouse}), ` +
+        `quesited ${h.quesitedSignificator} (house ${h.quesitedSignificatorHouse}). ` +
+        `Moon void: ${h.moonVoidOfCourse ? "yes" : "no"}.` +
+        (h.translationOfLight ? ` Translation by ${h.translationOfLight.translator}.` : "") +
+        (h.collectionOfLight ? ` Collection by ${h.collectionOfLight.collector}.` : "") +
+        (Array.isArray(h.testimonies) && h.testimonies.length
+          ? " Testimonies: " + h.testimonies.join("; ") + "."
+          : "");
     } else if (result.transitAspects) {
       extra = `Transit aspects to natal: ${result.transitAspects.length}.`;
     }

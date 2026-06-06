@@ -26,6 +26,55 @@ describe("judgeHorary", () => {
     expect(typeof j.moonVoidOfCourse).toBe("boolean");
   });
 
+  it("produces a calibrated aggregate: score, confidence band, lean, and testimonies", () => {
+    const chart = buildChart("horary", {
+      datetimeLocal: "2024-03-10T15:00:00",
+      latitude: 51.5074,
+      longitude: -0.1278,
+      timezone: "Europe/London",
+    });
+    const j = judgeHorary(chart, 7);
+    expect(typeof j.score).toBe("number");
+    expect(["low", "medium", "high"]).toContain(j.confidence);
+    expect(["favorable", "unfavorable", "uncertain"]).toContain(j.lean);
+    expect(Array.isArray(j.testimonies)).toBe(true);
+    expect(j.testimonies.length).toBeGreaterThan(0);
+    // Lean is consistent with the sign of the score.
+    if (j.score > 15) expect(j.lean).toBe("favorable");
+    else if (j.score < -15) expect(j.lean).toBe("unfavorable");
+    else expect(j.lean).toBe("uncertain");
+    // The new significator-hint fields are always present (possibly null).
+    expect("moonApplyingToQuesited" in j).toBe(true);
+    expect("translationOfLight" in j).toBe(true);
+    expect("collectionOfLight" in j).toBe(true);
+  });
+
+  it("detects translation of light and credits it in the score", () => {
+    // Empirically exhibits Venus translating Mercury -> Saturn (10th-house matter).
+    const chart = buildChart("horary", {
+      datetimeLocal: "2026-03-01T11:00:00",
+      latitude: 51.5,
+      longitude: -0.12,
+      timezone: "Europe/London",
+    });
+    const j = judgeHorary(chart, 10);
+    expect(j.translationOfLight).not.toBeNull();
+    expect(j.translationOfLight!.translator).toBe("Venus");
+    expect(j.testimonies.some((t) => t.includes("Translation of light"))).toBe(true);
+  });
+
+  it("detects collection of light when both significators apply to a third planet", () => {
+    const chart = buildChart("horary", {
+      datetimeLocal: "2026-03-01T11:00:00",
+      latitude: 51.5,
+      longitude: -0.12,
+      timezone: "Europe/London",
+    });
+    const j = judgeHorary(chart, 4);
+    expect(j.collectionOfLight).not.toBeNull();
+    expect(j.collectionOfLight!.collector).toBe("Jupiter");
+  });
+
   it("throws on an out-of-range quesited house", () => {
     const chart = buildChart("horary", {
       datetimeLocal: "2024-03-10T15:00:00",

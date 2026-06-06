@@ -208,26 +208,51 @@
 
   /**
    * Spread out planets that sit very close in longitude so their glyphs do not
-   * overlap. Returns a map name -> displayLongitude (the angle used only for
-   * placing the glyph; the tick still points at the true longitude).
+   * overlap. Uses circular relaxation: neighbours closer than MIN_SEP are pushed
+   * apart symmetrically (so a cluster fans out around its own centre rather than
+   * drifting in one direction), with proper 360° wraparound between the last and
+   * first body. Returns a map name -> displayLongitude (used only to place the
+   * glyph; the tick + leader still point at the true longitude).
    */
   function spreadPlanets(planets) {
-    const MIN_SEP = 7; // degrees of visual separation
-    const sorted = planets
-      .map((p, idx) => ({ idx, lon: p.longitude }))
+    const MIN_SEP = 9; // degrees of visual separation between glyphs
+    const n = planets.length;
+    if (n === 0) return {};
+
+    const items = planets
+      .map((p) => ({ name: p.name, lon: ((p.longitude % 360) + 360) % 360 }))
       .sort((a, b) => a.lon - b.lon);
+    const disp = items.map((it) => it.lon);
+
+    // With ~11 bodies the total required arc (n * MIN_SEP) is well under 360°,
+    // so this always converges without the cluster wrapping onto itself.
+    for (let pass = 0; pass < 300; pass++) {
+      let moved = false;
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        let gap = disp[j] - disp[i];
+        if (j === 0) gap += 360; // wraparound between last and first
+        if (gap < MIN_SEP - 1e-6) {
+          const push = (MIN_SEP - gap) / 2;
+          disp[i] -= push;
+          disp[j] += push;
+          moved = true;
+        }
+      }
+      if (!moved) break;
+    }
 
     const display = {};
-    for (let i = 0; i < sorted.length; i++) {
-      let lon = sorted[i].lon;
-      if (i > 0) {
-        const prev = sorted[i - 1].displayLon;
-        if (lon - prev < MIN_SEP) lon = prev + MIN_SEP;
-      }
-      sorted[i].displayLon = lon;
-      display[planets[sorted[i].idx].name] = lon;
-    }
+    for (let i = 0; i < n; i++) display[items[i].name] = ((disp[i] % 360) + 360) % 360;
     return display;
+  }
+
+  /** Shortest signed angular difference a - b, in (-180, 180]. */
+  function angleDelta(a, b) {
+    let d = (a - b) % 360;
+    if (d > 180) d -= 360;
+    if (d < -180) d += 360;
+    return d;
   }
 
   function renderPlanets(svg, planets, ascendant, options) {
@@ -237,6 +262,7 @@
     for (const p of planets) {
       const trueLon = p.longitude;
       const showLon = display[p.name];
+      const displaced = Math.abs(angleDelta(showLon, trueLon)) > 0.75;
 
       // Tick from the zodiac ring inward to the true longitude position.
       const tickOuter = degreesToXY(trueLon, R.planetTick, ascendant);
@@ -247,6 +273,16 @@
       }));
 
       const pos = degreesToXY(showLon, R.planet, ascendant);
+
+      // Leader line connecting a displaced glyph back to its true-longitude tick,
+      // so a fanned-out cluster stays legible (you can trace each glyph home).
+      if (displaced) {
+        g.appendChild(el("line", {
+          x1: pos.x, y1: pos.y, x2: tickInner.x, y2: tickInner.y,
+          class: "planet-leader",
+        }));
+      }
+
       const glyph = PLANET_GLYPHS[p.name] || p.name.slice(0, 2);
       const glyphEl = text(glyph, {
         x: pos.x, y: pos.y, class: "planet-glyph",
@@ -259,23 +295,23 @@
       glyphEl.appendChild(titleEl);
       g.appendChild(glyphEl);
 
-      // Degree-in-sign label under the glyph.
-      if (options.showDegrees) {
+      // Combined degree + retrograde label under the glyph (single element avoids
+      // the old deg/℞ collision). Shows whichever the toggles enable.
+      const showDeg = options.showDegrees;
+      const showRetro = options.showRetrograde && p.retrograde;
+      if (showDeg || showRetro) {
         const degPos = degreesToXY(showLon, R.degLabel, ascendant);
-        const degStr = `${Math.floor(p.degInSign)}°`;
-        g.appendChild(text(degStr, {
+        const labelEl = el("text", {
           x: degPos.x, y: degPos.y, class: "deg-label",
           "text-anchor": "middle", "dominant-baseline": "central",
-        }));
-      }
-
-      // Retrograde marker.
-      if (options.showRetrograde && p.retrograde) {
-        const rPos = degreesToXY(showLon, R.planet - 18, ascendant);
-        g.appendChild(text(RETROGRADE, {
-          x: rPos.x, y: rPos.y, class: "retro-label",
-          "text-anchor": "middle", "dominant-baseline": "central",
-        }));
+        });
+        if (showDeg) labelEl.appendChild(document.createTextNode(`${Math.floor(p.degInSign)}°`));
+        if (showRetro) {
+          const r = el("tspan", { class: "retro" });
+          r.textContent = (showDeg ? " " : "") + RETROGRADE;
+          labelEl.appendChild(r);
+        }
+        g.appendChild(labelEl);
       }
     }
 
