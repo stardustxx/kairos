@@ -83,6 +83,13 @@ Use the JSON it prints. Do not alter the numbers.
 
 ## Step 4 — Judge and answer
 
+**Every chart** now carries richer context you can draw on for any kind:
+- `chart.sect` (`"day"`/`"night"`), and `chart.partOfFortune` (sign + house) — a
+  classical point of benefit; note its house for "where fortune favors."
+- Each classical planet has `dignities` (domicile/exaltation/triplicity/term/face,
+  with a net `score` and `labels`). Use it to say whether a relevant planet is
+  **strong or compromised** — e.g. "Venus is in detriment, so her promise is weak."
+
 **Horary:**
 - The engine now returns an **aggregated judgment** you should anchor on:
   `lean` (`"favorable"` / `"unfavorable"` / `"uncertain"`), `confidence`
@@ -102,6 +109,14 @@ Use the JSON it prints. Do not alter the numbers.
   - `translationOfLight` / `collectionOfLight` — perfection via a third planet
     (carrying or gathering the light). When present, the matter can still come
     together indirectly even without a direct significator aspect; name the planet.
+  - `significatorReception` — mutual reception (each significator in a sign the
+    other rules/exalts) can perfect a matter even without an aspect, and softens
+    a hard one; one-way reception is a lesser aid. Name it when present.
+  - `querentSignificatorDignity` / `quesitedSignificatorDignity` — the essential
+    dignity score of each significator (from the planet's `dignities`). A
+    well-dignified significator (high +) acts strongly and reliably; a debilitated
+    one (detriment/fall/peregrine, negative) is weak or compromised — temper the
+    promise accordingly and say so.
   - `moonVoidOfCourse === true` — strong "nothing comes of it / no change" signal.
 - Each significator's house placement (`querentSignificatorHouse` /
   `quesitedSignificatorHouse`) gives context on where the querent and matter "sit."

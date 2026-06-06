@@ -64,6 +64,22 @@ export interface ElectionalResult {
   candidatesEvaluated: number;
 }
 
+/** A planet's essential dignity state at its position (classical Lilly points). */
+export interface PlanetDignities {
+  domicile: boolean; // in its own sign (+5)
+  exaltation: boolean; // in its exaltation sign (+4)
+  triplicity: boolean; // in-sect triplicity ruler of its element (+3)
+  term: boolean; // ruler of its Egyptian term/bound (+2)
+  face: boolean; // ruler of its face/decan (+1)
+  detriment: boolean; // in the sign opposite its rulership (-5)
+  fall: boolean; // in the sign opposite its exaltation (-4)
+  peregrine: boolean; // no essential dignity and not in detriment/fall (-5)
+  /** Net dignity score (positive = strong, negative = debilitated). */
+  score: number;
+  /** Human-readable contributing dignities/debilities, e.g. "domicile (+5)". */
+  labels: string[];
+}
+
 export interface PlanetPosition {
   name: string;
   longitude: number; // ecliptic longitude 0..360
@@ -71,6 +87,18 @@ export interface PlanetPosition {
   degInSign: number; // 0..30
   retrograde: boolean;
   speed: number; // degrees/day in longitude
+  /** Essential dignity state. Attached by buildChart (needs chart sect); absent
+   *  on bare position lists (e.g. transit natal-side planets). */
+  dignities?: PlanetDignities;
+}
+
+/** The Part of Fortune (Lot of Fortune) — a derived sensitive point. */
+export interface PartOfFortune {
+  longitude: number;
+  sign: Sign;
+  degInSign: number;
+  /** House (1..12) it falls in. */
+  house: number;
 }
 
 export interface Houses {
@@ -102,6 +130,21 @@ export interface Chart {
   planets: PlanetPosition[];
   houses: Houses;
   aspects: Aspect[];
+  /** Chart sect: "day" if the Sun is above the horizon, else "night". Drives
+   *  triplicity rulership and the Part of Fortune formula. */
+  sect: "day" | "night";
+  /** The Part of Fortune for this chart. */
+  partOfFortune: PartOfFortune;
+}
+
+/** Two significators each dignifying the other's position — a perfecting aid. */
+export interface Reception {
+  /** "mutual" = both receive each other; "one-way" = only one receives. */
+  kind: "mutual" | "one-way";
+  /** Dignity by which a receives b (e.g. "domicile", "exaltation"), or null. */
+  aReceivesBBy: string | null;
+  /** Dignity by which b receives a, or null. */
+  bReceivesABy: string | null;
 }
 
 /** A faster planet carrying light between the two significators. */
@@ -148,6 +191,13 @@ export interface HoraryJudgment {
   translationOfLight: TranslationOfLight | null;
   /** Perfection via a third planet both significators apply to. */
   collectionOfLight: CollectionOfLight | null;
+  /** Reception between the two significators (mutual reception can perfect a
+   *  matter even without a direct aspect). Null when neither receives the other. */
+  significatorReception: Reception | null;
+  /** Essential dignity score of the querent's significator (planet strength). */
+  querentSignificatorDignity: number;
+  /** Essential dignity score of the quesited's significator. */
+  quesitedSignificatorDignity: number;
   /** Aggregate testimony score (negative = unfavorable, positive = favorable).
    *  A calibration aid for the skill, NOT a verdict on its own. */
   score: number;

@@ -92,6 +92,18 @@
       (c.houses && c.houses.system) ? c.houses.system : "—";
     els.metaPlanets.textContent = c.planets ? String(c.planets.length) : "—";
 
+    const parts = [];
+    // Always-available chart context: sect + Part of Fortune.
+    if (c.sect) {
+      let ctx = `Sect: ${c.sect}.`;
+      if (c.partOfFortune && c.partOfFortune.sign) {
+        const pf = c.partOfFortune;
+        ctx += ` Part of Fortune: ${Math.floor(pf.degInSign)}° ${pf.sign}` +
+          (pf.house ? ` (house ${pf.house})` : "") + ".";
+      }
+      parts.push(ctx);
+    }
+
     let extra = "";
     if (result.electional && Array.isArray(result.electional.topMoments)) {
       const e = result.electional;
@@ -105,11 +117,18 @@
     } else if (result.horary) {
       const h = result.horary;
       const lean = h.lean ? h.lean.charAt(0).toUpperCase() + h.lean.slice(1) : "—";
+      const recv = h.significatorReception
+        ? ` Reception: ${h.significatorReception.kind}.`
+        : "";
+      const dig = (typeof h.querentSignificatorDignity === "number")
+        ? ` Significator dignity: ${h.querentSignificator} ${h.querentSignificatorDignity >= 0 ? "+" : ""}${h.querentSignificatorDignity}, ` +
+          `${h.quesitedSignificator} ${h.quesitedSignificatorDignity >= 0 ? "+" : ""}${h.quesitedSignificatorDignity}.`
+        : "";
       extra = `Horary: ${lean}` +
         (typeof h.score === "number" ? ` (score ${h.score}, ${h.confidence} confidence)` : "") +
         `. Querent ${h.querentSignificator} (house ${h.querentSignificatorHouse}), ` +
         `quesited ${h.quesitedSignificator} (house ${h.quesitedSignificatorHouse}). ` +
-        `Moon void: ${h.moonVoidOfCourse ? "yes" : "no"}.` +
+        `Moon void: ${h.moonVoidOfCourse ? "yes" : "no"}.` + recv + dig +
         (h.translationOfLight ? ` Translation by ${h.translationOfLight.translator}.` : "") +
         (h.collectionOfLight ? ` Collection by ${h.collectionOfLight.collector}.` : "") +
         (Array.isArray(h.testimonies) && h.testimonies.length
@@ -118,8 +137,10 @@
     } else if (result.transitAspects) {
       extra = `Transit aspects to natal: ${result.transitAspects.length}.`;
     }
-    els.metaExtra.textContent = extra;
-    els.metaExtra.hidden = !extra;
+    if (extra) parts.push(extra);
+    const combined = parts.join(" ");
+    els.metaExtra.textContent = combined;
+    els.metaExtra.hidden = !combined;
 
     els.metadata.hidden = false;
   }

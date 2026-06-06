@@ -84,8 +84,11 @@ process start (see `engine/src/ephemeris.ts`).
 
 The engine covers **horary**, **transits**, **natal**, and **electional**
 (best-window search — scan a future window and rank candidate moments by
-classical electional rules). An interactive chart-wheel web UI ships in `web/`
-(`pnpm wheel`).
+classical electional rules). Every chart also carries **essential dignities**
+(Lilly's domicile/exaltation/triplicity/term/face scoring), **sect**, and the
+**Part of Fortune**; horary judgments add **reception** and dignity-weighted
+significator strength on top of translation/collection of light. An interactive
+chart-wheel web UI ships in `web/` (`pnpm wheel`).
 
 ## Licensing note
 

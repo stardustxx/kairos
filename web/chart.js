@@ -72,6 +72,7 @@
   };
 
   const RETROGRADE = "℞";
+  const FORTUNE_GLYPH = "⊕"; // Part of Fortune
 
   // Aspect type -> CSS class (colours live in style.css).
   const ASPECT_CLASS = {
@@ -291,7 +292,11 @@
       const titleEl = el("title");
       titleEl.textContent =
         `${p.name} ${p.degInSign.toFixed(2)}° ${p.sign}` +
-        (p.retrograde ? " (R)" : "");
+        (p.retrograde ? " (R)" : "") +
+        (p.dignities
+          ? ` — dignity ${p.dignities.score >= 0 ? "+" : ""}${p.dignities.score}` +
+            (p.dignities.labels.length ? ` (${p.dignities.labels.join(", ")})` : "")
+          : "");
       glyphEl.appendChild(titleEl);
       g.appendChild(glyphEl);
 
@@ -314,6 +319,34 @@
         g.appendChild(labelEl);
       }
     }
+
+    svg.appendChild(g);
+  }
+
+  function renderPartOfFortune(svg, fortune, ascendant) {
+    if (!fortune || typeof fortune.longitude !== "number") return;
+    const g = el("g", { class: "fortune" });
+    const lon = fortune.longitude;
+
+    // Tick to the true longitude, like the planets.
+    const tickOuter = degreesToXY(lon, R.planetTick, ascendant);
+    const tickInner = degreesToXY(lon, R.planet + 12, ascendant);
+    g.appendChild(el("line", {
+      x1: tickOuter.x, y1: tickOuter.y, x2: tickInner.x, y2: tickInner.y,
+      class: "planet-tick",
+    }));
+
+    const pos = degreesToXY(lon, R.planet, ascendant);
+    const glyphEl = text(FORTUNE_GLYPH, {
+      x: pos.x, y: pos.y, class: "fortune-glyph",
+      "text-anchor": "middle", "dominant-baseline": "central",
+    });
+    const titleEl = el("title");
+    titleEl.textContent =
+      `Part of Fortune ${fortune.degInSign != null ? fortune.degInSign.toFixed(2) + "° " : ""}` +
+      `${fortune.sign || ""}` + (fortune.house ? ` — house ${fortune.house}` : "");
+    glyphEl.appendChild(titleEl);
+    g.appendChild(glyphEl);
 
     svg.appendChild(g);
   }
@@ -374,6 +407,7 @@
     renderHouses(svg, chart.houses, options);
     renderAspects(svg, chart.aspects, chart.planets, ascendant, options);
     renderPlanets(svg, chart.planets, ascendant, options);
+    renderPartOfFortune(svg, chart.partOfFortune, ascendant);
   }
 
   global.KairosChart = {

@@ -1,6 +1,7 @@
 import { SIGN_RULER, PLANETS, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
 import { computeAspects } from "./aspects.js";
 import { houseOf } from "./houses.js";
+import { receptionBetween } from "./dignities.js";
 import type {
   Aspect,
   Chart,
@@ -9,6 +10,7 @@ import type {
   HoraryJudgment,
   Lean,
   PlanetPosition,
+  Reception,
   TranslationOfLight,
 } from "./types.js";
 
@@ -91,6 +93,11 @@ function aggregateTestimony(args: {
   moonApplyingToQuesited: Aspect | null;
   translation: TranslationOfLight | null;
   collection: CollectionOfLight | null;
+  reception: Reception | null;
+  querentSig: string;
+  quesitedSig: string;
+  querentDignity: number;
+  quesitedDignity: number;
   moonVoid: boolean;
 }): { score: number; confidence: Confidence; lean: Lean; testimonies: string[] } {
   const t: string[] = [];
@@ -136,6 +143,37 @@ function aggregateTestimony(args: {
     score += 15;
     t.push(`Collection of light by ${args.collection.collector} (+15)`);
   }
+
+  const r = args.reception;
+  if (r?.kind === "mutual") {
+    score += 15;
+    t.push(
+      `Significators in mutual reception ` +
+        `(${args.querentSig} by ${r.bReceivesABy}, ${args.quesitedSig} by ${r.aReceivesBBy}) ` +
+        `— can perfect through dignity exchange (+15)`,
+    );
+  } else if (r?.kind === "one-way") {
+    score += 5;
+    const who = r.aReceivesBBy ? args.querentSig : args.quesitedSig;
+    const by = r.aReceivesBBy ?? r.bReceivesABy;
+    t.push(`One-way reception (${who} receives the other by ${by}) (+5)`);
+  }
+
+  // Significator essential strength: a well-dignified significator helps, a
+  // debilitated one (detriment/fall/peregrine) undermines its promise.
+  for (const [label, dignity] of [
+    [`Querent significator ${args.querentSig}`, args.querentDignity],
+    [`Quesited significator ${args.quesitedSig}`, args.quesitedDignity],
+  ] as [string, number][]) {
+    if (dignity >= 4) {
+      score += 5;
+      t.push(`${label} well-dignified (dignity ${dignity >= 0 ? "+" : ""}${dignity}) (+5)`);
+    } else if (dignity <= -5) {
+      score -= 5;
+      t.push(`${label} debilitated (dignity ${dignity}) (-5)`);
+    }
+  }
+
   if (args.moonVoid) {
     score -= 30;
     t.push("Moon void of course — little is likely to come of the matter (-30)");
@@ -224,11 +262,23 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
       ? findCollection(classicalAspects, querentSig, quesitedSig, classical)
       : null;
 
+  const significatorReception =
+    sigA && sigB && sigA.name !== sigB.name
+      ? receptionBetween(querentSig, sigA.longitude, quesitedSig, sigB.longitude)
+      : null;
+  const querentSignificatorDignity = sigA?.dignities?.score ?? 0;
+  const quesitedSignificatorDignity = sigB?.dignities?.score ?? 0;
+
   const { score, confidence, lean, testimonies } = aggregateTestimony({
     significatorAspect,
     moonApplyingToQuesited,
     translation: translationOfLight,
     collection: collectionOfLight,
+    reception: significatorReception,
+    querentSig,
+    quesitedSig,
+    querentDignity: querentSignificatorDignity,
+    quesitedDignity: quesitedSignificatorDignity,
     moonVoid: moon.void,
   });
 
@@ -243,6 +293,9 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     moonApplyingToQuesited,
     translationOfLight,
     collectionOfLight,
+    significatorReception,
+    querentSignificatorDignity,
+    quesitedSignificatorDignity,
     score,
     confidence,
     lean,

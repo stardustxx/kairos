@@ -1,8 +1,34 @@
 import { resolveJulianDay } from "./time.js";
 import { computePositions } from "./positions.js";
-import { computeHouses } from "./houses.js";
+import { computeHouses, houseOf } from "./houses.js";
 import { computeAspects } from "./aspects.js";
-import type { Chart, ChartKind, MomentInput } from "./types.js";
+import { computeDignities } from "./dignities.js";
+import { PLANETS, SIGNS, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
+import type { Chart, ChartKind, MomentInput, PartOfFortune } from "./types.js";
+
+const CLASSICAL = new Set(PLANETS.filter((d) => d.classical).map((d) => d.name));
+
+function norm360(x: number): number {
+  return ((x % 360) + 360) % 360;
+}
+
+function partOfFortune(
+  asc: number,
+  sun: number,
+  moon: number,
+  sect: "day" | "night",
+  cusps: number[],
+): PartOfFortune {
+  // Day: Asc + Moon - Sun. Night: Asc + Sun - Moon.
+  const lon = norm360(sect === "day" ? asc + moon - sun : asc + sun - moon);
+  const si = Math.floor(lon / DEGREES_PER_SIGN) % SIGN_COUNT;
+  return {
+    longitude: lon,
+    sign: SIGNS[si],
+    degInSign: lon - si * DEGREES_PER_SIGN,
+    house: houseOf(lon, cusps),
+  };
+}
 
 export interface BuildChartOptions {
   /**
@@ -36,5 +62,22 @@ export function buildChart(
   const aspects = aspectTiming
     ? computeAspects(planets, julianDayUt)
     : computeAspects(planets);
-  return { kind, julianDayUt, utc, planets, houses, aspects };
+
+  // Sect: the Sun above the horizon (houses 7..12) = a day chart.
+  const sun = planets.find((p) => p.name === "Sun")!;
+  const moon = planets.find((p) => p.name === "Moon")!;
+  const sunHouse = houseOf(sun.longitude, houses.cusps);
+  const sect: "day" | "night" = sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
+
+  // Attach essential dignities to the seven classical planets (the only bodies
+  // with traditional rulerships); outer points have no essential dignity.
+  for (const p of planets) {
+    if (CLASSICAL.has(p.name)) {
+      p.dignities = computeDignities(p.name, p.longitude, sect);
+    }
+  }
+
+  const fortune = partOfFortune(houses.ascendant, sun.longitude, moon.longitude, sect, houses.cusps);
+
+  return { kind, julianDayUt, utc, planets, houses, aspects, sect, partOfFortune: fortune };
 }
