@@ -295,7 +295,10 @@
   }
 
   function buildAspectsTable(chart) {
-    const aspects = (chart.aspects || []).slice().sort(function (a, b) { return a.orb - b.orb; });
+    const aspects = (chart.aspects || [])
+      .concat(chart.angleAspects || []) // include aspects to the Asc/MC
+      .slice()
+      .sort(function (a, b) { return a.orb - b.orb; });
     if (!aspects.length) return "<p class=\"empty\">No major aspects in orb.</p>";
     const rows = aspects.map(function (a) {
       const g = ASPECT_GLYPHS[a.type] || "";

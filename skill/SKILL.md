@@ -101,6 +101,11 @@ Use the JSON it prints. Do not alter the numbers.
   `under-beams` = burnt/hidden/weakened; `cazimi` = in the Sun's heart, strong;
   `clear` = unafflicted. A combust significator is a real "it won't manifest"
   caveat; call it out.
+- `chart.angleAspects` lists tight aspects (≤5°) from planets to the Ascendant/MC.
+  A planet closely on an angle is strong and "public/visible" — a significator
+  conjunct the Asc or MC is a notable testimony of prominence.
+- A **retrograde** significator (`planet.retrograde`) signals hesitation,
+  reversal, or things going backward — the horary score already debits it.
 
 **Horary:**
 - The engine now returns an **aggregated judgment** you should anchor on:

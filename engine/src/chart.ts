@@ -1,4 +1,4 @@
-import { computeAspects } from "./aspects.js";
+import { computeAngleAspects, computeAspects } from "./aspects.js";
 import { sunProximity } from "./conditions.js";
 import { DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGNS } from "./constants.js";
 import { computeDignities } from "./dignities.js";
@@ -85,8 +85,9 @@ export function buildChart(
   }
 
   const fortune = partOfFortune(houses.ascendant, sun.longitude, moon.longitude, sect, houses.cusps);
+  const angleAspects = computeAngleAspects(planets, houses.ascendant, houses.mc);
 
-  return { kind, julianDayUt, utc, planets, houses, aspects, sect, partOfFortune: fortune };
+  return { kind, julianDayUt, utc, planets, houses, aspects, sect, partOfFortune: fortune, angleAspects };
 }
 
 /**
@@ -122,5 +123,6 @@ export function relocateChart(
   });
 
   const fortune = partOfFortune(houses.ascendant, sun.longitude, moon.longitude, sect, houses.cusps);
-  return { ...chart, planets, houses, sect, partOfFortune: fortune };
+  const angleAspects = computeAngleAspects(planets, houses.ascendant, houses.mc);
+  return { ...chart, planets, houses, sect, partOfFortune: fortune, angleAspects };
 }

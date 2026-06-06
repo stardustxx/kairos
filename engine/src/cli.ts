@@ -105,7 +105,7 @@ function readStdin(): string {
 }
 
 // Executed only when run as a script (not when imported by tests).
-if (process.argv[1] && process.argv[1].endsWith("cli.ts")) {
+if (process.argv[1]?.endsWith("cli.ts")) {
   const raw = process.argv[2] ?? readStdin();
   if (!raw.trim()) {
     console.error('Usage: pnpm compute \'{"kind":"horary","quesitedHouse":10,"moment":{...}}\'');
@@ -113,7 +113,7 @@ if (process.argv[1] && process.argv[1].endsWith("cli.ts")) {
   }
   try {
     const req = JSON.parse(raw) as ComputeRequest;
-    process.stdout.write(JSON.stringify(runCompute(req), null, 2) + "\n");
+    process.stdout.write(`${JSON.stringify(runCompute(req), null, 2)}\n`);
   } catch (err) {
     console.error(`Error: ${(err as Error).message}`);
     process.exit(1);

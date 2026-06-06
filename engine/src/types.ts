@@ -159,6 +159,9 @@ export interface Chart {
   sect: "day" | "night";
   /** The Part of Fortune for this chart. */
   partOfFortune: PartOfFortune;
+  /** Tight aspects from planets to the angles (Ascendant/MC). `b` is "Ascendant"
+   *  or "MC". A planet on an angle is a strong testimony. */
+  angleAspects: Aspect[];
 }
 
 /** Two significators each dignifying the other's position — a perfecting aid. */

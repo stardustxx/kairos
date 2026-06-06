@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
-import { computeAspects, computeCrossAspects } from "../src/aspects.js";
+import { computeAngleAspects, computeAspects, computeCrossAspects } from "../src/aspects.js";
 import { buildChart } from "../src/chart.js";
 import { computePositions } from "../src/positions.js";
 import { julianDayToUtcString, resolveJulianDay } from "../src/time.js";
@@ -165,5 +165,46 @@ describe("computeCrossAspects perfection timing", () => {
     const conj = aspects.find((a) => a.type === "conjunction")!;
     expect("perfectsAtUtc" in conj).toBe(false);
     expect(conj.applying).toBe(true);
+  });
+});
+
+describe("computeAngleAspects", () => {
+  it("finds tight aspects from planets to the Ascendant and MC", () => {
+    // Ascendant 0° Aries, MC ~270° (Capricorn). Mars at 2° Aries conjuncts Asc;
+    // Venus at 272° squares nothing but trines/sextiles can be checked.
+    const planets = [p("Mars", 2, 0.5), p("Sun", 90, 1), p("Saturn", 180, 0.03)];
+    const aspects = computeAngleAspects(planets, 0, 270);
+    const marsAsc = aspects.find((a) => a.a === "Mars" && a.b === "Ascendant");
+    expect(marsAsc).toBeTruthy();
+    expect(marsAsc!.type).toBe("conjunction");
+    expect(marsAsc!.orb).toBeCloseTo(2, 1);
+    // Sun at 90° squares the Ascendant at 0°.
+    const sunAsc = aspects.find((a) => a.a === "Sun" && a.b === "Ascendant");
+    expect(sunAsc!.type).toBe("square");
+    // Saturn at 180° opposes the Ascendant.
+    const satAsc = aspects.find((a) => a.a === "Saturn" && a.b === "Ascendant");
+    expect(satAsc!.type).toBe("opposition");
+  });
+
+  it("respects the tight 5° angle orb", () => {
+    // 7° off a conjunction is within the 8° planet orb but beyond the 5° angle orb.
+    const aspects = computeAngleAspects([p("Mars", 7, 0.5)], 0, 270);
+    expect(aspects.find((a) => a.b === "Ascendant")).toBeUndefined();
+  });
+});
+
+describe("buildChart angle aspects", () => {
+  it("attaches an angleAspects array to every chart", () => {
+    const chart = buildChart("natal", {
+      datetimeLocal: "1990-05-21T14:30:00",
+      latitude: 40.71,
+      longitude: -74.01,
+      timezone: "America/New_York",
+    });
+    expect(Array.isArray(chart.angleAspects)).toBe(true);
+    for (const a of chart.angleAspects) {
+      expect(["Ascendant", "MC"]).toContain(a.b);
+      expect(a.orb).toBeLessThanOrEqual(5);
+    }
   });
 });

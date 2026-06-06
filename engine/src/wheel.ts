@@ -32,7 +32,7 @@ const CONTENT_TYPES: Record<string, string> = {
 
 function readRequestArg(): string {
   const arg = process.argv[2];
-  if (arg && arg.trim()) return arg;
+  if (arg?.trim()) return arg;
   try {
     return readFileSync(0, "utf8");
   } catch {

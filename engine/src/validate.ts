@@ -47,7 +47,7 @@ export function validateRequest(req: ComputeRequest): void {
     if (req.quesitedHouse == null || req.quesitedHouse < 2 || req.quesitedHouse > 12) {
       throw new Error(`electional requires quesitedHouse in 2..12, got ${req.quesitedHouse}`);
     }
-    if (!req.window || !req.window.startLocal || !req.window.endLocal) {
+    if (!req.window?.startLocal || !req.window?.endLocal) {
       throw new Error("electional request requires `window` with startLocal and endLocal");
     }
     checkDatetime("window.startLocal", req.window.startLocal);

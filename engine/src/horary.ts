@@ -101,13 +101,15 @@ function aggregateTestimony(args: {
   quesitedDignity: number;
   querentSolar: SolarPhase;
   quesitedSolar: SolarPhase;
+  querentRetro: boolean;
+  quesitedRetro: boolean;
   moonVoid: boolean;
 }): { score: number; confidence: Confidence; lean: Lean; testimonies: string[] } {
   const t: string[] = [];
   let score = 0;
 
   const a = args.significatorAspect;
-  if (a && a.applying) {
+  if (a?.applying) {
     if (SOFT_ASPECTS.has(a.type)) {
       score += 40;
       t.push(`Significators perfect by applying ${a.type} (+40)`);
@@ -194,6 +196,17 @@ function aggregateTestimony(args: {
     }
   }
 
+  // A retrograde significator: hesitation, reversal, things going backward.
+  for (const [label, retro] of [
+    [`Querent significator ${args.querentSig}`, args.querentRetro],
+    [`Quesited significator ${args.quesitedSig}`, args.quesitedRetro],
+  ] as [string, boolean][]) {
+    if (retro) {
+      score -= 4;
+      t.push(`${label} retrograde — hesitation or reversal (-4)`);
+    }
+  }
+
   if (args.moonVoid) {
     score -= 30;
     t.push("Moon void of course — little is likely to come of the matter (-30)");
@@ -211,28 +224,44 @@ function aggregateTestimony(args: {
   return { score, confidence, lean, testimonies: t };
 }
 
-/** The Moon is void of course if it forms no further major aspect before
- *  leaving its current sign. Traditionally only the 7 classical planets count.
+/** The Moon is void of course if it perfects no further major aspect to a
+ *  classical planet before leaving its current sign.
  *
- *  NOTE: v1 approximation — this compares the tightest applying aspect's current
- *  orb to the Moon's remaining arc in its sign, not the exact relative-motion
- *  perfection time. */
+ *  Uses relative motion: time-to-perfection = orb / |moonSpeed - otherSpeed|,
+ *  compared against time-to-sign-change = remaining arc / moonSpeed. This is the
+ *  standard practical method and far tighter than the old orb-vs-arc heuristic.
+ *  `next` is the soonest-perfecting applying aspect (by time, not just orb). */
 export function moonVoidStatus(planets: PlanetPosition[]): { void: boolean; next: Aspect | null } {
   const moon = planets.find((p) => p.name === "Moon")!;
+  const moonSpeed = Math.abs(moon.speed) || 13.2; // deg/day; guard against 0
   const degreesToSignEnd = DEGREES_PER_SIGN - moon.degInSign;
+  const daysToSignChange = degreesToSignEnd / moonSpeed;
+
   // Restrict to the classical bodies (Moon + the 6 other traditional planets).
   const classicalNames = new Set(PLANETS.filter((d) => d.classical).map((d) => d.name));
   const classical = planets.filter((p) => classicalNames.has(p.name));
-  // Find the Moon's next applying major aspect to any classical body.
+  const speedOf = (name: string): number => classical.find((p) => p.name === name)?.speed ?? 0;
+
   const aspectsWithMoon = computeAspects(classical).filter(
     (a) => (a.a === "Moon" || a.b === "Moon") && a.applying,
   );
   if (aspectsWithMoon.length === 0) {
     return { void: true, next: null };
   }
-  // Approximate degrees until exact for the tightest applying aspect.
-  const next = aspectsWithMoon.reduce((best, a) => (a.orb < best.orb ? a : best));
-  const isVoid = next.orb > degreesToSignEnd;
+
+  // Days until each applying aspect perfects, by relative angular velocity.
+  let next: Aspect | null = null;
+  let soonestDays = Number.POSITIVE_INFINITY;
+  for (const a of aspectsWithMoon) {
+    const otherName = a.a === "Moon" ? a.b : a.a;
+    const relSpeed = Math.abs(moonSpeed - speedOf(otherName)) || moonSpeed;
+    const days = a.orb / relSpeed;
+    if (days < soonestDays) {
+      soonestDays = days;
+      next = a;
+    }
+  }
+  const isVoid = soonestDays > daysToSignChange;
   return { void: isVoid, next };
 }
 
@@ -301,6 +330,8 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     quesitedDignity: quesitedSignificatorDignity,
     querentSolar: sigA?.sunProximity?.state ?? "clear",
     quesitedSolar: sigB?.sunProximity?.state ?? "clear",
+    querentRetro: sigA?.retrograde ?? false,
+    quesitedRetro: sigB?.retrograde ?? false,
     moonVoid: moon.void,
   });
 

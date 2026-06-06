@@ -5,7 +5,7 @@
  *   const result = runCompute({ kind: "horary", quesitedHouse: 10, moment: {...} });
  */
 
-export { computeAspects, computeCrossAspects } from "./aspects.js";
+export { computeAngleAspects, computeAspects, computeCrossAspects } from "./aspects.js";
 export { buildChart, relocateChart } from "./chart.js";
 export { runCompute } from "./cli.js";
 export { sunProximity } from "./conditions.js";

@@ -221,3 +221,41 @@ export function computeCrossAspects(
   }
   return out;
 }
+
+/**
+ * Aspects from each planet to the chart's angles (Ascendant, MC). A planet
+ * closely aspecting an angle is one of the strongest testimonies of strength and
+ * visibility. Angles are treated as fixed points; `applying` is approximated
+ * from the planet's own motion toward the angle. Uses a tight 5° orb for all
+ * aspect types, as is traditional for the angles.
+ */
+export function computeAngleAspects(
+  planets: PlanetPosition[],
+  ascendant: number,
+  mc: number,
+): Aspect[] {
+  const ANGLE_ORB = 5;
+  const angles = [
+    { name: "Ascendant", lon: ascendant },
+    { name: "MC", lon: mc },
+  ];
+  const out: Aspect[] = [];
+  for (const P of planets) {
+    for (const ang of angles) {
+      const sepNow = separation(P.longitude, ang.lon);
+      for (const def of ASPECTS) {
+        const orb = Math.abs(sepNow - def.angle);
+        if (orb > Math.min(def.orb, ANGLE_ORB)) continue;
+        const sepNext = separation(P.longitude + P.speed, ang.lon);
+        out.push({
+          a: P.name,
+          b: ang.name,
+          type: def.name,
+          orb,
+          applying: Math.abs(sepNext - def.angle) < orb,
+        });
+      }
+    }
+  }
+  return out;
+}
