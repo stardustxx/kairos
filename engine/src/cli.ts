@@ -20,15 +20,24 @@ export function runCompute(req: ComputeRequest): ComputeResult {
     if (req.quesitedHouse == null) {
       throw new Error("electional request requires `quesitedHouse` (2..12)");
     }
-    return {
-      electional: searchElectionalMoments(
-        req.window,
-        req.stepMinutes,
-        req.location,
-        req.quesitedHouse,
-        req.significatorHints,
-      ),
-    };
+    const electional = searchElectionalMoments(
+      req.window,
+      req.stepMinutes,
+      req.location,
+      req.quesitedHouse,
+      req.significatorHints,
+    );
+    const result: ComputeResult = { electional };
+    // Attach the full chart of the #1 elected moment so it can be rendered/
+    // inspected. Only one chart, so we keep exact aspect timing (default).
+    const best = electional.topMoments[0];
+    if (best) {
+      result.chart = buildChart("electional", {
+        ...req.location,
+        datetimeLocal: best.datetimeLocal,
+      });
+    }
+    return result;
   }
 
   if (!req.moment) {

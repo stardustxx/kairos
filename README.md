@@ -26,6 +26,19 @@ pnpm test        # run the engine test suite
 pnpm compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-02T09:00:00","latitude":40.7128,"longitude":-74.006,"timezone":"America/New_York"}}'
 ```
 
+## Render a chart wheel
+
+`pnpm wheel <json>` computes a request and opens an interactive SVG chart wheel
+in your browser, pre-loaded with the result. For an **electional** request it
+renders the chart of the #1 elected moment and shows its score and reasons.
+
+```bash
+pnpm wheel '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-02T09:00:00","latitude":40.7128,"longitude":-74.006,"timezone":"America/New_York"}}'
+```
+
+The UI also runs standalone: open `web/index.html` and paste any `pnpm compute`
+JSON (or click **Load Example**). See `web/README.md`.
+
 ## Install the skill
 
 Copy or symlink `skill/` into your Claude skills directory as `kairos`, or point
@@ -47,19 +60,20 @@ By default, the engine uses the **Moshier analytical ephemeris** — accurate fo
 the modern era, no data files required. To use full Swiss Ephemeris (SWIEPH)
 precision:
 
-1. Download the `.se1` data files from Astrodienst and place them in a directory,
-   then point the engine at it:
+1. Download the `.se1` data files (planets + Moon, 1800–2399 CE) into `./ephe`:
 
    ```bash
-   export KAIROS_EPHE_PATH=/path/to/ephemeris
+   pnpm ephe:install            # or: pnpm ephe:install /custom/dir
    ```
 
-2. Enable SWIEPH computation:
+2. Enable SWIEPH computation by pointing at that directory:
 
    ```bash
-   export KAIROS_SWIEPH=1
-   pnpm compute '...'
+   KAIROS_SWIEPH=1 KAIROS_EPHE_PATH=./ephe pnpm -s compute '...'
    ```
+
+   This shifts positions by up to ~1″ vs Moshier (e.g. the Moon), which is
+   negligible for judgment but available if you want full JPL-derived precision.
 
 If `KAIROS_SWIEPH=1` but the data files are unavailable, the engine logs a
 warning to **stderr** and gracefully falls back to Moshier. Missing files never
@@ -70,7 +84,8 @@ process start (see `engine/src/ephemeris.ts`).
 
 The engine covers **horary**, **transits**, **natal**, and **electional**
 (best-window search — scan a future window and rank candidate moments by
-classical electional rules). A chart-wheel web UI is still planned.
+classical electional rules). An interactive chart-wheel web UI ships in `web/`
+(`pnpm wheel`).
 
 ## Licensing note
 

@@ -93,7 +93,16 @@
     els.metaPlanets.textContent = c.planets ? String(c.planets.length) : "—";
 
     let extra = "";
-    if (result.horary) {
+    if (result.electional && Array.isArray(result.electional.topMoments)) {
+      const e = result.electional;
+      const best = e.topMoments[0];
+      if (best) {
+        extra = `Elected moment: ${best.datetimeLocal} — score ${best.score} ` +
+          `(of ${e.candidatesEvaluated} evaluated). ` +
+          `${(best.reasons || []).join("; ")}. ` +
+          `Chart below is this #1 moment.`;
+      }
+    } else if (result.horary) {
       const h = result.horary;
       extra = `Horary: querent ${h.querentSignificator} (house ` +
         `${h.querentSignificatorHouse}), quesited ${h.quesitedSignificator} ` +
@@ -143,6 +152,25 @@
       showError("Could not read file: " + file.name);
     };
     reader.readAsText(file);
+  }
+
+  /**
+   * Load a JSON ComputeResult from a URL (used by ?data=<path>, e.g. the
+   * `pnpm wheel` helper writes last-result.json and opens ?data=last-result.json).
+   */
+  function loadFromUrl(url) {
+    fetch(url)
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      })
+      .then(function (txt) {
+        els.json.value = txt;
+        handleRender();
+      })
+      .catch(function (e) {
+        showError("Could not load data from " + url + ": " + e.message);
+      });
   }
 
   function loadExample() {
@@ -206,9 +234,21 @@
       });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
+  function start() {
     init();
+    // Auto-load if a ?data=<path> query param is present (the wheel helper).
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const dataUrl = params.get("data");
+      if (dataUrl) loadFromUrl(dataUrl);
+    } catch (e) {
+      /* ignore malformed query strings */
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
   }
 })();

@@ -156,7 +156,7 @@ describe("searchElectionalMoments", () => {
 });
 
 describe("runCompute electional integration", () => {
-  it("returns an electional result and no chart", () => {
+  it("returns an electional result plus the chart of the #1 elected moment", () => {
     const result = runCompute({
       kind: "electional",
       quesitedHouse: 7,
@@ -165,9 +165,14 @@ describe("runCompute electional integration", () => {
       window: { startLocal: "2024-06-01T08:00:00", endLocal: "2024-06-01T20:00:00" },
     });
     expect(result.electional).toBeTruthy();
-    expect(result.chart).toBeUndefined();
     expect(result.electional!.candidatesEvaluated).toBe(13);
     expect(result.electional!.topMoments.length).toBeGreaterThan(0);
+    // The elected chart is attached and corresponds to the top moment.
+    expect(result.chart).toBeTruthy();
+    expect(result.chart!.kind).toBe("electional");
+    expect(result.chart!.planets.length).toBe(11);
+    const best = result.electional!.topMoments[0];
+    expect(result.chart!.utc.slice(0, 4)).toBe(best.datetimeLocal.slice(0, 4));
   });
 
   it("throws when an electional request is missing the window", () => {

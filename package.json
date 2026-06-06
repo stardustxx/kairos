@@ -6,7 +6,9 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "compute": "tsx engine/src/cli.ts"
+    "compute": "tsx engine/src/cli.ts",
+    "wheel": "tsx engine/src/wheel.ts",
+    "ephe:install": "tsx engine/src/install-ephe.ts"
   },
   "keywords": [],
   "author": "",
