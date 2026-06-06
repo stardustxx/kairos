@@ -75,6 +75,7 @@ export function buildChart(
   // proximity (combust/cazimi/under-beams) is geometric — attach to every body
   // except the Sun itself.
   for (const p of planets) {
+    p.house = houseOf(p.longitude, houses.cusps);
     if (CLASSICAL.has(p.name)) {
       p.dignities = computeDignities(p.name, p.longitude, sect);
     }

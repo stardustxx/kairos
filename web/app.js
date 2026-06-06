@@ -160,6 +160,84 @@
     window.KairosChart.renderChart(els.chart, lastResult, currentOptions());
   }
 
+  // ---- Details tables ------------------------------------------------------
+
+  const PLANET_GLYPHS = {
+    Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀", Mars: "♂", Jupiter: "♃",
+    Saturn: "♄", Uranus: "♅", Neptune: "♆", Pluto: "♇", Node: "☊",
+  };
+  const ASPECT_GLYPHS = {
+    conjunction: "☌", sextile: "⚹", square: "□", trine: "△", opposition: "☍",
+  };
+
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;";
+    });
+  }
+  function cell(v, cls) {
+    return `<td${cls ? ` class="${cls}"` : ""}>${esc(v)}</td>`;
+  }
+  function table(headers, rows) {
+    const thead = "<tr>" + headers.map(function (h) { return `<th>${esc(h)}</th>`; }).join("") + "</tr>";
+    return `<table class="data-table"><thead>${thead}</thead><tbody>${rows.join("")}</tbody></table>`;
+  }
+
+  function buildPositionsTable(chart) {
+    const rows = chart.planets.map(function (p) {
+      const glyph = PLANET_GLYPHS[p.name] || "";
+      const pos = `${Math.floor(p.degInSign)}° ${p.sign}`;
+      const dig = p.dignities
+        ? `${p.dignities.score >= 0 ? "+" : ""}${p.dignities.score}`
+        : "—";
+      const digCls = p.dignities ? (p.dignities.score > 0 ? "pos" : p.dignities.score < 0 ? "neg" : "") : "";
+      const cond = (p.sunProximity && p.sunProximity.state !== "clear") ? p.sunProximity.state : "";
+      const condCls = cond === "cazimi" ? "pos" : cond ? "neg" : "";
+      return "<tr>" +
+        cell(`${glyph} ${p.name}`.trim()) +
+        cell(pos) +
+        cell(p.house != null ? p.house : "—", "num") +
+        cell(p.retrograde ? "℞" : "", "retro") +
+        cell(dig, "num " + digCls) +
+        cell(cond, condCls) +
+        "</tr>";
+    });
+    if (chart.partOfFortune) {
+      const pf = chart.partOfFortune;
+      rows.push("<tr class=\"fortune-row\">" +
+        cell("⊕ Fortune") +
+        cell(`${Math.floor(pf.degInSign)}° ${pf.sign}`) +
+        cell(pf.house != null ? pf.house : "—", "num") +
+        cell("") + cell("—", "num") + cell("") + "</tr>");
+    }
+    return table(["Body", "Position", "Hse", "℞", "Dignity", "Condition"], rows);
+  }
+
+  function buildAspectsTable(chart) {
+    const aspects = (chart.aspects || []).slice().sort(function (a, b) { return a.orb - b.orb; });
+    if (!aspects.length) return "<p class=\"empty\">No major aspects in orb.</p>";
+    const rows = aspects.map(function (a) {
+      const g = ASPECT_GLYPHS[a.type] || "";
+      const perfects = a.perfectsAtUtc ? String(a.perfectsAtUtc).slice(0, 10) : "—";
+      return "<tr>" +
+        cell(`${a.a} ${g} ${a.b}`) +
+        cell(a.type) +
+        cell(`${a.orb.toFixed(1)}°`, "num") +
+        cell(a.applying ? "applying" : "separating", a.applying ? "pos" : "") +
+        cell(perfects, "num") +
+        "</tr>";
+    });
+    return table(["Bodies", "Aspect", "Orb", "Motion", "Perfects"], rows);
+  }
+
+  function renderDetails(result) {
+    const chart = result.chart;
+    if (!chart) { els.details.hidden = true; return; }
+    els.positionsTable.innerHTML = buildPositionsTable(chart);
+    els.aspectsTable.innerHTML = buildAspectsTable(chart);
+    els.details.hidden = !els.toggleDetails.checked;
+  }
+
   function handleRender() {
     showError("");
     let data;
@@ -177,6 +255,7 @@
     lastResult = data;
     renderMetadata(data);
     draw();
+    renderDetails(data);
   }
 
   function handleFile(file) {
@@ -250,6 +329,10 @@
     els.toggleRetrograde = $("toggle-retrograde");
     els.toggleCusps = $("toggle-cusps");
     els.toggleDegrees = $("toggle-degrees");
+    els.toggleDetails = $("toggle-details");
+    els.details = $("details");
+    els.positionsTable = $("positions-table");
+    els.aspectsTable = $("aspects-table");
 
     els.render.addEventListener("click", handleRender);
     els.example.addEventListener("click", loadExample);
@@ -258,6 +341,7 @@
       lastResult = null;
       showError("");
       els.metadata.hidden = true;
+      els.details.hidden = true;
       window.KairosChart.clearChart(els.chart);
     });
 
@@ -270,6 +354,9 @@
       .forEach(function (t) {
         t.addEventListener("change", draw);
       });
+    els.toggleDetails.addEventListener("change", function () {
+      els.details.hidden = !(els.toggleDetails.checked && lastResult);
+    });
   }
 
   function start() {

@@ -85,5 +85,10 @@ describe("buildChart enrichment", () => {
     expect(typeof venus.dignities!.score).toBe("number");
     const pluto = chart.planets.find((p) => p.name === "Pluto")!;
     expect(pluto.dignities).toBeUndefined();
+    // Every body gets a house placement (1..12).
+    for (const p of chart.planets) {
+      expect(p.house).toBeGreaterThanOrEqual(1);
+      expect(p.house).toBeLessThanOrEqual(12);
+    }
   });
 });

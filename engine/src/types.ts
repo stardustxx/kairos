@@ -107,6 +107,9 @@ export interface PlanetPosition {
   /** Relationship to the Sun's rays (cazimi/combust/under-beams/clear). Attached
    *  by buildChart for every body except the Sun itself. */
   sunProximity?: SunProximity;
+  /** House (1..12) this body occupies. Attached by buildChart (needs houses);
+   *  absent on bare position lists. */
+  house?: number;
 }
 
 /** The Part of Fortune (Lot of Fortune) — a derived sensitive point. */

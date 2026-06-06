@@ -47,6 +47,7 @@
         <label><input id="toggle-retrograde" type="checkbox" checked /> Retrograde (℞)</label>
         <label><input id="toggle-cusps" type="checkbox" checked /> House cusps</label>
         <label><input id="toggle-degrees" type="checkbox" checked /> Degree labels</label>
+        <label><input id="toggle-details" type="checkbox" checked /> Details tables</label>
       </fieldset>
 
       <div id="metadata" class="metadata" hidden>
@@ -85,6 +86,19 @@
       ></svg>
     </section>
   </main>
+
+  <section id="details" class="panel details-panel" aria-label="Chart details" hidden>
+    <div class="details-grid">
+      <div class="details-block">
+        <h2>Positions &amp; dignities</h2>
+        <div id="positions-table"></div>
+      </div>
+      <div class="details-block">
+        <h2>Aspects</h2>
+        <div id="aspects-table"></div>
+      </div>
+    </div>
+  </section>
 
   <footer class="app-footer">
     <p>
