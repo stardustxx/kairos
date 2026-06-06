@@ -110,6 +110,80 @@
     return utc;
   }
 
+  // Jargon worth a tooltip in the verdict reasons.
+  const GLOSSARY = {
+    "void of course": "The Moon makes no further major aspect before leaving its sign — classically, 'nothing comes of the matter.'",
+    combust: "Within ~8.5° of the Sun — the planet is burnt, hidden, weakened.",
+    cazimi: "Within ~17' of the Sun's exact degree — the planet is strengthened, 'in the heart.'",
+    "under the sun's beams": "Within ~15° of the Sun — moderately weakened.",
+    peregrine: "A planet with no essential dignity — wandering, without resources.",
+    "translation of light": "A faster planet carries light between the two significators, perfecting the matter indirectly.",
+    "collection of light": "A heavier planet both significators apply to, gathering their light.",
+    reception: "Each significator sits in a sign the other rules or exalts — goodwill that can perfect a matter.",
+    detriment: "A planet in the sign opposite its rulership — weakened.",
+    fall: "A planet in the sign opposite its exaltation — weakened.",
+  };
+
+  /** Wrap known glossary terms in a tooltip span (HTML). Input is plain text. */
+  function glossarize(text) {
+    let out = esc(text);
+    for (const term in GLOSSARY) {
+      const re = new RegExp("\\b(" + term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")\\b", "i");
+      out = out.replace(re, '<span class="term" title="' + esc(GLOSSARY[term]) + '">$1</span>');
+    }
+    return out;
+  }
+
+  /** Populate the dedicated verdict block for horary / electional; hide otherwise. */
+  function renderVerdict(result) {
+    const v = els.verdict;
+    if (result.horary) {
+      const h = result.horary;
+      const lean = h.lean || "uncertain";
+      els.verdictLean.textContent = lean.charAt(0).toUpperCase() + lean.slice(1);
+      els.verdictLean.className = "verdict-lean " + lean;
+      els.verdictSub.textContent =
+        `Querent ${h.querentSignificator} (house ${h.querentSignificatorHouse}) · ` +
+        `quesited ${h.quesitedSignificator} (house ${h.quesitedSignificatorHouse})`;
+      const conf = (h.confidence || "low");
+      els.verdictConfidence.className = "confidence-chip " + conf;
+      els.verdictConfidence.innerHTML = conf + " confidence " +
+        '<span class="score">' + (h.score >= 0 ? "+" : "") + h.score + "</span>";
+      els.verdictConfidence.hidden = false;
+      const reasons = Array.isArray(h.testimonies) ? h.testimonies : [];
+      els.verdictReasons.innerHTML = reasons.map(function (t) {
+        const cls = /\(-\d/.test(t) ? "neg" : /\(\+\d/.test(t) ? "pos" : "";
+        return '<li class="' + cls + '">' + glossarize(t) + "</li>";
+      }).join("");
+      v.hidden = false;
+    } else if (result.electional && result.electional.topMoments && result.electional.topMoments[0]) {
+      const e = result.electional;
+      const best = e.topMoments[0];
+      els.verdictLean.textContent = best.datetimeLocal.replace("T", "  ");
+      els.verdictLean.className = "verdict-lean " +
+        (best.score > e.averageScore + 15 ? "favorable" : best.score < e.averageScore ? "unfavorable" : "uncertain");
+      els.verdictSub.textContent =
+        `Best of ${e.candidatesEvaluated} moments · score ${best.score} ` +
+        `(window avg ${e.averageScore}, range ${e.scoreRange.min}…${e.scoreRange.max})`;
+      els.verdictConfidence.className = "confidence-chip " +
+        (best.score >= 90 ? "high" : best.score >= 60 ? "medium" : "low");
+      els.verdictConfidence.innerHTML = 'score <span class="score">' + best.score + "</span>";
+      els.verdictConfidence.hidden = false;
+      const reasons = (best.reasons || []).slice();
+      const alts = e.topMoments.slice(1, 4)
+        .map(function (m) { return m.datetimeLocal + " (" + m.score + ")"; });
+      els.verdictReasons.innerHTML =
+        reasons.map(function (t) {
+          const cls = /-\d/.test(t) ? "neg" : /\+\d/.test(t) ? "pos" : "";
+          return '<li class="' + cls + '">' + glossarize(t) + "</li>";
+        }).join("") +
+        (alts.length ? '<li>Alternatives: ' + esc(alts.join(", ")) + "</li>" : "");
+      v.hidden = false;
+    } else {
+      v.hidden = true;
+    }
+  }
+
   function renderMetadata(result) {
     const c = result.chart;
     els.metaKind.textContent = c.kind || "—";
@@ -149,50 +223,11 @@
       parts.push(s);
     }
 
-    let extra = "";
-    if (result.electional && Array.isArray(result.electional.topMoments)) {
-      const e = result.electional;
-      const best = e.topMoments[0];
-      if (best) {
-        let ctx = `Elected moment: ${best.datetimeLocal} — score ${best.score}`;
-        if (typeof e.averageScore === "number" && e.scoreRange) {
-          ctx += ` (best of ${e.candidatesEvaluated}; window avg ${e.averageScore}, ` +
-            `range ${e.scoreRange.min}…${e.scoreRange.max})`;
-        } else {
-          ctx += ` (of ${e.candidatesEvaluated} evaluated)`;
-        }
-        ctx += `. ${(best.reasons || []).join("; ")}.`;
-        // Runner-up alternatives, for context on how close the field is.
-        const alts = e.topMoments.slice(1, 4)
-          .map(function (m) { return `${m.datetimeLocal} (${m.score})`; });
-        if (alts.length) ctx += ` Alternatives: ${alts.join(", ")}.`;
-        ctx += ` Chart below is the #1 moment.`;
-        extra = ctx;
-      }
-    } else if (result.horary) {
-      const h = result.horary;
-      const lean = h.lean ? h.lean.charAt(0).toUpperCase() + h.lean.slice(1) : "—";
-      const recv = h.significatorReception
-        ? ` Reception: ${h.significatorReception.kind}.`
-        : "";
-      const dig = (typeof h.querentSignificatorDignity === "number")
-        ? ` Significator dignity: ${h.querentSignificator} ${h.querentSignificatorDignity >= 0 ? "+" : ""}${h.querentSignificatorDignity}, ` +
-          `${h.quesitedSignificator} ${h.quesitedSignificatorDignity >= 0 ? "+" : ""}${h.quesitedSignificatorDignity}.`
-        : "";
-      extra = `Horary: ${lean}` +
-        (typeof h.score === "number" ? ` (score ${h.score}, ${h.confidence} confidence)` : "") +
-        `. Querent ${h.querentSignificator} (house ${h.querentSignificatorHouse}), ` +
-        `quesited ${h.quesitedSignificator} (house ${h.quesitedSignificatorHouse}). ` +
-        `Moon void: ${h.moonVoidOfCourse ? "yes" : "no"}.` + recv + dig +
-        (h.translationOfLight ? ` Translation by ${h.translationOfLight.translator}.` : "") +
-        (h.collectionOfLight ? ` Collection by ${h.collectionOfLight.collector}.` : "") +
-        (Array.isArray(h.testimonies) && h.testimonies.length
-          ? " Testimonies: " + h.testimonies.join("; ") + "."
-          : "");
-    } else if (result.transitAspects) {
-      extra = `Transit aspects to natal: ${result.transitAspects.length}.`;
+    // The horary/electional verdict now lives in the dedicated #verdict block;
+    // metadata keeps only neutral chart context.
+    if (result.transitAspects) {
+      parts.push(`Transit aspects to natal: ${result.transitAspects.length}.`);
     }
-    if (extra) parts.push(extra);
     const combined = parts.join(" ");
     els.metaExtra.textContent = combined;
     els.metaExtra.hidden = !combined;
@@ -239,7 +274,7 @@
       const digCls = p.dignities ? (p.dignities.score > 0 ? "pos" : p.dignities.score < 0 ? "neg" : "") : "";
       const cond = (p.sunProximity && p.sunProximity.state !== "clear") ? p.sunProximity.state : "";
       const condCls = cond === "cazimi" ? "pos" : cond ? "neg" : "";
-      return "<tr>" +
+      return `<tr data-planet="${esc(p.name)}">` +
         cell(`${glyph} ${p.name}`.trim()) +
         cell(pos) +
         cell(p.house != null ? p.house : "—", "num") +
@@ -265,7 +300,7 @@
     const rows = aspects.map(function (a) {
       const g = ASPECT_GLYPHS[a.type] || "";
       const perfects = a.perfectsAtUtc ? String(a.perfectsAtUtc).slice(0, 10) : "—";
-      return "<tr>" +
+      return `<tr data-a="${esc(a.a)}" data-b="${esc(a.b)}">` +
         cell(`${a.a} ${g} ${a.b}`) +
         cell(a.type) +
         cell(`${a.orb.toFixed(1)}°`, "num") +
@@ -283,6 +318,38 @@
     els.positionsTable.innerHTML = buildPositionsTable(chart);
     els.aspectsTable.innerHTML = buildAspectsTable(chart);
     els.details.hidden = !els.toggleDetails.checked;
+    applySelection();
+  }
+
+  // ---- Linked selection: click a planet (wheel or table) to focus it --------
+
+  let selectedPlanet = null;
+
+  function applySelection() {
+    const svg = els.chart;
+    const has = !!selectedPlanet;
+    svg.classList.toggle("has-selection", has);
+    svg.querySelectorAll(".planet-glyph").forEach(function (g) {
+      g.classList.toggle("is-active", has && g.getAttribute("data-planet") === selectedPlanet);
+    });
+    svg.querySelectorAll(".aspect-line").forEach(function (l) {
+      const on = has && (l.getAttribute("data-a") === selectedPlanet || l.getAttribute("data-b") === selectedPlanet);
+      l.classList.toggle("is-active", on);
+    });
+    // Tables: highlight the selected planet's rows.
+    els.details.querySelectorAll("tr[data-planet]").forEach(function (tr) {
+      tr.classList.toggle("row-active", has && tr.getAttribute("data-planet") === selectedPlanet);
+    });
+    els.details.querySelectorAll("tr[data-a]").forEach(function (tr) {
+      const on = has && (tr.getAttribute("data-a") === selectedPlanet || tr.getAttribute("data-b") === selectedPlanet);
+      tr.classList.toggle("row-active", on);
+      tr.classList.toggle("row-dim", has && !on);
+    });
+  }
+
+  function selectPlanet(name) {
+    selectedPlanet = selectedPlanet === name ? null : name;
+    applySelection();
   }
 
   function handleRender() {
@@ -300,11 +367,13 @@
       return;
     }
     lastResult = data;
+    selectedPlanet = null;
     // Reset to the as-cast view, and reveal the switch only when relocation exists.
     viewMode = "natal";
     const hasReloc = !!(data.relocation && data.relocation.chart);
     els.viewSwitch.hidden = !hasReloc;
     if (hasReloc) els.chartView.value = "natal";
+    renderVerdict(data);
     renderMetadata(data);
     draw();
     renderDetails();
@@ -387,6 +456,11 @@
     els.aspectsTable = $("aspects-table");
     els.viewSwitch = $("view-switch");
     els.chartView = $("chart-view");
+    els.verdict = $("verdict");
+    els.verdictLean = $("verdict-lean");
+    els.verdictSub = $("verdict-sub");
+    els.verdictConfidence = $("verdict-confidence");
+    els.verdictReasons = $("verdict-reasons");
 
     els.render.addEventListener("click", handleRender);
     els.example.addEventListener("click", loadExample);
@@ -397,6 +471,7 @@
       els.metadata.hidden = true;
       els.details.hidden = true;
       els.viewSwitch.hidden = true;
+      els.verdict.hidden = true;
       viewMode = "natal";
       window.KairosChart.clearChart(els.chart);
     });
@@ -419,6 +494,16 @@
       if (lastResult) renderMetadata(lastResult);
       draw();
       renderDetails();
+    });
+
+    // Linked selection: click a planet glyph in the wheel, or a planet row.
+    els.chart.addEventListener("click", function (e) {
+      const g = e.target.closest("[data-planet]");
+      if (g) selectPlanet(g.getAttribute("data-planet"));
+    });
+    els.details.addEventListener("click", function (e) {
+      const tr = e.target.closest("tr[data-planet]");
+      if (tr) selectPlanet(tr.getAttribute("data-planet"));
     });
   }
 

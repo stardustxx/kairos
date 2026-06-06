@@ -288,6 +288,7 @@
       const glyphEl = text(glyph, {
         x: pos.x, y: pos.y, class: "planet-glyph",
         "text-anchor": "middle", "dominant-baseline": "central",
+        "data-planet": p.name, style: "cursor: pointer;",
       });
       const titleEl = el("title");
       titleEl.textContent =
@@ -371,10 +372,16 @@
       const pa = degreesToXY(A.longitude, R.aspectHub, ascendant);
       const pb = degreesToXY(B.longitude, R.aspectHub, ascendant);
       const cls = ASPECT_CLASS[asp.type] || "aspect-other";
+      // Tightness -> line weight: a near-exact aspect (orb ~0) is bold; a wide
+      // one is thin. Encodes strength without relying on colour.
+      const width = Math.max(0.7, 2.5 - (asp.orb || 0) * 0.2).toFixed(2);
 
       const line = el("line", {
         x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y,
         class: "aspect-line " + cls + (asp.applying ? " aspect-applying" : ""),
+        "stroke-width": width,
+        "data-a": asp.a,
+        "data-b": asp.b,
       });
       const titleEl = el("title");
       titleEl.textContent =
