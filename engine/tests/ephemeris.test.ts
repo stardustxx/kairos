@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sweph from "sweph";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveCalcFlags, resolveHouseFlags } from "../src/ephemeris.js";
 
 // NOTE: the resolver intentionally logs to stderr (console.error) when SWIEPH

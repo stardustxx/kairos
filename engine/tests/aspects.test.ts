@@ -1,9 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { DateTime } from "luxon";
+import { describe, expect, it } from "vitest";
 import { computeAspects, computeCrossAspects } from "../src/aspects.js";
 import { buildChart } from "../src/chart.js";
-import { resolveJulianDay, julianDayToUtcString } from "../src/time.js";
 import { computePositions } from "../src/positions.js";
-import { DateTime } from "luxon";
+import { julianDayToUtcString, resolveJulianDay } from "../src/time.js";
 import type { PlanetPosition } from "../src/types.js";
 
 function p(name: string, longitude: number, speed: number): PlanetPosition {

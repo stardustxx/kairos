@@ -9,14 +9,15 @@
  * opens http://localhost:<port>/?data=last-result.json (the web app auto-loads
  * that file). Leave it running; Ctrl+C to stop.
  */
-import { createServer } from "node:http";
-import { readFile, writeFile } from "node:fs/promises";
-import { readFileSync } from "node:fs";
-import { join, extname, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
+
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import { extname, join, normalize } from "node:path";
+import { fileURLToPath } from "node:url";
 import { runCompute } from "./cli.js";
-import type { ComputeRequest } from "./types.js";
+import type { ComputeRequest, ComputeResult } from "./types.js";
 
 const WEB_DIR = join(fileURLToPath(import.meta.url), "..", "..", "..", "web");
 const START_PORT = 8765;
@@ -97,7 +98,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  let result;
+  let result: ComputeResult;
   try {
     const req = JSON.parse(raw) as ComputeRequest;
     result = runCompute(req);

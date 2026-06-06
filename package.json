@@ -1,18 +1,41 @@
 {
   "name": "kairos",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.1.0",
+  "description": "Astrology-based decision support: a Swiss Ephemeris engine that computes accurate charts (horary, transit, natal, electional) with classical dignities and returns calibrated verdicts.",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "skill",
+    "web"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "lint": "biome check engine",
+    "lint:fix": "biome check --write engine",
     "compute": "tsx engine/src/cli.ts",
     "wheel": "tsx engine/src/wheel.ts",
     "ephe:install": "tsx engine/src/install-ephe.ts"
   },
-  "keywords": [],
+  "keywords": [
+    "astrology",
+    "swiss-ephemeris",
+    "horary",
+    "electional",
+    "decision-support"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "AGPL-3.0-or-later",
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
@@ -20,13 +43,13 @@
       "onFail": "download"
     }
   },
-  "type": "module",
   "dependencies": {
     "luxon": "^3.7.2",
     "sweph": "2.10.3-5",
     "tz-lookup": "^6.1.25"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
     "@types/luxon": "^3.7.1",
     "@types/node": "^25.9.1",
     "tsx": "^4.22.4",

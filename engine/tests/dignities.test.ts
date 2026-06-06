@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { computeDignities, receptionBetween } from "../src/dignities.js";
+import { describe, expect, it } from "vitest";
 import { buildChart } from "../src/chart.js";
+import { computeDignities, receptionBetween } from "../src/dignities.js";
 
 // Longitude helper: sign index (0=Aries) * 30 + degrees.
 function lon(signIndex: number, deg: number): number {

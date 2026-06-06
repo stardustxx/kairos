@@ -1,9 +1,9 @@
 import { DateTime } from "luxon";
-import { SIGN_RULER, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
-import { buildChart } from "./chart.js";
 import { computeAspects } from "./aspects.js";
-import { houseOf } from "./houses.js";
+import { buildChart } from "./chart.js";
+import { DEGREES_PER_SIGN, SIGN_COUNT, SIGN_RULER } from "./constants.js";
 import { moonVoidStatus } from "./horary.js";
+import { houseOf } from "./houses.js";
 import type {
   Aspect,
   Chart,

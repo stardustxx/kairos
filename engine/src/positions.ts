@@ -1,5 +1,5 @@
 import sweph from "sweph";
-import { PLANETS, SIGNS, CALC_FLAGS, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
+import { CALC_FLAGS, DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGNS } from "./constants.js";
 import type { PlanetPosition } from "./types.js";
 
 /**

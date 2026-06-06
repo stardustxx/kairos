@@ -1,13 +1,15 @@
 import { readFileSync } from "node:fs";
+import { computeCrossAspects } from "./aspects.js";
 import { buildChart, relocateChart } from "./chart.js";
+import { searchElectionalMoments } from "./electional.js";
+import { judgeHorary } from "./horary.js";
 import { computePositions } from "./positions.js";
 import { resolveJulianDay } from "./time.js";
-import { computeCrossAspects } from "./aspects.js";
-import { judgeHorary } from "./horary.js";
-import { searchElectionalMoments } from "./electional.js";
 import type { ComputeRequest, ComputeResult } from "./types.js";
+import { validateRequest } from "./validate.js";
 
 export function runCompute(req: ComputeRequest): ComputeResult {
+  validateRequest(req);
   // Electional is window-based: it has no single chart, so handle it first.
   if (req.kind === "electional") {
     if (!req.window) throw new Error("electional request requires `window`");

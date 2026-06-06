@@ -1,10 +1,10 @@
-import { resolveJulianDay } from "./time.js";
-import { computePositions } from "./positions.js";
-import { computeHouses, houseOf } from "./houses.js";
 import { computeAspects } from "./aspects.js";
-import { computeDignities } from "./dignities.js";
 import { sunProximity } from "./conditions.js";
-import { PLANETS, SIGNS, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
+import { DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGNS } from "./constants.js";
+import { computeDignities } from "./dignities.js";
+import { computeHouses, houseOf } from "./houses.js";
+import { computePositions } from "./positions.js";
+import { resolveJulianDay } from "./time.js";
 import type { Chart, ChartKind, MomentInput, PartOfFortune } from "./types.js";
 
 const CLASSICAL = new Set(PLANETS.filter((d) => d.classical).map((d) => d.name));

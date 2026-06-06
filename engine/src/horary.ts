@@ -1,7 +1,7 @@
-import { SIGN_RULER, PLANETS, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
 import { computeAspects } from "./aspects.js";
-import { houseOf } from "./houses.js";
+import { DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGN_RULER } from "./constants.js";
 import { receptionBetween } from "./dignities.js";
+import { houseOf } from "./houses.js";
 import type {
   Aspect,
   Chart,

@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { sunProximity } from "../src/conditions.js";
+import { describe, expect, it } from "vitest";
 import { buildChart } from "../src/chart.js";
+import { sunProximity } from "../src/conditions.js";
 
 describe("sunProximity", () => {
   it("classifies cazimi within ~17 arcminutes", () => {

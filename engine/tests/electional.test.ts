@@ -1,12 +1,12 @@
-import { describe, it, expect } from "vitest";
-import {
-  scoreElectionalMoment,
-  findSignificators,
-  evaluateAspectQuality,
-  searchElectionalMoments,
-} from "../src/electional.js";
+import { describe, expect, it } from "vitest";
 import { buildChart } from "../src/chart.js";
 import { runCompute } from "../src/cli.js";
+import {
+  evaluateAspectQuality,
+  findSignificators,
+  scoreElectionalMoment,
+  searchElectionalMoments,
+} from "../src/electional.js";
 import type { Aspect, MomentInput } from "../src/types.js";
 
 // Location without a datetime; the search/chart helpers supply datetimeLocal.

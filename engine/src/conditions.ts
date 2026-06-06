@@ -5,7 +5,7 @@
  * "under the beams" within ~15°, but exactly in the Sun's heart (~17 arcminutes)
  * it is cazimi — strengthened and protected instead.
  */
-import type { SunProximity, SolarPhase } from "./types.js";
+import type { SolarPhase, SunProximity } from "./types.js";
 
 const CAZIMI_DEG = 17 / 60; // 17 arcminutes ≈ 0.2833°
 const COMBUST_DEG = 8.5;

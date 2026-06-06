@@ -9,7 +9,7 @@
  * triplicities (day/night rulers), Egyptian terms (bounds), and Chaldean faces
  * (decans).
  */
-import { SIGN_RULER, SIGNS, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
+import { DEGREES_PER_SIGN, SIGN_COUNT, SIGN_RULER, SIGNS } from "./constants.js";
 import type { PlanetDignities, Reception } from "./types.js";
 
 // Lilly point values.
