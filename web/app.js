@@ -109,10 +109,20 @@
       const e = result.electional;
       const best = e.topMoments[0];
       if (best) {
-        extra = `Elected moment: ${best.datetimeLocal} — score ${best.score} ` +
-          `(of ${e.candidatesEvaluated} evaluated). ` +
-          `${(best.reasons || []).join("; ")}. ` +
-          `Chart below is this #1 moment.`;
+        let ctx = `Elected moment: ${best.datetimeLocal} — score ${best.score}`;
+        if (typeof e.averageScore === "number" && e.scoreRange) {
+          ctx += ` (best of ${e.candidatesEvaluated}; window avg ${e.averageScore}, ` +
+            `range ${e.scoreRange.min}…${e.scoreRange.max})`;
+        } else {
+          ctx += ` (of ${e.candidatesEvaluated} evaluated)`;
+        }
+        ctx += `. ${(best.reasons || []).join("; ")}.`;
+        // Runner-up alternatives, for context on how close the field is.
+        const alts = e.topMoments.slice(1, 4)
+          .map(function (m) { return `${m.datetimeLocal} (${m.score})`; });
+        if (alts.length) ctx += ` Alternatives: ${alts.join(", ")}.`;
+        ctx += ` Chart below is the #1 moment.`;
+        extra = ctx;
       }
     } else if (result.horary) {
       const h = result.horary;

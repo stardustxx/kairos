@@ -62,6 +62,20 @@ export interface ElectionalResult {
   topMoments: ElectionalCandidate[];
   /** Total number of moments scanned. */
   candidatesEvaluated: number;
+  /** Mean score across all scanned candidates — context for how good the best
+   *  moment is relative to the window as a whole. */
+  averageScore: number;
+  /** Lowest and highest score seen across the window. */
+  scoreRange: { min: number; max: number };
+}
+
+/** A planet's relationship to the Sun's rays (an accidental condition). */
+export type SolarPhase = "cazimi" | "combust" | "under-beams" | "clear";
+
+export interface SunProximity {
+  state: SolarPhase;
+  /** Angular distance from the Sun, in degrees (0..180). */
+  distanceDeg: number;
 }
 
 /** A planet's essential dignity state at its position (classical Lilly points). */
@@ -90,6 +104,9 @@ export interface PlanetPosition {
   /** Essential dignity state. Attached by buildChart (needs chart sect); absent
    *  on bare position lists (e.g. transit natal-side planets). */
   dignities?: PlanetDignities;
+  /** Relationship to the Sun's rays (cazimi/combust/under-beams/clear). Attached
+   *  by buildChart for every body except the Sun itself. */
+  sunProximity?: SunProximity;
 }
 
 /** The Part of Fortune (Lot of Fortune) — a derived sensitive point. */

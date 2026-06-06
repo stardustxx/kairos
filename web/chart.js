@@ -296,6 +296,9 @@
         (p.dignities
           ? ` — dignity ${p.dignities.score >= 0 ? "+" : ""}${p.dignities.score}` +
             (p.dignities.labels.length ? ` (${p.dignities.labels.join(", ")})` : "")
+          : "") +
+        (p.sunProximity && p.sunProximity.state !== "clear"
+          ? ` — ${p.sunProximity.state}`
           : "");
       glyphEl.appendChild(titleEl);
       g.appendChild(glyphEl);

@@ -3,6 +3,7 @@ import { computePositions } from "./positions.js";
 import { computeHouses, houseOf } from "./houses.js";
 import { computeAspects } from "./aspects.js";
 import { computeDignities } from "./dignities.js";
+import { sunProximity } from "./conditions.js";
 import { PLANETS, SIGNS, DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
 import type { Chart, ChartKind, MomentInput, PartOfFortune } from "./types.js";
 
@@ -70,10 +71,15 @@ export function buildChart(
   const sect: "day" | "night" = sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
 
   // Attach essential dignities to the seven classical planets (the only bodies
-  // with traditional rulerships); outer points have no essential dignity.
+  // with traditional rulerships); outer points have no essential dignity. Solar
+  // proximity (combust/cazimi/under-beams) is geometric — attach to every body
+  // except the Sun itself.
   for (const p of planets) {
     if (CLASSICAL.has(p.name)) {
       p.dignities = computeDignities(p.name, p.longitude, sect);
+    }
+    if (p.name !== "Sun") {
+      p.sunProximity = sunProximity(p.longitude, sun.longitude);
     }
   }
 

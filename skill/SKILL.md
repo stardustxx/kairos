@@ -89,6 +89,10 @@ Use the JSON it prints. Do not alter the numbers.
 - Each classical planet has `dignities` (domicile/exaltation/triplicity/term/face,
   with a net `score` and `labels`). Use it to say whether a relevant planet is
   **strong or compromised** — e.g. "Venus is in detriment, so her promise is weak."
+- Every body (except the Sun) has `sunProximity.state`: `combust` or
+  `under-beams` = burnt/hidden/weakened; `cazimi` = in the Sun's heart, strong;
+  `clear` = unafflicted. A combust significator is a real "it won't manifest"
+  caveat; call it out.
 
 **Horary:**
 - The engine now returns an **aggregated judgment** you should anchor on:
@@ -147,6 +151,10 @@ Use the JSON it prints. Do not alter the numbers.
   caveat to state.
 - `candidatesEvaluated` tells you how wide the search was; if the best score is
   still low/negative, say the window is unfavorable rather than overselling it.
+- `averageScore` and `scoreRange` (min/max across the whole window) put the top
+  pick in context: a top of 95 against an average of 27 is a genuinely standout
+  moment; a top of 10 against an average of 5 means the window is mediocre — say
+  so. Offer the 2nd/3rd `topMoments` as alternatives when their scores are close.
 
 ## Step 5 — Output (always this shape)
 

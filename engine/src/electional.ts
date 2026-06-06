@@ -243,5 +243,14 @@ export function searchElectionalMoments(
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_RESULTS);
 
-  return { topMoments, candidatesEvaluated: evaluated };
+  const scores = candidates.map((c) => c.score);
+  const averageScore = scores.length
+    ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length)
+    : 0;
+  const scoreRange = {
+    min: scores.length ? Math.min(...scores) : 0,
+    max: scores.length ? Math.max(...scores) : 0,
+  };
+
+  return { topMoments, candidatesEvaluated: evaluated, averageScore, scoreRange };
 }

@@ -119,6 +119,12 @@ describe("searchElectionalMoments", () => {
       expect(m.datetimeLocal).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
       expect(m.reasons.length).toBeGreaterThan(0);
     }
+    // Window context: average within the observed range, best == range.max.
+    expect(typeof result.averageScore).toBe("number");
+    expect(result.scoreRange.min).toBeLessThanOrEqual(result.scoreRange.max);
+    expect(result.averageScore).toBeGreaterThanOrEqual(result.scoreRange.min);
+    expect(result.averageScore).toBeLessThanOrEqual(result.scoreRange.max);
+    expect(result.topMoments[0].score).toBe(result.scoreRange.max);
   });
 
   it("throws on a non-positive step", () => {

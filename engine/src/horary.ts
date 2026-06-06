@@ -11,6 +11,7 @@ import type {
   Lean,
   PlanetPosition,
   Reception,
+  SolarPhase,
   TranslationOfLight,
 } from "./types.js";
 
@@ -98,6 +99,8 @@ function aggregateTestimony(args: {
   quesitedSig: string;
   querentDignity: number;
   quesitedDignity: number;
+  querentSolar: SolarPhase;
+  quesitedSolar: SolarPhase;
   moonVoid: boolean;
 }): { score: number; confidence: Confidence; lean: Lean; testimonies: string[] } {
   const t: string[] = [];
@@ -171,6 +174,23 @@ function aggregateTestimony(args: {
     } else if (dignity <= -5) {
       score -= 5;
       t.push(`${label} debilitated (dignity ${dignity}) (-5)`);
+    }
+  }
+
+  // Solar condition of each significator: combust = hidden/weak, cazimi = strong.
+  for (const [label, solar] of [
+    [`Querent significator ${args.querentSig}`, args.querentSolar],
+    [`Quesited significator ${args.quesitedSig}`, args.quesitedSolar],
+  ] as [string, SolarPhase][]) {
+    if (solar === "cazimi") {
+      score += 5;
+      t.push(`${label} cazimi — in the Sun's heart, greatly strengthened (+5)`);
+    } else if (solar === "combust") {
+      score -= 7;
+      t.push(`${label} combust the Sun — hidden/weakened (-7)`);
+    } else if (solar === "under-beams") {
+      score -= 3;
+      t.push(`${label} under the Sun's beams — weakened (-3)`);
     }
   }
 
@@ -279,6 +299,8 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     quesitedSig,
     querentDignity: querentSignificatorDignity,
     quesitedDignity: quesitedSignificatorDignity,
+    querentSolar: sigA?.sunProximity?.state ?? "clear",
+    quesitedSolar: sigB?.sunProximity?.state ?? "clear",
     moonVoid: moon.void,
   });
 
