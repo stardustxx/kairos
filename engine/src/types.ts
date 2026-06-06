@@ -46,6 +46,10 @@ export interface ComputeRequest {
   location?: Omit<MomentInput, "datetimeLocal"> & { datetimeLocal?: string };
   /** Optional for kind "electional". */
   significatorHints?: SignificatorHints;
+  /** Optional relocation: a place to recast the chart's houses/angles for, using
+   *  the same moment (e.g. a natal chart relocated to where you live now). Only
+   *  lat/lon (+ optional timezone/houseSystem) are used; datetime is ignored. */
+  relocation?: Omit<MomentInput, "datetimeLocal"> & { datetimeLocal?: string };
 }
 
 export interface ElectionalCandidate {
@@ -229,6 +233,25 @@ export interface HoraryJudgment {
   testimonies: string[];
 }
 
+/** A planet that occupies a different house when the chart is relocated. */
+export interface HouseShift {
+  planet: string;
+  /** House (1..12) at the original (e.g. birth) place. */
+  fromHouse: number;
+  /** House (1..12) at the relocation place. */
+  toHouse: number;
+}
+
+/** A chart recast for a different place (same moment, new houses/angles). */
+export interface RelocationResult {
+  location: { latitude: number; longitude: number };
+  /** The relocated chart: same planets/longitudes/aspects, but houses, sect,
+   *  Part of Fortune, and each planet's house recomputed for the new place. */
+  chart: Chart;
+  /** Planets that change house between the original place and the relocation. */
+  houseShifts: HouseShift[];
+}
+
 export interface ComputeResult {
   /** Present for chart-based kinds (natal/transit/horary); absent for electional. */
   chart?: Chart;
@@ -238,4 +261,6 @@ export interface ComputeResult {
   horary?: HoraryJudgment;
   /** Present only when kind is "electional". */
   electional?: ElectionalResult;
+  /** Present when the request supplied a `relocation` place. */
+  relocation?: RelocationResult;
 }

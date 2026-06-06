@@ -88,3 +88,39 @@ export function buildChart(
 
   return { kind, julianDayUt, utc, planets, houses, aspects, sect, partOfFortune: fortune };
 }
+
+/**
+ * Recast a chart's houses/angles for a different place, keeping the same moment
+ * (so the planets' longitudes and aspects are unchanged). Re-houses every body,
+ * recomputes sect, triplicity-dependent dignities, and the Part of Fortune for
+ * the new location. This is the classical "relocated chart."
+ */
+export function relocateChart(
+  chart: Chart,
+  latitude: number,
+  longitude: number,
+  houseSystem?: string,
+): Chart {
+  const houses = computeHouses(
+    chart.julianDayUt,
+    latitude,
+    longitude,
+    houseSystem ?? chart.houses.system,
+  );
+  const sun = chart.planets.find((p) => p.name === "Sun")!;
+  const moon = chart.planets.find((p) => p.name === "Moon")!;
+  const sunHouse = houseOf(sun.longitude, houses.cusps);
+  const sect: "day" | "night" = sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
+
+  const planets = chart.planets.map((p) => {
+    const np = { ...p };
+    np.house = houseOf(p.longitude, houses.cusps);
+    // Triplicity (and thus the dignity score) depends on sect, which can flip
+    // with relocation; sunProximity is geometric and is left untouched.
+    if (CLASSICAL.has(p.name)) np.dignities = computeDignities(p.name, p.longitude, sect);
+    return np;
+  });
+
+  const fortune = partOfFortune(houses.ascendant, sun.longitude, moon.longitude, sect, houses.cusps);
+  return { ...chart, planets, houses, sect, partOfFortune: fortune };
+}

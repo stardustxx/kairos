@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { buildChart } from "./chart.js";
+import { buildChart, relocateChart } from "./chart.js";
 import { computePositions } from "./positions.js";
 import { resolveJulianDay } from "./time.js";
 import { computeCrossAspects } from "./aspects.js";
@@ -62,6 +62,33 @@ export function runCompute(req: ComputeRequest): ComputeResult {
       throw new Error("horary request requires `quesitedHouse` (2..12)");
     }
     result.horary = judgeHorary(chart, req.quesitedHouse);
+  }
+
+  // Relocation: recast this chart's houses/angles for another place (same moment).
+  if (req.relocation) {
+    if (req.relocation.latitude == null || req.relocation.longitude == null) {
+      throw new Error("relocation requires `latitude` and `longitude`");
+    }
+    const relocated = relocateChart(
+      chart,
+      req.relocation.latitude,
+      req.relocation.longitude,
+      req.relocation.houseSystem,
+    );
+    const houseShifts = chart.planets
+      .map((p) => {
+        const rp = relocated.planets.find((q) => q.name === p.name)!;
+        return { planet: p.name, fromHouse: p.house!, toHouse: rp.house! };
+      })
+      .filter((s) => s.fromHouse !== s.toHouse);
+    result.relocation = {
+      location: {
+        latitude: req.relocation.latitude,
+        longitude: req.relocation.longitude,
+      },
+      chart: relocated,
+      houseShifts,
+    };
   }
 
   return result;

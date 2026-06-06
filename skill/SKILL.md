@@ -66,6 +66,14 @@ pnpm compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"<IS
 - For `transit`, also include a `"natal": { ...same shape... }` object.
 - `datetimeLocal` is local civil time WITHOUT an offset (e.g. `"2026-06-02T09:00:00"`).
 - Omit `timezone` to let the engine derive it from lat/lon.
+- **Relocation** (optional, mainly for `natal`/`transit`): add a
+  `"relocation": {"latitude":<lat>,"longitude":<lon>,"timezone":"<IANA>"}` to recast
+  the chart's houses/angles for where the person **lives now** (same birth moment,
+  so planet positions are unchanged — only the houses and Ascendant move). Use this
+  when someone was born one place but has lived elsewhere long-term. The result
+  gains a `relocation` block with the relocated `chart` and `houseShifts` (planets
+  that change house). In your answer, note material shifts — e.g. "born with the Sun
+  in the 9th, but living in Tokyo it relocates to your 1st house (identity)."
 
 For **electional**, the request shape is different — there's no single `moment`;
 instead pass a `window`, a `stepMinutes`, a `location`, and the `quesitedHouse`:

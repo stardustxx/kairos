@@ -87,8 +87,11 @@ The engine covers **horary**, **transits**, **natal**, and **electional**
 classical electional rules). Every chart also carries **essential dignities**
 (Lilly's domicile/exaltation/triplicity/term/face scoring), **sect**, and the
 **Part of Fortune**; horary judgments add **reception** and dignity-weighted
-significator strength on top of translation/collection of light. An interactive
-chart-wheel web UI ships in `web/` (`pnpm wheel`).
+significator strength on top of translation/collection of light. Charts can be
+**relocated** — pass a `relocation` place to recast the houses/angles for where
+someone lives now (same birth moment, planets unchanged, only the houses move). An
+interactive chart-wheel web UI ships in `web/` (`pnpm wheel`), with a
+Birthplace/Relocated view switch and detail tables.
 
 ## Licensing note
 

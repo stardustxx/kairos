@@ -11,9 +11,37 @@
   // The last successfully parsed + validated ComputeResult, kept so toggles can
   // re-render without re-parsing.
   let lastResult = null;
+  // Which chart the wheel/details show: "natal" (as-cast) or "relocated".
+  let viewMode = "natal";
+
+  /**
+   * The ComputeResult to render, accounting for the relocation view toggle:
+   * when "relocated" is selected and a relocation exists, substitute its chart.
+   */
+  function viewResult() {
+    if (
+      viewMode === "relocated" &&
+      lastResult &&
+      lastResult.relocation &&
+      lastResult.relocation.chart
+    ) {
+      return Object.assign({}, lastResult, { chart: lastResult.relocation.chart });
+    }
+    return lastResult;
+  }
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  const SIGNS = [
+    "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+    "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+  ];
+  /** Format an ecliptic longitude as "12° Gemini". */
+  function degSign(lon) {
+    const n = ((lon % 360) + 360) % 360;
+    return `${Math.floor(n % 30)}° ${SIGNS[Math.floor(n / 30) % 12]}`;
   }
 
   function currentOptions() {
@@ -104,6 +132,23 @@
       parts.push(ctx);
     }
 
+    // Relocation summary (uses the original chart's angles vs the relocated ones).
+    if (result.relocation && result.relocation.chart) {
+      const rel = result.relocation;
+      const loc = rel.location;
+      let s = `Relocation (${loc.latitude.toFixed(2)}, ${loc.longitude.toFixed(2)}): ` +
+        `Ascendant ${degSign(rel.chart.houses.ascendant)} ` +
+        `(birthplace ${degSign(result.chart.houses.ascendant)}).`;
+      const shifts = (rel.houseShifts || [])
+        .map(function (x) { return `${x.planet} ${x.fromHouse}→${x.toHouse}`; });
+      if (shifts.length) {
+        s += ` ${shifts.length} ${shifts.length === 1 ? "planet changes" : "planets change"} ` +
+          `house: ${shifts.join(", ")}.`;
+      }
+      s += ` Showing the ${viewMode === "relocated" ? "relocated" : "birthplace"} chart.`;
+      parts.push(s);
+    }
+
     let extra = "";
     if (result.electional && Array.isArray(result.electional.topMoments)) {
       const e = result.electional;
@@ -156,8 +201,9 @@
   }
 
   function draw() {
-    if (!lastResult) return;
-    window.KairosChart.renderChart(els.chart, lastResult, currentOptions());
+    const r = viewResult();
+    if (!r) return;
+    window.KairosChart.renderChart(els.chart, r, currentOptions());
   }
 
   // ---- Details tables ------------------------------------------------------
@@ -230,8 +276,9 @@
     return table(["Bodies", "Aspect", "Orb", "Motion", "Perfects"], rows);
   }
 
-  function renderDetails(result) {
-    const chart = result.chart;
+  function renderDetails() {
+    const r = viewResult();
+    const chart = r && r.chart;
     if (!chart) { els.details.hidden = true; return; }
     els.positionsTable.innerHTML = buildPositionsTable(chart);
     els.aspectsTable.innerHTML = buildAspectsTable(chart);
@@ -253,9 +300,14 @@
       return;
     }
     lastResult = data;
+    // Reset to the as-cast view, and reveal the switch only when relocation exists.
+    viewMode = "natal";
+    const hasReloc = !!(data.relocation && data.relocation.chart);
+    els.viewSwitch.hidden = !hasReloc;
+    if (hasReloc) els.chartView.value = "natal";
     renderMetadata(data);
     draw();
-    renderDetails(data);
+    renderDetails();
   }
 
   function handleFile(file) {
@@ -333,6 +385,8 @@
     els.details = $("details");
     els.positionsTable = $("positions-table");
     els.aspectsTable = $("aspects-table");
+    els.viewSwitch = $("view-switch");
+    els.chartView = $("chart-view");
 
     els.render.addEventListener("click", handleRender);
     els.example.addEventListener("click", loadExample);
@@ -342,6 +396,8 @@
       showError("");
       els.metadata.hidden = true;
       els.details.hidden = true;
+      els.viewSwitch.hidden = true;
+      viewMode = "natal";
       window.KairosChart.clearChart(els.chart);
     });
 
@@ -356,6 +412,13 @@
       });
     els.toggleDetails.addEventListener("change", function () {
       els.details.hidden = !(els.toggleDetails.checked && lastResult);
+    });
+
+    els.chartView.addEventListener("change", function () {
+      viewMode = els.chartView.value === "relocated" ? "relocated" : "natal";
+      if (lastResult) renderMetadata(lastResult);
+      draw();
+      renderDetails();
     });
   }
 
