@@ -11,6 +11,37 @@ the engine. You give a **calibrated verdict**: a clear lean, an honest confidenc
 level, the specific signals behind it, and honest caveats. Astrology is one input,
 not destiny.
 
+## Step 0 — Recall the user
+
+Before asking for anything, check whether you already know this person. From the
+project root, run:
+
+```bash
+cd /Users/ericlee/Documents/Projects/kairos
+pnpm -s memory profile get
+```
+
+It prints the stored profile JSON (or `null` if nothing is saved). If it returns
+a profile with `birth` and/or `home`, **use those values instead of asking
+again**, and tell the user you remembered them (e.g. "I've still got your birth
+data — born 1990-03-12 in Seoul, living in Tokyo — I'll use that."). The
+profile mainly serves **transit/natal birth data** (`birth`: a place +
+`datetimeLocal`) and the **home/relocation** location (`home`: a place).
+
+When the user supplies **new** birth or home data (or corrects what's stored),
+persist it with `profile set`, passing the JSON shape the CLI expects (only the
+keys you're setting; birth/home are deep-merged field-wise):
+
+```bash
+pnpm -s memory profile set '{"birth":{"datetimeLocal":"1990-03-12T07:45:00","latitude":37.57,"longitude":126.98,"timezone":"Asia/Seoul","place":"Seoul"},"home":{"latitude":35.68,"longitude":139.69,"timezone":"Asia/Tokyo","place":"Tokyo"}}'
+```
+
+- A place is `{latitude, longitude, timezone?, place?}`; `birth` also carries
+  `datetimeLocal` (local civil time, no offset).
+- `pnpm -s memory profile clear` forgets the user entirely.
+
+Horary needs no birth data, so a missing profile is fine — just proceed.
+
 ## Step 1 — Classify the question
 
 - **Horary** (default for yes/no or "will it happen"): "Will I get this job?",
@@ -93,6 +124,26 @@ pnpm -s compute '{"kind":"electional","quesitedHouse":7,"stepMinutes":30,"locati
 
 Use the JSON it prints. Do not alter the numbers.
 
+## Step 3b — Optional: a visual chart
+
+If the user wants to *see* the chart (a wheel they can open), render a single
+self-contained HTML file with the engine's non-blocking render command. Pass the
+**exact same request JSON you built in Step 3** — no new request-building — and the
+engine writes one openable artifact and exits without starting a server:
+
+```bash
+cd /Users/ericlee/Documents/Projects/kairos
+pnpm -s wheel:render '<the same request JSON from Step 3>'
+```
+
+- It prints the **absolute path** of the artifact to stdout. Hand that path to the
+  user so they can open it in a browser — don't paste the file's contents.
+- This is **purely optional and supplementary**: the text verdict from Step 5 stays
+  the primary answer. Render only when asked, and still give the full written
+  verdict.
+- The visual verdict panel currently covers **horary and electional** only;
+  transit/natal charts render without one, so lean on your written verdict there.
+
 ## Step 4 — Judge and answer
 
 **Every chart** now carries richer context you can draw on for any kind:
@@ -155,6 +206,19 @@ Use the JSON it prints. Do not alter the numbers.
   (or `null` if it doesn't perfect within the search window). Use it to name the
   precise date the supportive/difficult window peaks, instead of estimating from
   orb alone. Chart aspects (`chart.aspects`) carry the same field.
+- **Transits give you MAGNITUDE and TIMING, never DIRECTION.** A hard outer-planet
+  aspect (Saturn/Mars square or opposition) means "this period is effortful,
+  high-stakes, and identity-defining" — it does **not** mean the outcome is "no."
+  The same Saturn-square that accompanies a passed-over reorg also accompanies an
+  earned, demanding promotion; the transit cannot tell the two apart. Never convert
+  a transit into a yes/no event verdict, and never read absence of a benefic (e.g.
+  "no Jupiter to the MC") as positive evidence for "no" — absence is non-evidence,
+  not a negative testimony.
+- **If the question is a discrete yes/no event** ("did/will I get the promotion",
+  "will the deal close"), that is a **Horary** matter per Step 1 — cast horary for
+  the directional verdict, and use the transit only to characterize the window's
+  texture (how heavy, when it peaks). Horary is the only kind with directional
+  scoring machinery; Transit has none by design.
 
 **Electional:**
 - Read `electional.topMoments` — an array of candidates sorted **best first**.
@@ -185,5 +249,67 @@ Use the JSON it prints. Do not alter the numbers.
 4. **Caveats** — what lowers confidence (void Moon, rough birth time, wide orb),
    and the reminder that this is one input to the decision.
 
+**Per-kind confidence rule.** Only **Horary** and **Electional** are engine-scored
+and may carry a directional lean with up to `strong` confidence. For **Transit**
+and **Natal**, the Verdict is about *window quality* ("a demanding, high-stakes
+career window"), not a yes/no outcome — frame it that way, cap confidence on any
+directional/outcome claim at **low**, and always add the magnitude-not-direction
+caveat. Reserve `strong` for the *when* and *what-kind* (timing and texture), never
+for the *whether*. A directional lean requires convergent testimony (a real
+significator or house lord pointing one way), so if all you have is a transit's
+intensity, you do not have a direction — say so rather than manufacturing one.
+
 Never present a verdict without the signals. Never invent a degree the engine
 did not return.
+
+## Step 6 — Log the reading
+
+After **every** verdict, record it to the local journal so Kairos can later
+report its own track record. Pass a JSON object with the question, the kind, the
+matter's house (when applicable), and the judgment you gave:
+
+```bash
+pnpm -s memory log '{"question":"Will I get this job?","kind":"horary","quesitedHouse":10,"lean":"favorable","confidence":"medium","score":34}'
+```
+
+- Fields: `question` (string), `kind` (`"horary"`/`"transit"`/`"natal"`/
+  `"electional"`), `quesitedHouse?` (number), `lean` (`"favorable"`/
+  `"unfavorable"`/`"uncertain"`), `confidence` (`"low"`/`"medium"`/`"high"`),
+  `score` (number). The engine's own `lean`/`confidence`/`score` should be what
+  you log.
+- It prints the stored entry, including a generated `id`. **Keep that id** and
+  mention it to the user — tell them they can later tell you what actually
+  happened for this question, and you'll record the outcome (see below).
+
+## Calibration & outcomes
+
+If the user asks **how their past readings have done** or whether the verdicts
+are calibrated, run:
+
+```bash
+pnpm -s memory calibration
+```
+
+It returns hit-rate **by confidence band** (`bands[]` with `confidence`,
+`resolved`, `correct`, `hitRate`), an `overall` rollup, and `unresolved`/`total`
+counts. Report the hit-rate per band — but **always** with the honest
+small-sample caveat: a personal track record is noisy, and finding a pattern in
+a handful of readings is pattern-finding, **not** proof that astrology works.
+(The report even ships a `note` field saying as much.)
+
+When the user reports **what actually happened** for a prior question, resolve
+that entry by id:
+
+```bash
+pnpm -s memory outcome <id> <happened|did-not-happen|partial> [note words...]
+```
+
+- `<id>` is the journal id you gave them at log time.
+- The outcome is `happened`, `did-not-happen`, or `partial` (`unknown` leaves it
+  effectively unresolved). Anything after the outcome is recorded as a free-text
+  note.
+
+## Privacy
+
+Memory is stored **locally** under `~/.kairos` (profile + journal) and is
+**never synced** — birth data and your history stay on this machine.

@@ -39,6 +39,23 @@ pnpm wheel '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-
 The UI also runs standalone: open `web/index.html` and paste any `pnpm compute`
 JSON (or click **Load Example**). See `web/README.md`.
 
+## Memory
+
+Kairos keeps a small **local** memory (`pnpm -s memory <command>`) so it can
+remember you and learn from its own track record:
+
+- **Profile** — `memory profile get|set|clear` stores your birth data (for
+  transits/natal) and home/relocation location, so the skill doesn't re-ask.
+- **Journal** — `memory log <json>` records every verdict (question, kind, lean,
+  confidence, score) and returns an `id`; `memory journal` lists them.
+- **Outcomes & calibration** — `memory outcome <id> <happened|did-not-happen|partial> [note]`
+  records what actually happened, and `memory calibration` reports hit-rate by
+  confidence band. Small samples are noisy — it's a personal pattern, not proof.
+
+All of this lives under `~/.kairos` and is **never synced** — your birth data
+and history stay on this machine. (Run with `pnpm -s`; the `-s` keeps pnpm's
+banner out of the JSON.)
+
 ## Install the skill
 
 Copy or symlink `skill/` into your Claude skills directory as `kairos`, or point

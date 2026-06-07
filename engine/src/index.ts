@@ -12,6 +12,24 @@ export { sunProximity } from "./conditions.js";
 export { computeDignities, receptionBetween } from "./dignities.js";
 export { searchElectionalMoments } from "./electional.js";
 export { judgeHorary, moonVoidStatus } from "./horary.js";
+export type {
+  CalibrationBand,
+  CalibrationReport,
+  JournalEntry,
+  Outcome,
+  Profile,
+  ProfilePlace,
+} from "./memory.js";
+export {
+  appendJournal,
+  clearProfile,
+  computeCalibration,
+  loadJournal,
+  loadProfile,
+  memoryHome,
+  recordOutcome,
+  saveProfile,
+} from "./memory.js";
 
 export type {
   Aspect,
