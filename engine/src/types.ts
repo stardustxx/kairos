@@ -196,6 +196,30 @@ export interface CollectionOfLight {
   fromQuesited: string;
 }
 
+/** A third planet that perfects an aspect to a significator before the two
+ *  significators perfect with each other, cutting the matter off. */
+export interface Prohibition {
+  /** The intervening planet that perfects first. */
+  prohibitor: string;
+  /** The significator it perfects with (the contact that intercepts). */
+  target: string;
+  /** Aspect type of the intercepting (completing) contact. */
+  aspect: string;
+}
+
+/** A significator that withdraws (retrograde/stationing) before the perfecting
+ *  aspect completes, drawing the matter back. */
+export interface Refranation {
+  /** The significator that turns back. */
+  planet: string;
+}
+
+/** A significator hemmed bodily between the two malefics (Mars and Saturn). */
+export interface Besieging {
+  /** The two malefics besieging the planet — always ["Mars", "Saturn"]. */
+  betweenOf: [string, string];
+}
+
 export type Confidence = "low" | "medium" | "high";
 export type Lean = "favorable" | "unfavorable" | "uncertain";
 
@@ -225,6 +249,27 @@ export interface HoraryJudgment {
   querentSignificatorDignity: number;
   /** Essential dignity score of the quesited's significator. */
   quesitedSignificatorDignity: number;
+  /** Almuten of the Ascendant — the planet with the most essential dignity over
+   *  the 1st-house cusp degree. Often, but not always, the querent's domicile
+   *  ruler; when it differs it has the strongest "say" over the querent. */
+  querentAlmuten: { planet: string; score: number };
+  /** Almuten of the quesited-house cusp degree — the most dignified planet over
+   *  the matter, which can outrank the simple domicile-ruler significator. */
+  quesitedAlmuten: { planet: string; score: number };
+  /** True when the Ascendant's almuten is not the querent's domicile ruler. */
+  querentAlmutenDiffersFromRuler: boolean;
+  /** True when the quesited cusp's almuten is not the quesited domicile ruler. */
+  quesitedAlmutenDiffersFromRuler: boolean;
+  /** Prohibition: a third planet perfects with a significator before the two
+   *  significators perfect, cutting the matter off. Null when none. A strong
+   *  denial that can overturn an otherwise-favorable lean. */
+  prohibition: Prohibition | null;
+  /** Refranation: a significator withdraws (retrograde/stationing) before the
+   *  perfecting aspect completes. Null when none. A strong withdrawal. */
+  refranation: Refranation | null;
+  /** Besieged significators: each significator hemmed bodily between Mars and
+   *  Saturn. Empty when neither is besieged. A real affliction per significator. */
+  besieging: Array<{ significator: string; planet: string }>;
   /** Aggregate testimony score (negative = unfavorable, positive = favorable).
    *  A calibration aid for the skill, NOT a verdict on its own. */
   score: number;
@@ -255,11 +300,34 @@ export interface RelocationResult {
   houseShifts: HouseShift[];
 }
 
+/**
+ * Annual profection ("lord of the year"): from the natal Ascendant, advance one
+ * whole sign per completed year of life. The sign reached is the profected
+ * Ascendant; its house (counting from the natal 1st) is the activated topic of
+ * the year; the domicile ruler of that sign is the Lord of the Year.
+ */
+export interface Profection {
+  /** Completed years of life at the target moment (integer, floored). */
+  age: number;
+  /** Sign of the profected Ascendant for the year. */
+  profectedSign: Sign;
+  /** Profected house (1..12), counting from the natal 1st — the year's topic. */
+  profectedHouse: number;
+  /** Domicile ruler of the profected sign — the Lord of the Year. */
+  lordOfYear: string;
+  /** Where the Lord of the Year sits in the target (transit) chart, so the user
+   *  can see where the year is "running". Absent if the lord is not found. */
+  lordOfYearPosition?: { sign: Sign; house: number; retrograde: boolean };
+}
+
 export interface ComputeResult {
   /** Present for chart-based kinds (natal/transit/horary); absent for electional. */
   chart?: Chart;
   /** Present only when kind is "transit": aspects from transiting to natal planets. */
   transitAspects?: Aspect[];
+  /** Present only when kind is "transit": the annual profection (lord of the
+   *  year), derived from the natal Ascendant and age at the transit moment. */
+  profection?: Profection;
   /** Present only when kind is "horary". */
   horary?: HoraryJudgment;
   /** Present only when kind is "electional". */

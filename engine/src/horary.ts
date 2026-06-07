@@ -1,7 +1,9 @@
+import { almutenOfDegree } from "./almuten.js";
 import { computeAspects } from "./aspects.js";
 import { DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGN_RULER } from "./constants.js";
 import { receptionBetween } from "./dignities.js";
 import { houseOf } from "./houses.js";
+import { detectBesieging, detectProhibition, detectRefranation } from "./perfection.js";
 import type {
   Aspect,
   Chart,
@@ -10,7 +12,9 @@ import type {
   HoraryJudgment,
   Lean,
   PlanetPosition,
+  Prohibition,
   Reception,
+  Refranation,
   SolarPhase,
   TranslationOfLight,
 } from "./types.js";
@@ -20,6 +24,22 @@ const SOFT_ASPECTS = new Set(["conjunction", "sextile", "trine"]);
 function rulerOfCusp(cuspLongitude: number): string {
   const signIndex = Math.floor(cuspLongitude / DEGREES_PER_SIGN) % SIGN_COUNT;
   return SIGN_RULER[signIndex];
+}
+
+/** English ordinal for a house number, e.g. 1 -> "1st", 10 -> "10th". */
+function ordinal(n: number): string {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
 }
 
 /** Find the aspect between two named bodies in an aspect list, if any. */
@@ -104,6 +124,9 @@ function aggregateTestimony(args: {
   querentRetro: boolean;
   quesitedRetro: boolean;
   moonVoid: boolean;
+  prohibition: Prohibition | null;
+  refranation: Refranation | null;
+  besieging: Array<{ significator: string; planet: string }>;
 }): { score: number; confidence: Confidence; lean: Lean; testimonies: string[] } {
   const t: string[] = [];
   let score = 0;
@@ -205,6 +228,32 @@ function aggregateTestimony(args: {
       score -= 4;
       t.push(`${label} retrograde — hesitation or reversal (-4)`);
     }
+  }
+
+  // Perfection-breakers: even when the significators apply to perfection, the
+  // matter can be cut off. These are strong denials that can overturn an
+  // otherwise-favorable lean. The detectors already require an applying
+  // significator aspect, so a breaker here means a real interception.
+  if (args.prohibition) {
+    score -= 25;
+    t.push(
+      `Prohibition: ${args.prohibition.prohibitor} perfects by ${args.prohibition.aspect} ` +
+        `with ${args.prohibition.target} before the significators — the matter is cut off (-25)`,
+    );
+  }
+  if (args.refranation) {
+    score -= 22;
+    t.push(
+      `Refranation: ${args.refranation.planet} turns back (retrograde/stationing) before the ` +
+        `significators perfect — the matter withdraws (-22)`,
+    );
+  }
+  for (const b of args.besieging) {
+    score -= 12;
+    t.push(
+      `${b.significator} significator ${b.planet} besieged between Mars and Saturn ` +
+        `— hemmed by both malefics (-12)`,
+    );
   }
 
   if (args.moonVoid) {
@@ -318,6 +367,39 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
   const querentSignificatorDignity = sigA?.dignities?.score ?? 0;
   const quesitedSignificatorDignity = sigB?.dignities?.score ?? 0;
 
+  // Perfection-breakers, over the classical bodies. Prohibition/refranation only
+  // apply when there are two distinct significators that could perfect; the
+  // detectors themselves require an applying significator aspect, so they return
+  // null otherwise. Besieging is checked for each significator independently.
+  const haveTwoSigs = !!(sigA && sigB && sigA.name !== sigB.name);
+  const prohibition = haveTwoSigs
+    ? detectProhibition(querentSig, quesitedSig, classical)
+    : null;
+  const refranation = haveTwoSigs
+    ? detectRefranation(querentSig, quesitedSig, classical)
+    : null;
+  // Besieging is checked per significator, but when the querent and quesited
+  // significator are the SAME planet (shared domicile ruler), one physical
+  // affliction must not be counted twice — only push the quesited entry when it
+  // is a distinct planet.
+  const besieging: Array<{ significator: string; planet: string }> = [];
+  if (sigA && detectBesieging(querentSig, classical)) {
+    besieging.push({ significator: "querent", planet: querentSig });
+  }
+  if (sigB && quesitedSig !== querentSig && detectBesieging(quesitedSig, classical)) {
+    besieging.push({ significator: "quesited", planet: quesitedSig });
+  }
+
+  // Almuten of the Ascendant (querent) and of the quesited-house cusp: the planet
+  // with the most essential dignity over that degree — sometimes more dignified
+  // than the simple domicile ruler, in which case it has the strongest say.
+  const querentAlmutenFull = almutenOfDegree(chart.houses.cusps[0], chart.sect);
+  const quesitedAlmutenFull = almutenOfDegree(chart.houses.cusps[quesitedHouse - 1], chart.sect);
+  const querentAlmuten = { planet: querentAlmutenFull.planet, score: querentAlmutenFull.score };
+  const quesitedAlmuten = { planet: quesitedAlmutenFull.planet, score: quesitedAlmutenFull.score };
+  const querentAlmutenDiffersFromRuler = querentAlmuten.planet !== querentSig;
+  const quesitedAlmutenDiffersFromRuler = quesitedAlmuten.planet !== quesitedSig;
+
   const { score, confidence, lean, testimonies } = aggregateTestimony({
     significatorAspect,
     moonApplyingToQuesited,
@@ -333,7 +415,28 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     querentRetro: sigA?.retrograde ?? false,
     quesitedRetro: sigB?.retrograde ?? false,
     moonVoid: moon.void,
+    prohibition,
+    refranation,
+    besieging,
   });
+
+  // Informational almuten testimonies: when the almuten of a cusp is NOT its
+  // domicile ruler, name the planet that truly has the most say over the matter.
+  // Neutral — does not flip the verdict (0 points).
+  if (querentAlmutenDiffersFromRuler) {
+    testimonies.push(
+      `Almuten of the 1st (querent) is ${querentAlmuten.planet} ` +
+        `(more dignified than ruler ${querentSig}) ` +
+        `— ${querentAlmuten.planet} has the strongest say over the querent (0)`,
+    );
+  }
+  if (quesitedAlmutenDiffersFromRuler) {
+    testimonies.push(
+      `Almuten of the ${ordinal(quesitedHouse)} is ${quesitedAlmuten.planet} ` +
+        `(more dignified than ruler ${quesitedSig}) ` +
+        `— ${quesitedAlmuten.planet} has the strongest say over the matter (0)`,
+    );
+  }
 
   return {
     querentSignificator: querentSig,
@@ -349,6 +452,13 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     significatorReception,
     querentSignificatorDignity,
     quesitedSignificatorDignity,
+    querentAlmuten,
+    quesitedAlmuten,
+    querentAlmutenDiffersFromRuler,
+    quesitedAlmutenDiffersFromRuler,
+    prohibition,
+    refranation,
+    besieging,
     score,
     confidence,
     lean,

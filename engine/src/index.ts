@@ -5,10 +5,13 @@
  *   const result = runCompute({ kind: "horary", quesitedHouse: 10, moment: {...} });
  */
 
+export type { AlmutenContribution, AlmutenResult } from "./almuten.js";
+export { almutenOfDegree } from "./almuten.js";
 export { computeAngleAspects, computeAspects, computeCrossAspects } from "./aspects.js";
 export { buildChart, relocateChart } from "./chart.js";
 export { runCompute } from "./cli.js";
 export { sunProximity } from "./conditions.js";
+export type { DignityLords } from "./dignities.js";
 export { computeDignities, receptionBetween } from "./dignities.js";
 export { searchElectionalMoments } from "./electional.js";
 export { judgeHorary, moonVoidStatus } from "./horary.js";
@@ -30,9 +33,12 @@ export {
   recordOutcome,
   saveProfile,
 } from "./memory.js";
+export { detectBesieging, detectProhibition, detectRefranation } from "./perfection.js";
+export { annualProfection, completedYearsBetween } from "./profections.js";
 
 export type {
   Aspect,
+  Besieging,
   Chart,
   ChartKind,
   CollectionOfLight,
@@ -50,7 +56,10 @@ export type {
   PartOfFortune,
   PlanetDignities,
   PlanetPosition,
+  Profection,
+  Prohibition,
   Reception,
+  Refranation,
   RelocationResult,
   SignificatorHints,
   SolarPhase,

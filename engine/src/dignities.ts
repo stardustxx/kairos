@@ -86,6 +86,33 @@ function faceRuler(signIndex: number, deg: number): string {
   return FACES[signIndex][Math.min(2, Math.floor(deg / 10))];
 }
 
+/** The five essential-dignity lords at a given ecliptic longitude, for the given
+ *  sect. Each field names the single planet holding that dignity at the degree
+ *  (exaltation may be null where no planet exalts). Exposes the dignity tables
+ *  to consumers (e.g. the almuten computation) without duplicating them. */
+export interface DignityLords {
+  domicile: string;
+  exaltation: string | null;
+  triplicity: string;
+  term: string;
+  face: string;
+}
+
+/** Resolve the domicile/exaltation/triplicity/term/face lords at `longitude`
+ *  (triplicity by `sect`). Reuses the same tables as computeDignities. */
+export function dignityLordsAtDegree(longitude: number, sect: "day" | "night"): DignityLords {
+  const si = signIndexOf(longitude);
+  const deg = degInSignOf(longitude);
+  const element = si % 4; // 0 Fire,1 Earth,2 Air,3 Water (Aries..Pisces cycles)
+  return {
+    domicile: SIGN_RULER[si],
+    exaltation: EXALTATION[si],
+    triplicity: TRIPLICITY[element][sect],
+    term: termRuler(si, deg),
+    face: faceRuler(si, deg),
+  };
+}
+
 /**
  * Compute the essential dignity state of `planet` at `longitude` for a chart of
  * the given sect ("day"/"night"). The Sun and Moon never count as their own

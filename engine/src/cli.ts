@@ -4,6 +4,7 @@ import { buildChart, relocateChart } from "./chart.js";
 import { searchElectionalMoments } from "./electional.js";
 import { judgeHorary } from "./horary.js";
 import { computePositions } from "./positions.js";
+import { annualProfection, completedYearsBetween } from "./profections.js";
 import { resolveJulianDay } from "./time.js";
 import type { ComputeRequest, ComputeResult } from "./types.js";
 import { validateRequest } from "./validate.js";
@@ -57,6 +58,24 @@ export function runCompute(req: ComputeRequest): ComputeResult {
       natalPlanets,
       chart.julianDayUt,
     );
+
+    // Annual profection (lord of the year): advance one whole sign from the
+    // natal Ascendant per completed year of life, up to the transit moment.
+    // (Natal-alone charts have no meaningful profection — age would be 0 and
+    // simply return the natal Ascendant sign / 1st house.)
+    const natalChart = buildChart("natal", req.natal);
+    const age = completedYearsBetween(req.natal.datetimeLocal, req.moment.datetimeLocal);
+    const profection = annualProfection(natalChart.houses.ascendant, age);
+    // Look up where the Lord of the Year is "running" in the transit chart.
+    const lord = chart.planets.find((p) => p.name === profection.lordOfYear);
+    if (lord) {
+      profection.lordOfYearPosition = {
+        sign: lord.sign,
+        house: lord.house!,
+        retrograde: lord.retrograde,
+      };
+    }
+    result.profection = profection;
   }
 
   if (req.kind === "horary") {
