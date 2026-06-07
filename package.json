@@ -25,6 +25,7 @@
     "lint:fix": "biome check --write engine",
     "compute": "tsx engine/src/cli.ts",
     "wheel": "tsx engine/src/wheel.ts",
+    "wheel:render": "tsx engine/src/wheel.ts --write",
     "ephe:install": "tsx engine/src/install-ephe.ts"
   },
   "keywords": [
