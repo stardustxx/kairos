@@ -42,21 +42,39 @@ pnpm -s memory profile set '{"birth":{"datetimeLocal":"1990-03-12T07:45:00","lat
 
 Horary needs no birth data, so a missing profile is fine — just proceed.
 
-## Step 1 — Classify the question
+## Step 1 — Start from the QUESTION, then gather only what it needs
+
+**The question comes first.** Before anything else (after Step 0's recall), the
+very first thing you do is **elicit and classify the user's actual question** —
+do **not** open by asking for a birth time. Intake is **adaptive**: once you know
+the kind, you ask for *only* the inputs that kind needs, reusing anything Step 0
+already recalled.
+
+**1a. Elicit the question.** If the user hasn't stated a clear question, draw one
+out ("What's the decision or outcome you're weighing?"). You need the matter and,
+where relevant, the timeframe ("now", "this year", "next month").
+
+**1b. Classify the kind** from the question:
 
 - **Horary** (default for yes/no or "will it happen"): "Will I get this job?",
   "Will this come to fruition?", "Is this deal going to close?" → cast a chart for
-  **the moment the user asks** (now). Needs no birth data.
-- **Transit** ("is now the right time for *me*"): "Is now a good time to switch
-  jobs?", "Should I make this move?" → needs the user's **natal** data.
+  **the moment the user asks** (now). **No birth time** — never ask for one.
 - **Electional** ("when is the *best time* to do X within a window"): "What's the
   best day next month to sign the lease?", "Pick a good time this week to launch."
   → the user wants you to **search a future window** and recommend specific
-  moments, not judge a single moment. Needs a window, a location, and the house
-  of the matter (same house map as horary). Needs no birth data.
-- **Natal** (background only): computed once to support transits.
+  moments, not judge a single moment. **No birth time** — never ask for one.
+- **Transit** ("is now the right time for *me*"): "Is now a good time to switch
+  jobs?", "Should I make this move?" → this is the **only** kind that needs the
+  user's **natal** birth data (date, exact time, place).
+- **Natal** (background only): computed once to support transits; also birth-data
+  based.
 
-Map the matter to a house for horary:
+**Birth time is requested ONLY for transit/natal — never for horary/electional.**
+Do not front-load a birth-time request: many questions are horary and need none.
+Classify first; ask for birth data only if you land on transit/natal.
+
+**1c. Map the matter to a house** (horary and electional both need this; it's the
+`quesitedHouse`):
 
 | Matter | House |
 |---|---|
@@ -69,20 +87,19 @@ Map the matter to a house for horary:
 | Travel, study, publishing, legal | 9 |
 | Friends, hopes, groups | 11 |
 
-## Step 2 — Gather inputs
+**1d. Gather only the inputs the classified kind needs** (recall from Step 0 first;
+ask only for what's still missing):
 
-For **horary**: you need the user's current location (city → lat/lon; you may
-estimate from a city name). The moment is now — use the current date/time.
-
-For **transit**: you need the user's **birth date, exact time, and place**.
-- If they don't know the exact time, proceed but add an explicit caveat that
-  house-based and rising-sign claims are unreliable.
-- If they refuse or can't provide birth data, fall back to **horary**.
-
-For **electional**: you need a **window** (start/end local dates), the **location**
-where the action happens, a **step** (scan granularity — 15–60 min is typical),
-and the **house** of the matter (use the horary house map above). If the user
-gives a vague window ("next month"), pick concrete start/end dates that cover it.
+- **Horary** — the user's **current location** (city → lat/lon; you may estimate
+  from a city name). The moment is **now**. No birth data.
+- **Electional** — a **window** (start/end local dates), the **location** where the
+  action happens, a **step** (scan granularity — 15–60 min is typical), and the
+  **house** of the matter (1c). If the window is vague ("next month"), pick concrete
+  start/end dates that cover it. No birth data.
+- **Transit** — the user's **birth date, exact time, and place** (reuse the saved
+  `birth` profile from Step 0 if present). If they don't know the exact time,
+  proceed but add an explicit caveat that house-based and rising-sign claims are
+  unreliable. If they refuse or can't provide birth data, **fall back to horary**.
 
 ## Step 3 — Call the engine
 
@@ -190,6 +207,33 @@ pnpm -s wheel:render '<the same request JSON from Step 3>'
     one (detriment/fall/peregrine, negative) is weak or compromised — temper the
     promise accordingly and say so.
   - `moonVoidOfCourse === true` — strong "nothing comes of it / no change" signal.
+- **Almuten of each side** — the engine also returns the almuten (most
+  essentially dignified planet) over each side's cusp degree:
+  `querentAlmuten` (`{ planet, score }`, almuten of the Ascendant) and
+  `quesitedAlmuten` (`{ planet, score }`, almuten of the quesited-house cusp). The
+  domicile **ruler** of each cusp remains the **primary significator** (the one the
+  aspect/perfection machinery tracks). But check the booleans
+  `querentAlmutenDiffersFromRuler` / `quesitedAlmutenDiffersFromRuler`: when `true`,
+  the almuten is **not** the domicile ruler, and you should **name the almuten as
+  the planet with the strongest say over that side of the matter** while keeping the
+  domicile ruler as the primary significator. (E.g. "your ruler Mars carries the
+  question, but Saturn is the almuten of the Ascendant — it has the heaviest hand on
+  your position.") When the boolean is `false`, almuten and ruler coincide and
+  there's nothing extra to say.
+- **Perfection-breakers (denials that can OVERTURN a favorable perfection).** Even
+  when significators apply to a perfecting aspect, the matter can be cut off. When
+  any of these is present, **lead the caveat with it and name the planet(s)** — they
+  outweigh an otherwise-favorable lean:
+  - `prohibition` (`{ prohibitor, target, aspect }` or `null`) — a third planet
+    perfects with a significator **before** the two significators perfect, cutting
+    the matter off. Name the `prohibitor` and the `target` it intercepts (e.g.
+    "Jupiter prohibits — it perfects with your significator before the deal closes").
+  - `refranation` (`{ planet }` or `null`) — a significator withdraws (turns
+    retrograde / stations) before the perfecting aspect completes, drawing the
+    matter back. Name the `planet` that backs out.
+  - `besieging` (array of `{ significator, planet }`, empty when none) — a
+    significator hemmed bodily between Mars and Saturn, a real affliction. Name each
+    besieged `significator`/`planet`.
 - Each significator's house placement (`querentSignificatorHouse` /
   `quesitedSignificatorHouse`) gives context on where the querent and matter "sit."
 - `moonNextAspect` and aspect `orb` hint at **timing**: a tight orb means sooner.
@@ -219,6 +263,25 @@ pnpm -s wheel:render '<the same request JSON from Step 3>'
   the directional verdict, and use the transit only to characterize the window's
   texture (how heavy, when it peaks). Horary is the only kind with directional
   scoring machinery; Transit has none by design.
+- **Profection — the Lord of the Year (for "this year" timing).** A transit result
+  also carries a `profection` block, derived from the natal Ascendant and the
+  user's age at the transit moment:
+  - `age` — completed years of life.
+  - `profectedSign` — the profected Ascendant sign for the year.
+  - `profectedHouse` — the **activated topic of the year** (1..12, counting from the
+    natal 1st). This is *the* house the year is "about" — read its matter from the
+    house map in Step 1 (e.g. profectedHouse 7 → a relationship/partnership year,
+    10 → a career/status year).
+  - `lordOfYear` — the domicile ruler of the profected sign: the planet that
+    **colours the whole year**.
+  - `lordOfYearPosition` (`{ sign, house, retrograde }`, absent if the lord isn't
+    found) — where the Lord of the Year is running in the transit chart. Use this for
+    "this year" timing: the house the Lord of the Year sits in shows **where the
+    year's energy is playing out**, and any applying transit *to* the Lord of the
+    Year is an especially significant event for the year. A retrograde Lord of the
+    Year signals a year of revisiting/reworking the profected topic. Tie it together:
+    "you're in a [profectedHouse-matter] year (Lord of the Year [lordOfYear]),
+    and it's running through your [lordOfYearPosition.house]th house."
 
 **Electional:**
 - Read `electional.topMoments` — an array of candidates sorted **best first**.
@@ -258,6 +321,14 @@ caveat. Reserve `strong` for the *when* and *what-kind* (timing and texture), ne
 for the *whether*. A directional lean requires convergent testimony (a real
 significator or house lord pointing one way), so if all you have is a transit's
 intensity, you do not have a direction — say so rather than manufacturing one.
+
+**State what would falsify it.** Whenever you give a directional lean, name — in
+advance — the outcome that would prove it wrong (e.g. "if you're passed over, this
+read missed"). This is a guardrail against the unfalsifiable retrofit: if the
+outcome later contradicts the verdict, you own the miss; you do **not** re-narrate
+the same placement to "explain" the opposite result. A signal that fits any
+outcome predicted nothing — so a hard transit that's compatible with both "yes"
+and "no" cannot be quoted as evidence for either.
 
 Never present a verdict without the signals. Never invent a degree the engine
 did not return.
@@ -308,6 +379,17 @@ pnpm -s memory outcome <id> <happened|did-not-happen|partial> [note words...]
 - The outcome is `happened`, `did-not-happen`, or `partial` (`unknown` leaves it
   effectively unresolved). Anything after the outcome is recorded as a free-text
   note.
+
+**Record misses honestly — never launder them.** When an outcome contradicts a
+verdict you gave with `high`/`strong` confidence, resolve it as a plain
+`did-not-happen` so that confidence band's hit-rate actually reflects the miss.
+Do **not** soften it to `partial`, and do not reach back to reinterpret the
+original placements so the verdict "was right all along." A confident verdict that
+resolves the opposite way is a calibration failure, full stop — the value of the
+journal is that it counts those, so the band-by-confidence report stays honest. If
+part of the read genuinely landed (e.g. the *timing* was right even though the
+*direction* was wrong), say so in the free-text note, but the outcome flag tracks
+whether the **verdict** held, not whether some fragment of the narrative survives.
 
 ## Privacy
 
