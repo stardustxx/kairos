@@ -48,7 +48,15 @@
         <button id="clear-btn" type="button">Clear</button>
       </div>
 
+      <div id="share-row" class="row button-row" hidden>
+        <button id="copy-link-btn" type="button">Copy link</button>
+        <button id="copy-json-btn" type="button">Copy JSON</button>
+        <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
+      </div>
+
       <p id="error" class="error" role="alert" hidden></p>
+
+      <p id="share-notice" class="share-notice" role="alert" hidden></p>
 
       <fieldset class="toggles">
         <legend>Display</legend>
@@ -77,6 +85,14 @@
           <dt>Bodies</dt><dd id="meta-planets">—</dd>
         </dl>
         <p id="meta-extra" class="meta-extra" hidden></p>
+      </div>
+
+      <div id="recent" class="recent" hidden>
+        <div class="recent-head">
+          <h2>Recent charts</h2>
+          <button id="recent-clear-btn" type="button" class="link-btn">Clear</button>
+        </div>
+        <ul id="recent-list" class="recent-list"></ul>
       </div>
 
       <div class="legend">

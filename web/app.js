@@ -34,6 +34,45 @@
     return document.getElementById(id);
   }
 
+  // ---- Permalink encoding + Recent charts (client-side only) ---------------
+
+  // URL hash parameter that carries an encoded ComputeResult, and the
+  // localStorage key for the capped recent-charts list.
+  const HASH_PARAM = "r";
+  const STORAGE_KEY = "kairos.recent.v1";
+  const RECENT_LIMIT = 10;
+  // A generous ceiling on encoded length: very large payloads usually mean a
+  // corrupt or hostile hash, and most browsers cap URLs well below this.
+  const MAX_ENCODED = 2_000_000;
+
+  /** Encode a UTF-8 string as base64url (no padding), safe for a URL hash. */
+  function toBase64Url(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  /** Decode a base64url string back to its original UTF-8 string. */
+  function fromBase64Url(b64url) {
+    let b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  /** Encode a ComputeResult object into a compact base64url string. */
+  function encodeResult(result) {
+    return toBase64Url(JSON.stringify(result));
+  }
+
+  /** Decode a base64url string into a ComputeResult object. Throws on failure. */
+  function decodeResult(encoded) {
+    return JSON.parse(fromBase64Url(encoded));
+  }
+
   const SIGNS = [
     "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
     "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
@@ -252,8 +291,16 @@
   };
 
   function esc(s) {
-    return String(s).replace(/[&<>]/g, function (c) {
-      return c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;";
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return c === "&"
+        ? "&amp;"
+        : c === "<"
+          ? "&lt;"
+          : c === ">"
+            ? "&gt;"
+            : c === '"'
+              ? "&quot;"
+              : "&#39;";
     });
   }
   function cell(v, cls) {
@@ -355,8 +402,182 @@
     applySelection();
   }
 
+  // ---- Recent charts (localStorage, degrades silently in private mode) -----
+
+  /** Read the stored recent list, or [] if storage is unavailable/corrupt. */
+  function readRecent() {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const list = JSON.parse(raw);
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /** Persist the recent list. Silently no-ops if storage is unavailable. */
+  function writeRecent(list) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /** Build a concise, human-readable label for a saved chart. */
+  function recentLabel(result) {
+    const chart = result.chart || {};
+    const kind = chart.kind || "chart";
+    if (result.horary) {
+      const h = result.horary;
+      return `Horary: ${h.querentSignificator} and ${h.quesitedSignificator}`;
+    }
+    if (result.electional && result.electional.topMoments && result.electional.topMoments[0]) {
+      const best = result.electional.topMoments[0];
+      return `Electional: best ${String(best.datetimeLocal).replace("T", " ")}`;
+    }
+    if (chart.utc) {
+      return `${kind.charAt(0).toUpperCase() + kind.slice(1)}: ${String(chart.utc).slice(0, 16).replace("T", " ")} UTC`;
+    }
+    return kind.charAt(0).toUpperCase() + kind.slice(1);
+  }
+
+  function formatSavedAt(ts) {
+    try {
+      return new Date(ts).toLocaleString();
+    } catch (e) {
+      return "";
+    }
+  }
+
+  /** Save the current result to the recent list (capped, de-duped by encoding). */
+  function saveRecent(result) {
+    let encoded;
+    try {
+      encoded = encodeResult(result);
+    } catch (e) {
+      return; // unserialisable - skip silently
+    }
+    const list = readRecent().filter(function (r) { return r && r.encoded !== encoded; });
+    list.unshift({
+      label: recentLabel(result),
+      kind: (result.chart && result.chart.kind) || "chart",
+      savedAt: Date.now(),
+      encoded: encoded,
+    });
+    writeRecent(list.slice(0, RECENT_LIMIT));
+    renderRecent();
+  }
+
+  /** Render the recent-charts list, or hide it when empty. */
+  function renderRecent() {
+    const list = readRecent();
+    if (!list.length) {
+      els.recent.hidden = true;
+      els.recentList.innerHTML = "";
+      return;
+    }
+    els.recentList.innerHTML = list.map(function (r, i) {
+      return '<li><button type="button" class="recent-item" data-recent="' + i + '">' +
+        '<span class="recent-label">' + esc(r.label) + "</span>" +
+        '<span class="recent-time">' + esc(formatSavedAt(r.savedAt)) + "</span>" +
+        "</button></li>";
+    }).join("");
+    els.recent.hidden = false;
+  }
+
+  /** Open a recent chart by index: load its JSON into the box and render. */
+  function openRecent(index) {
+    const list = readRecent();
+    const item = list[index];
+    if (!item) return;
+    let result;
+    try {
+      result = decodeResult(item.encoded);
+    } catch (e) {
+      showShareNotice("That saved chart could not be opened.");
+      return;
+    }
+    els.json.value = JSON.stringify(result, null, 2);
+    handleRender();
+  }
+
+  // ---- Copy link / Copy JSON -----------------------------------------------
+
+  function showCopyStatus(msg) {
+    els.copyStatus.textContent = msg;
+    window.clearTimeout(showCopyStatus._t);
+    showCopyStatus._t = window.setTimeout(function () {
+      els.copyStatus.textContent = "";
+    }, 2500);
+  }
+
+  function showShareNotice(msg) {
+    els.shareNotice.textContent = msg;
+    els.shareNotice.hidden = !msg;
+  }
+
+  /** Copy text to the clipboard, with a synchronous fallback for file://. */
+  function copyText(textValue, okMessage) {
+    function fallback() {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = textValue;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "absolute";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (ok) showCopyStatus(okMessage);
+        else showShareNotice("Copy failed. Select the JSON and copy it manually.");
+      } catch (e) {
+        showShareNotice("Copy is not available in this browser.");
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(textValue).then(
+        function () { showCopyStatus(okMessage); },
+        fallback,
+      );
+    } else {
+      fallback();
+    }
+  }
+
+  function copyLink() {
+    if (!lastResult) return;
+    showShareNotice("");
+    let encoded;
+    try {
+      encoded = encodeResult(lastResult);
+    } catch (e) {
+      showShareNotice("This chart could not be encoded into a link.");
+      return;
+    }
+    const base = window.location.href.split("#")[0];
+    const url = base + "#" + HASH_PARAM + "=" + encoded;
+    // Reflect it in the address bar so a manual copy works too.
+    try {
+      window.history.replaceState(null, "", "#" + HASH_PARAM + "=" + encoded);
+    } catch (e) {
+      /* file:// may reject replaceState; the copied URL still works */
+    }
+    copyText(url, "Link copied");
+  }
+
+  function copyJson() {
+    if (!lastResult) return;
+    showShareNotice("");
+    copyText(JSON.stringify(lastResult, null, 2), "JSON copied");
+  }
+
   function handleRender() {
     showError("");
+    showShareNotice("");
     let data;
     try {
       data = parseInput();
@@ -380,6 +601,8 @@
     renderMetadata(data);
     draw();
     renderDetails();
+    els.shareRow.hidden = false;
+    saveRecent(data);
   }
 
   function handleFile(file) {
@@ -464,17 +687,42 @@
     els.verdictSub = $("verdict-sub");
     els.verdictConfidence = $("verdict-confidence");
     els.verdictReasons = $("verdict-reasons");
+    els.shareRow = $("share-row");
+    els.copyLink = $("copy-link-btn");
+    els.copyJsonBtn = $("copy-json-btn");
+    els.copyStatus = $("copy-status");
+    els.shareNotice = $("share-notice");
+    els.recent = $("recent");
+    els.recentList = $("recent-list");
+    els.recentClear = $("recent-clear-btn");
 
     els.render.addEventListener("click", handleRender);
+    els.copyLink.addEventListener("click", copyLink);
+    els.copyJsonBtn.addEventListener("click", copyJson);
+    els.recentClear.addEventListener("click", function () {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {
+        /* storage unavailable - nothing to clear */
+      }
+      renderRecent();
+    });
+    els.recentList.addEventListener("click", function (e) {
+      const btn = e.target.closest("[data-recent]");
+      if (btn) openRecent(Number(btn.getAttribute("data-recent")));
+    });
     els.example.addEventListener("click", loadExample);
     els.clear.addEventListener("click", function () {
       els.json.value = "";
       lastResult = null;
       showError("");
+      showShareNotice("");
       els.metadata.hidden = true;
       els.details.hidden = true;
       els.viewSwitch.hidden = true;
       els.verdict.hidden = true;
+      els.shareRow.hidden = true;
+      els.copyStatus.textContent = "";
       viewMode = "natal";
       window.KairosChart.clearChart(els.chart);
     });
@@ -510,9 +758,59 @@
     });
   }
 
+  /**
+   * If the URL hash carries an encoded ComputeResult (#r=<base64url>), decode
+   * and render it through the same path as the textarea. Returns true if it
+   * handled a hash, false otherwise. Never throws to a blank page.
+   */
+  function loadFromHash() {
+    let hash = window.location.hash || "";
+    if (hash.charAt(0) === "#") hash = hash.slice(1);
+    if (!hash) return false;
+    let encoded = null;
+    try {
+      const params = new URLSearchParams(hash);
+      encoded = params.get(HASH_PARAM);
+    } catch (e) {
+      encoded = null;
+    }
+    if (!encoded) return false;
+    if (encoded.length > MAX_ENCODED) {
+      showShareNotice("This shared link is too large to open.");
+      return true;
+    }
+    let result;
+    try {
+      result = decodeResult(encoded);
+    } catch (e) {
+      showShareNotice("This shared link could not be decoded.");
+      return true;
+    }
+    const err = validateComputeResult(result);
+    if (err) {
+      showShareNotice("Shared link is not a valid chart: " + err);
+      return true;
+    }
+    // Feed the decoded JSON through the same renderer as the textarea path.
+    els.json.value = JSON.stringify(result, null, 2);
+    handleRender();
+    return true;
+  }
+
   function start() {
     init();
-    // Auto-load if a ?data=<path> query param is present (the wheel helper).
+    renderRecent();
+    // Priority: an encoded result in the hash (#r=...) renders immediately.
+    let handled = false;
+    try {
+      handled = loadFromHash();
+    } catch (e) {
+      /* never blank the page on a malformed hash */
+      showShareNotice("This shared link could not be opened.");
+      handled = true;
+    }
+    if (handled) return;
+    // Otherwise auto-load if a ?data=<path> query param is present (wheel helper).
     try {
       const params = new URLSearchParams(window.location.search);
       const dataUrl = params.get("data");
