@@ -55,11 +55,15 @@ gives a vague window ("next month"), pick concrete start/end dates that cover it
 
 ## Step 3 — Call the engine
 
-Run the bundled CLI with a JSON request. From the skill directory's parent
-(the kairos project root):
+The engine is a CLI in the Kairos project (the parent of this skill directory).
+**Run it from the project root**, e.g. on this machine:
+`/Users/ericlee/Documents/Projects/kairos`. If your shell is elsewhere, `cd`
+there first. Always use `pnpm -s` (the `-s` silences pnpm's banner, which would
+otherwise corrupt the JSON on stdout).
 
 ```bash
-pnpm compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"<ISO local>","latitude":<lat>,"longitude":<lon>,"timezone":"<IANA or omit>"}}'
+cd /Users/ericlee/Documents/Projects/kairos
+pnpm -s compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"<ISO local>","latitude":<lat>,"longitude":<lon>,"timezone":"<IANA or omit>"}}'
 ```
 
 - `kind`: `"horary"`, `"transit"`, `"natal"`, or `"electional"`.
@@ -79,7 +83,7 @@ For **electional**, the request shape is different — there's no single `moment
 instead pass a `window`, a `stepMinutes`, a `location`, and the `quesitedHouse`:
 
 ```bash
-pnpm compute '{"kind":"electional","quesitedHouse":7,"stepMinutes":30,"location":{"latitude":<lat>,"longitude":<lon>,"timezone":"<IANA or omit>"},"window":{"startLocal":"2026-07-01T08:00:00","endLocal":"2026-07-07T20:00:00"},"significatorHints":{"planet":"Venus"}}'
+pnpm -s compute '{"kind":"electional","quesitedHouse":7,"stepMinutes":30,"location":{"latitude":<lat>,"longitude":<lon>,"timezone":"<IANA or omit>"},"window":{"startLocal":"2026-07-01T08:00:00","endLocal":"2026-07-07T20:00:00"},"significatorHints":{"planet":"Venus"}}'
 ```
 
 - `quesitedHouse` is the matter's house (2..12), same map as horary.
