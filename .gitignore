@@ -1,7 +1,28 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build output
 dist/
-.DS_Store
-*.local
-.claude/
+*.tsbuildinfo
+
+# Swiss Ephemeris data files (downloaded via `pnpm ephe:install`)
 ephe/
+
+# Local runtime artifacts
 web/last-result.json
+*.local
+
+# Editor / tooling
+.claude/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

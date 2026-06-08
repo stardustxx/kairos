@@ -1,0 +1,25 @@
+Kairos
+Copyright (C) 2026 Kairos contributors
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at your
+option) any later version. See the LICENSE file for the full text.
+
+Third-party components
+----------------------
+
+Swiss Ephemeris (sweph)
+  Kairos computes planetary positions with the Swiss Ephemeris, accessed via
+  the `sweph` npm package. The Swiss Ephemeris is dual-licensed under the GNU
+  Affero General Public License (AGPL) and a separate commercial license from
+  Astrodienst AG. Kairos is distributed under the AGPL and therefore relies on
+  the AGPL terms of the Swiss Ephemeris. If you intend to ship Kairos (or any
+  derivative) inside a closed-source or commercial product, you must obtain a
+  commercial Swiss Ephemeris license from Astrodienst AG first.
+  See https://www.astro.com/swisseph/ for details.
+
+GeoNames gazetteer
+  The optional offline geocoder (`pnpm geocode:install`) downloads data derived
+  from the GeoNames geographical database, licensed under Creative Commons
+  Attribution 4.0 (CC BY 4.0). See https://www.geonames.org/ .

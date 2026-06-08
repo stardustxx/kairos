@@ -13,11 +13,37 @@ not destiny.
 
 ## Step 0 — Recall the user
 
-Before asking for anything, check whether you already know this person. From the
-project root, run:
+**Resolve the engine root once per session.** Every command below runs from the
+Kairos checkout. If `$KAIROS_ROOT` is set, use it; otherwise determine the Kairos
+checkout path — ask the user the first time, or if the current working directory is
+inside the repo use `git -C . rev-parse --show-toplevel` — then `export KAIROS_ROOT=<path>`
+and reuse it for every command below. Do **not** rely on this skill file's own
+location: it is typically symlinked into `~/.claude/skills`, so an ancestor-directory
+walk from the skill file will **not** find the repo. (`$KAIROS_ROOT` is the repo;
+the engine's separate `~/.kairos` data store is unaffected.)
+
+**Re-surface one ripe reading (close the calibration loop).** Right after
+resolving the root, check whether a past reading is now ripe to resolve:
 
 ```bash
-cd /Users/ericlee/Documents/Projects/kairos
+cd "$KAIROS_ROOT"
+pnpm -s memory due
+```
+
+It prints a JSON array of logged-but-unresolved readings that are now ripe
+(expected-resolution date passed, or 30+ days since asked), **most-ripe first**. If
+it's non-empty, surface **only the single most-ripe one** (`[0]`) and ask the user,
+lightly, what actually happened — e.g. "Last month you asked whether the deal would
+close — how did that turn out?". If they tell you, record it with
+`pnpm -s memory outcome <id> <happened|did-not-happen|partial> [note]` (see
+Calibration & outcomes). **Cap it to one item, make it clearly skippable, and never
+nag** — if they brush past it, drop it and move on to their actual question. When
+the array is empty, say nothing about it.
+
+Then check whether you already know this person. From the project root, run:
+
+```bash
+cd "$KAIROS_ROOT"
 pnpm -s memory profile get
 ```
 
@@ -136,10 +162,10 @@ look it up with the bundled geocoder rather than estimating from memory — it r
 accuracy:
 
 ```bash
-cd /Users/ericlee/Documents/Projects/kairos && pnpm -s geocode '<city>'
+cd "$KAIROS_ROOT" && pnpm -s geocode '<city>'
 ```
 
-- One-time setup: `cd /Users/ericlee/Documents/Projects/kairos && pnpm -s geocode:install`
+- One-time setup: `cd "$KAIROS_ROOT" && pnpm -s geocode:install`
   (installs the offline gazetteer; the lookup errors until it's installed).
 - It prints a JSON array of matches, most populous first — take the best match's
   lat/lon and `timezone` and feed them into the request you build in Step 3.
@@ -149,14 +175,13 @@ cd /Users/ericlee/Documents/Projects/kairos && pnpm -s geocode '<city>'
 
 ## Step 3 — Call the engine
 
-The engine is a CLI in the Kairos project (the parent of this skill directory).
-**Run it from the project root**, e.g. on this machine:
-`/Users/ericlee/Documents/Projects/kairos`. If your shell is elsewhere, `cd`
-there first. Always use `pnpm -s` (the `-s` silences pnpm's banner, which would
+The engine is a CLI in the Kairos project (the repo at `$KAIROS_ROOT`, resolved in
+Step 0). **Run it from the project root** — `cd "$KAIROS_ROOT"` first if your shell
+is elsewhere. Always use `pnpm -s` (the `-s` silences pnpm's banner, which would
 otherwise corrupt the JSON on stdout).
 
 ```bash
-cd /Users/ericlee/Documents/Projects/kairos
+cd "$KAIROS_ROOT"
 pnpm -s compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"<ISO local>","latitude":<lat>,"longitude":<lon>,"timezone":"<IANA or omit>"}}'
 ```
 
@@ -195,7 +220,7 @@ self-contained HTML file with the engine's non-blocking render command. Pass the
 engine writes one openable artifact and exits without starting a server:
 
 ```bash
-cd /Users/ericlee/Documents/Projects/kairos
+cd "$KAIROS_ROOT"
 pnpm -s wheel:render '<the same request JSON from Step 3>'
 ```
 
@@ -489,24 +514,34 @@ and "no" cannot be quoted as evidence for either.
 Never present a verdict without the signals to back it (they live in Layer 2, but
 they must be there). Never invent a degree the engine did not return.
 
-## Step 6 — Log the reading
+## Step 6 — Logging is automatic
 
-After **every** verdict, record it to the local journal so Kairos can later
-report its own track record. Pass a JSON object with the question, the kind, the
-matter's house (when applicable), and the judgment you gave:
+You **do not** hand-copy the reading into a second command anymore — the compute
+call logs it for you. Add a `journal` field to the **exact request JSON you built
+in Step 3** and the engine appends the journal entry as a side effect *after*
+computing, capturing the engine-derived fields itself (`kind`, `quesitedHouse`,
+and for horary the judgment's own `lean`/`confidence`/`score`) so the track record
+can never drift from the numbers the engine actually returned:
 
 ```bash
-pnpm -s memory log '{"question":"Will I get this job?","kind":"horary","quesitedHouse":10,"lean":"favorable","confidence":"medium","score":34}'
+pnpm -s compute '{"kind":"horary","quesitedHouse":10,"moment":{...},"journal":{"question":"Will I get this job?","verdictText":"Leans yes — moderate confidence."}}'
 ```
 
-- Fields: `question` (string), `kind` (`"horary"`/`"transit"`/`"natal"`/
-  `"electional"`), `quesitedHouse?` (number), `lean` (`"favorable"`/
-  `"unfavorable"`/`"uncertain"`), `confidence` (`"low"`/`"medium"`/`"high"`),
-  `score` (number). The engine's own `lean`/`confidence`/`score` should be what
-  you log.
-- It prints the stored entry, including a generated `id`. **Keep that id** and
-  mention it to the user — tell them they can later tell you what actually
-  happened for this question, and you'll record the outcome (see below).
+- `journal.question` (string, required) is the user's question, recorded verbatim.
+- `journal.verdictText` (string, optional) is the plain verdict you gave, stored as
+  a note on the entry.
+- The result gains a `journalId`. **Keep that id** and mention it to the user —
+  tell them they can later tell you what actually happened for this question, and
+  you'll record the outcome (see below). For horary with applying-perfection
+  timing, the engine also stamps an `expectedResolutionAt` (the "ask me later"
+  date) from the perfection time, so the reading re-surfaces on its own when ripe
+  (see Step 0).
+- Omit `journal` and compute stays pure (no write) — that's the path the
+  web/wheel render uses. Add it on the **text-verdict** path so every verdict is
+  logged by construction.
+
+(If you ever need to log a row without recomputing, `pnpm -s memory log '<json>'`
+still exists, but the auto-log above is the default — prefer it.)
 
 ## Calibration & outcomes
 
@@ -535,7 +570,8 @@ that entry by id:
 pnpm -s memory outcome <id> <happened|did-not-happen|partial> [note words...]
 ```
 
-- `<id>` is the journal id you gave them at log time.
+- `<id>` is the journal id you gave them at log time (or the `id` of a ripe entry
+  from `pnpm -s memory due`).
 - The outcome is `happened`, `did-not-happen`, or `partial` (`unknown` leaves it
   effectively unresolved). Anything after the outcome is recorded as a free-text
   note.

@@ -9,6 +9,7 @@
  *   pnpm -s memory profile clear
  *   pnpm -s memory log '{"question":"...","kind":"horary","lean":"favorable"}'
  *   pnpm -s memory journal
+ *   pnpm -s memory due            (alias: pending) — ripe unresolved readings
  *   pnpm -s memory outcome <id> happened it worked out
  *   pnpm -s memory calibration
  */
@@ -19,6 +20,7 @@ import {
   clearProfile,
   computeCalibration,
   createProfile,
+  dueReadings,
   listProfiles,
   loadJournal,
   loadProfile,
@@ -39,11 +41,12 @@ const USAGE = [
   "  profile remove <slug>",
   "  log <json>",
   "  journal | journal list",
+  "  due | pending",
   "  outcome <id> <happened|did-not-happen|partial|unknown> [note words...]",
   "  calibration",
   "",
   "  --profile <slug>  run this one command against <slug> without switching the",
-  "                    active profile (works with get/set/clear/log/journal/calibration)",
+  "                    active profile (works with get/set/clear/log/journal/due/calibration)",
 ].join("\n");
 
 function emit(value: unknown): void {
@@ -116,6 +119,14 @@ function main(): void {
         process.exit(1);
       }
       emit(withSlug(loadJournal) satisfies JournalEntry[]);
+      return;
+    }
+    case "due":
+    case "pending": {
+      // Logged-but-unresolved readings that are now ripe to ask about (most-ripe
+      // first). Uses the real clock here; the underlying fn takes an injectable
+      // "now" for deterministic tests.
+      emit(withSlug(dueReadings) satisfies JournalEntry[]);
       return;
     }
     case "outcome": {

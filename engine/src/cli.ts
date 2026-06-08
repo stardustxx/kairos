@@ -3,11 +3,36 @@ import { computeCrossAspects } from "./aspects.js";
 import { buildChart, relocateChart } from "./chart.js";
 import { searchElectionalMoments } from "./electional.js";
 import { judgeHorary } from "./horary.js";
+import { appendJournal } from "./memory.js";
 import { computePositions } from "./positions.js";
 import { annualProfection, completedYearsBetween } from "./profections.js";
 import { resolveJulianDay } from "./time.js";
 import type { ComputeRequest, ComputeResult } from "./types.js";
 import { validateRequest } from "./validate.js";
+
+/**
+ * Auto-log this compute to the local journal as a side effect (opt-in via
+ * `req.journal`). We capture the engine-derived fields HERE — kind, quesitedHouse,
+ * and for horary the judgment's own lean/confidence/score — rather than trusting a
+ * hand-copied second call, so the track record can't drift from what the engine
+ * actually returned. Sets `expectedResolutionAt` from the horary timing's
+ * perfectsAtUtc when present (the "ask me later" date). Mutates `result.journalId`.
+ */
+function autoLog(req: ComputeRequest, result: ComputeResult): void {
+  if (!req.journal) return;
+  const judgment = result.horary;
+  const stored = appendJournal({
+    question: req.journal.question,
+    kind: req.kind,
+    quesitedHouse: req.quesitedHouse,
+    lean: judgment?.lean,
+    confidence: judgment?.confidence,
+    score: judgment?.score,
+    verdictText: req.journal.verdictText,
+    expectedResolutionAt: judgment?.timing?.perfectsAtUtc ?? undefined,
+  });
+  result.journalId = stored.id;
+}
 
 export function runCompute(req: ComputeRequest): ComputeResult {
   validateRequest(req);
@@ -40,6 +65,7 @@ export function runCompute(req: ComputeRequest): ComputeResult {
         datetimeLocal: best.datetimeLocal,
       });
     }
+    autoLog(req, result);
     return result;
   }
 
@@ -112,6 +138,7 @@ export function runCompute(req: ComputeRequest): ComputeResult {
     };
   }
 
+  autoLog(req, result);
   return result;
 }
 

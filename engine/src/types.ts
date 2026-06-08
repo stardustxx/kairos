@@ -56,6 +56,18 @@ export interface ComputeRequest {
    *  the same moment (e.g. a natal chart relocated to where you live now). Only
    *  lat/lon (+ optional timezone/houseSystem) are used; datetime is ignored. */
   relocation?: Omit<MomentInput, "datetimeLocal"> & { datetimeLocal?: string };
+  /** Optional auto-logging: when present, runCompute appends a journal entry as a
+   *  side effect AFTER computing — capturing the engine-derived fields itself
+   *  (kind, quesitedHouse, and for horary the judgment lean/confidence/score) plus
+   *  this question (and optional verdictText) — and returns the new entry id on
+   *  the result. Absent ⇒ runCompute writes nothing (the web/wheel path stays
+   *  pure). Logged against the active profile, under the current KAIROS_HOME. */
+  journal?: {
+    /** The user's question, recorded verbatim on the entry. */
+    question: string;
+    /** Optional free-text verdict the model gave, stored as the entry's note. */
+    verdictText?: string;
+  };
 }
 
 export interface ElectionalCandidate {
@@ -411,4 +423,7 @@ export interface ComputeResult {
   electional?: ElectionalResult;
   /** Present when the request supplied a `relocation` place. */
   relocation?: RelocationResult;
+  /** Id of the journal entry auto-logged as a side effect of this compute. Present
+   *  only when the request carried a `journal` field; absent on the pure path. */
+  journalId?: string;
 }

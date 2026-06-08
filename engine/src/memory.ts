@@ -67,9 +67,16 @@ export interface JournalEntry {
   lean?: Lean;
   confidence?: Confidence;
   score?: number;
+  /** The plain-language verdict the model gave at log time (optional). Distinct
+   * from `outcomeNote`, which records what actually HAPPENED on resolution. */
+  verdictText?: string;
   outcome?: Outcome;
   outcomeNote?: string;
   resolvedAt?: string;
+  /** When this reading is expected to be resolvable — the "ask me later" date. Set
+   * from the horary timing's `perfectsAtUtc` when present (ISO-8601); absent
+   * otherwise (the due resolver then falls back to a default lag past askedAt). */
+  expectedResolutionAt?: string;
   /** Slug of the profile this reading is about. Absent on pre-multiprofile rows
    * (treated as the default profile). */
   ownerId?: string;
@@ -445,6 +452,35 @@ export function computeCalibration(slug?: string): CalibrationReport {
     total: entries.length,
     note: "Small samples are noisy — this is a personal pattern, not proof.",
   };
+}
+
+/** Default lag (ms) past `askedAt` before a timing-less reading is considered
+ *  ripe — long enough that most matters have had a chance to resolve. */
+const DEFAULT_LAG_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/**
+ * Logged-but-UNRESOLVED readings that are now ripe to ask about, most-ripe first.
+ * A reading is ripe when its `expectedResolutionAt` is in the past; entries with
+ * no expected-resolution date become ripe only after a default lag (30 days) past
+ * `askedAt`. Resolved entries (any outcome) and not-yet-ripe ones are excluded.
+ *
+ * `nowIso` is injectable so tests are deterministic — they pass a fixed reference
+ * "now" rather than depending on the real clock. Defaults to the wall clock.
+ */
+export function dueReadings(slug?: string, nowIso: string = new Date().toISOString()): JournalEntry[] {
+  const now = new Date(nowIso).getTime();
+  const ripe: Array<{ entry: JournalEntry; dueAt: number }> = [];
+  for (const entry of loadJournal(slug)) {
+    if (entry.outcome != null) continue; // already resolved
+    const dueAt = entry.expectedResolutionAt
+      ? new Date(entry.expectedResolutionAt).getTime()
+      : new Date(entry.askedAt).getTime() + DEFAULT_LAG_MS;
+    if (Number.isNaN(dueAt) || dueAt > now) continue; // not yet ripe (or unparseable)
+    ripe.push({ entry, dueAt });
+  }
+  // Most-ripe first = oldest due date first (longest overdue).
+  ripe.sort((a, b) => a.dueAt - b.dueAt);
+  return ripe.map((r) => r.entry);
 }
 
 // ── Profile management ──────────────────────────────────────────────────────

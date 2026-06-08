@@ -13,6 +13,47 @@ honest caveats.
 - **`skill/SKILL.md`** — the Claude Skill: classifies the question, calls the
   engine, and interprets the result. Pure judgment, no math.
 
+## Install (for anyone)
+
+Kairos runs anywhere, not just on the author's machine:
+
+```bash
+git clone <repo-url> kairos
+cd kairos
+pnpm install
+pnpm test                       # run the engine test suite — all should pass
+```
+
+Then install the Claude Skill and point it at your checkout:
+
+1. **Install the skill** — copy or symlink `skill/` into your Claude skills
+   directory as `kairos` (it is typically *symlinked* there, so the skill file
+   lives outside the repo and cannot locate the engine by walking up its own
+   directory tree):
+
+   ```bash
+   ln -s "$(pwd)/skill" ~/.claude/skills/kairos
+   ```
+
+2. **Tell the skill where the engine lives** — export `KAIROS_ROOT` (the path to
+   *this* checkout) so every engine command the skill runs can find it:
+
+   ```bash
+   export KAIROS_ROOT="$(pwd)"   # add to your shell profile to persist it
+   ```
+
+   `KAIROS_ROOT` is the **repo/engine** location. It is separate from
+   `KAIROS_HOME`, which (if set) overrides where the engine stores your **data**
+   (`~/.kairos`) — don't conflate them.
+
+3. **Optional installers** — the offline geocoder and full-precision ephemeris
+   are opt-in:
+
+   ```bash
+   pnpm geocode:install            # offline city → lat/lon + timezone gazetteer
+   pnpm ephe:install               # full Swiss Ephemeris .se1 data files
+   ```
+
 ## Setup
 
 ```bash
@@ -25,6 +66,20 @@ pnpm test        # run the engine test suite
 ```bash
 pnpm compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-02T09:00:00","latitude":40.7128,"longitude":-74.006,"timezone":"America/New_York"}}'
 ```
+
+## Geocode a place (offline)
+
+Instead of looking up coordinates by hand, resolve a city name to authoritative
+lat/lon + timezone from a local gazetteer (no network at query time):
+
+```bash
+pnpm geocode:install            # one-time: download the GeoNames cities15000 set
+pnpm -s geocode 'Tokyo'         # → [{ name, country, latitude, longitude, timezone, ... }]
+```
+
+It returns the top matches, most populous first, as JSON. The data lives under
+`~/.kairos/geonames` (outside the repo). Run with `pnpm -s` so stdout stays clean
+JSON.
 
 ## Render a chart wheel
 
@@ -117,7 +172,20 @@ someone lives now (same birth moment, planets unchanged, only the houses move). 
 interactive chart-wheel web UI ships in `web/` (`pnpm wheel`), with a
 Birthplace/Relocated view switch and detail tables.
 
-## Licensing note
+## License
 
-`sweph` (Swiss Ephemeris) is dual-licensed AGPL / commercial. Fine for personal
-and open use; revisit before shipping a closed commercial product.
+Kairos is licensed under the **GNU Affero General Public License v3.0 or later**
+(AGPL-3.0-or-later). The full text is in [`LICENSE`](./LICENSE); third-party
+credits are in [`NOTICE`](./NOTICE).
+
+**In plain English:** you can run, study, modify, and share Kairos freely. The
+one extra string the AGPL attaches (beyond the regular GPL) is the *network*
+clause: if you ever host a modified Kairos as a service that other people use over
+a network, you must also offer those users the corresponding source code. For the
+intended **local, personal** use — running it on your own machine — this changes
+nothing; you're free to do whatever you like.
+
+`sweph` (Swiss Ephemeris) is dual-licensed AGPL / commercial. Distributing Kairos
+under the AGPL is fine for personal and open use; if you ever embed it in a
+closed-source or commercial product, obtain a commercial Swiss Ephemeris license
+from Astrodienst AG first (see `NOTICE`).
