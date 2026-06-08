@@ -132,23 +132,20 @@ describe("indirect rescue from prohibition (Feature D rule 2)", () => {
     // indirectly => +12 recovery, perfection.indirectPath === "Mercury".
     //
     // Mercury geometry: applying-conjunction to Sun (Mercury 95°, faster 1.5),
-    // separating trine from Saturn. Saturn 106°, trine points 226°/-14°(346°);
-    // pick Saturn-trine via the OTHER significator path — translation needs
-    // Mercury aspecting BOTH significators. Mercury 95° to Sun 100°: conjunction
-    // applying. Mercury 95° to Saturn 106°: 11° — not a major aspect. Need
-    // Mercury to also aspect Saturn. Place Mercury so it sextiles Saturn while
-    // conjoining the Sun is impossible (Sun & Saturn only 6° apart). Instead make
-    // the translation run the OTHER direction: Mercury separating from the Sun,
-    // applying to Saturn. Mercury just past the Sun (102°, moving 1.5 > Sun 1.0,
-    // so pulling ahead = separating conjunction from Sun) and applying to Saturn
-    // (106°, conjunction, Mercury closing). 102→106 gap 4°, Mercury faster closes
-    // => applying conjunction to Saturn. Sun–Mercury: 100 vs 102, Mercury ahead &
-    // faster => separating. Translation: from Sun → to Saturn by Mercury. Sound.
+    // separating trine from Saturn. The bodies are placed in Sagittarius (250°+)
+    // so the Moon — the prohibitor — neither rules (Jupiter) nor exalts there and
+    // therefore does NOT receive its target: this stays a DENYING prohibition that
+    // a third-planet translation can rescue (reception is a separate mechanism).
+    // Make the translation run Sun → Saturn: Mercury just past the Sun (252°,
+    // moving 1.5 > Sun 1.0, so pulling ahead = separating conjunction from Sun) and
+    // applying to Saturn (256°, conjunction, Mercury closing). 252→256 gap 4°,
+    // Mercury faster closes => applying conjunction to Saturn. Sun–Mercury: 250 vs
+    // 252, Mercury ahead & faster => separating. Translation: from Sun → to Saturn.
     const planets = [
-      planet("Sun", 100, 1.0),
-      planet("Saturn", 106, 0.03),
-      planet("Moon", 93, 13.0), // prohibitor: perfects with the Sun first
-      planet("Mercury", 102, 1.5), // sound translator Sun → Saturn
+      planet("Sun", 250, 1.0),
+      planet("Saturn", 256, 0.03),
+      planet("Moon", 243, 13.0), // prohibitor (no reception in Sagittarius): perfects with the Sun first
+      planet("Mercury", 252, 1.5), // sound translator Sun → Saturn
       planet("Venus", 300, 1.1),
       planet("Mars", 20, 0.5),
       planet("Jupiter", 320, 0.08),
@@ -174,19 +171,22 @@ describe("indirect rescue from prohibition (Feature D rule 2)", () => {
     // rescue: no +12 recovery, and the synthesis records the prohibition with no
     // surviving indirect path through that body.
     //
-    // Moon at 99° translates Sun → Saturn: it has just SEPARATED from the Sun
-    // (Moon 99°, Sun 100° — a 1° conjunction the fast Moon is leaving) and is
-    // APPLYING to Saturn (99° → 106°, 7° closing conjunction). That same Moon→
-    // Saturn contact perfects long before the slow Sun⇄Saturn conjunction, so the
-    // Moon is ALSO the prohibitor targeting Saturn — one light, hence abscission.
+    // Bodies in Sagittarius (250°+) so the Moon does not RECEIVE its target (the
+    // Moon neither rules nor exalts there) — keeping this a DENYING prohibition,
+    // the case where abscission can apply. Moon at 249° translates Sun → Saturn: it
+    // has just SEPARATED from the Sun (Moon 249°, Sun 250° — a 1° conjunction the
+    // fast Moon is leaving) and is APPLYING to Saturn (249° → 256°, 7° closing
+    // conjunction). That same Moon→Saturn contact perfects long before the slow
+    // Sun⇄Saturn conjunction, so the Moon is ALSO the prohibitor targeting Saturn —
+    // one light, hence abscission.
     const planets = [
-      planet("Sun", 100, 1.0),
-      planet("Saturn", 106, 0.03),
-      planet("Moon", 99, 13.0), // both prohibitor (→Saturn) and translator
-      planet("Mercury", 300, 1.2),
-      planet("Venus", 320, 1.1),
+      planet("Sun", 250, 1.0),
+      planet("Saturn", 256, 0.03),
+      planet("Moon", 249, 13.0), // both prohibitor (→Saturn) and translator
+      planet("Mercury", 90, 1.2),
+      planet("Venus", 120, 1.1),
       planet("Mars", 20, 0.5),
-      planet("Jupiter", 240, 0.08),
+      planet("Jupiter", 30, 0.08),
     ];
     const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
     expect(j.prohibition).not.toBeNull();

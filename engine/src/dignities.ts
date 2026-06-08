@@ -163,6 +163,19 @@ function receivesBy(host: string, longitude: number): string | null {
   return null;
 }
 
+/** Directional reception: does planet `receiver` receive a body sitting at
+ *  `longitude` by domicile or exaltation — i.e. is `receiver` the domicile or
+ *  exaltation lord of the sign at `longitude`? Returns the dignity name
+ *  ("domicile"/"exaltation") or null. These are the two STRONG receptions that
+ *  classically nullify a prohibition's denial (term/face do not). Reuses the same
+ *  SIGN_RULER + EXALTATION tables as computeDignities — no duplication. */
+export function receivesByDomicileOrExaltation(
+  receiver: string,
+  longitude: number,
+): "domicile" | "exaltation" | null {
+  return receivesBy(receiver, longitude) as "domicile" | "exaltation" | null;
+}
+
 /**
  * Reception between two planets by domicile/exaltation. Mutual reception (each
  * in a sign the other rules/exalts) is a classical perfecting aid.

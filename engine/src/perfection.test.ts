@@ -217,11 +217,48 @@ describe("judgeHorary applies perfection-breaker debits", () => {
     return total;
   }
 
-  it("prohibition cuts off otherwise-applying significators (-25)", () => {
-    // Sun (querent) & Saturn (quesited) apply to conjunction (100° & 106°). The
-    // other bodies are parked around 70-76°, making no aspect to either
-    // significator. Moon 7° behind the Sun applies to it and perfects first =>
+  it("prohibition WITHOUT reception cuts off otherwise-applying significators (-25)", () => {
+    // Sun (querent) & Saturn (quesited) apply to conjunction at 250° & 256°
+    // (Sagittarius). The other bodies are parked around 220-226°, making no aspect
+    // to either significator. Moon 7° behind the Sun (243°, Sagittarius) applies to
+    // it and perfects first => prohibition. The Moon neither rules (Jupiter) nor
+    // exalts in Sagittarius, so it does NOT receive the Sun — a clean no-reception
     // prohibition. The -25 testimony must be present and part of the score.
+    const planets = [
+      planet("Sun", 250, 1.0),
+      planet("Saturn", 256, 0.03),
+      planet("Moon", 243, 13.0),
+      planet("Mercury", 220, 1.2),
+      planet("Venus", 222, 1.1),
+      planet("Mars", 224, 0.5),
+      planet("Jupiter", 226, 0.08),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
+    expect(j.prohibition).not.toBeNull();
+    expect(j.prohibition?.prohibitor).toBe("Moon");
+    expect(j.prohibition?.receivesTarget).toBe(false);
+    expect(j.prohibition?.mutualReception).toBe(false);
+    const breaker = j.testimonies.find((s) => s.includes("Prohibition"));
+    expect(breaker).toBeDefined();
+    expect(breaker).toContain("(-25)");
+    // The received-prohibition (+5) testimony must NOT appear; this denies.
+    expect(j.testimonies.some((s) => s.includes("perfects with labour"))).toBe(false);
+    // The perfection is marked broken-by-prohibition.
+    expect(j.perfection.broken).toContain("prohibition");
+    // The -25 is genuinely summed into the aggregate score (engine invariant:
+    // score == sum of the signed weights in the testimonies).
+    expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
+    expect(j.testimonies.filter((s) => s.includes("Prohibition")).length).toBe(1);
+  });
+
+  it("prohibition WITH reception is not a denial — perfects with labour (+5), not broken", () => {
+    // Same geometry, but in Cancer: Sun (querent) & Saturn (quesited) apply to a
+    // conjunction at 100° & 106° (Cancer). Moon 7° behind the Sun at 93° (Cancer)
+    // applies to it and perfects first => prohibition. BUT the Moon RULES Cancer,
+    // so the Moon RECEIVES the Sun by domicile: classically the matter is NOT cut
+    // off — it perfects with labour. The -25 must NOT be applied; instead a +5
+    // "perfects with labour" testimony, and the perfection is NOT broken-by-
+    // prohibition. Other bodies parked at 70-76° make no interfering aspect.
     const planets = [
       planet("Sun", 100, 1.0),
       planet("Saturn", 106, 0.03),
@@ -234,13 +271,18 @@ describe("judgeHorary applies perfection-breaker debits", () => {
     const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
     expect(j.prohibition).not.toBeNull();
     expect(j.prohibition?.prohibitor).toBe("Moon");
-    const breaker = j.testimonies.find((s) => s.includes("Prohibition"));
-    expect(breaker).toBeDefined();
-    expect(breaker).toContain("(-25)");
-    // The -25 is genuinely summed into the aggregate score (engine invariant:
-    // score == sum of the signed weights in the testimonies).
+    expect(j.prohibition?.target).toBe("Sun");
+    // The Moon rules Cancer, so it receives the Sun by domicile.
+    expect(j.prohibition?.receivesTarget).toBe(true);
+    // No -25 denial; instead the +5 "perfects with labour" testimony.
+    expect(j.testimonies.some((s) => s.includes("(-25)"))).toBe(false);
+    const received = j.testimonies.find((s) => s.includes("perfects with labour"));
+    expect(received).toBeDefined();
+    expect(received).toContain("(+5)");
+    // A received prohibition does NOT break perfection.
+    expect(j.perfection.broken).not.toContain("prohibition");
+    // Invariant: score == sum of the signed testimony weights, with the +5 folded in.
     expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
-    expect(j.testimonies.filter((s) => s.includes("Prohibition")).length).toBe(1);
   });
 
   it("a clean chart with no breakers reports none and no breaker testimonies", () => {

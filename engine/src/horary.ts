@@ -279,7 +279,24 @@ function aggregateTestimony(args: {
   // matter can be cut off. These are strong denials that can overturn an
   // otherwise-favorable lean. The detectors already require an applying
   // significator aspect, so a breaker here means a real interception.
-  if (args.prohibition) {
+  // A prohibition only DENIES when there is no reception (Lilly CA, Bonatti). When
+  // the prohibitor RECEIVES the significator it intercepts (by domicile/exaltation,
+  // or in mutual reception), the matter is NOT cut off — it perfects with labour.
+  // Treat that as a small positive instead of the -25 denial, and do NOT mark it as
+  // a perfection-breaker below.
+  const prohibitionReceived =
+    !!args.prohibition &&
+    (args.prohibition.receivesTarget || args.prohibition.mutualReception);
+  if (args.prohibition && prohibitionReceived) {
+    score += 5;
+    const how = args.prohibition.mutualReception
+      ? "mutual reception"
+      : `receives ${args.prohibition.target} by domicile/exaltation`;
+    t.push(
+      `Prohibition by ${args.prohibition.prohibitor}, but ${args.prohibition.prohibitor} ` +
+        `${how} — not cut off, perfects with labour (+5)`,
+    );
+  } else if (args.prohibition) {
     score -= 25;
     t.push(
       `Prohibition: ${args.prohibition.prohibitor} perfects by ${args.prohibition.aspect} ` +
@@ -307,9 +324,13 @@ function aggregateTestimony(args: {
   // against double-counting the SAME light: if the prohibitor IS the carrier, the
   // intercepting body and the "rescuing" body are one planet — that is abscission
   // (a cutting-off), not a rescue, so award no recovery.
+  // A RECEIVED prohibition is not a denial at all, so there is nothing to rescue —
+  // reception nullifying the denial is a DIFFERENT mechanism from a third-planet
+  // translation rescue. Only a denying (unreceived) prohibition opens the rescue.
   let rescuePath: string | null = null;
   if (
     args.prohibition &&
+    !prohibitionReceived &&
     soundIndirectCarrier &&
     soundIndirectCarrier !== args.prohibition.prohibitor
   ) {
@@ -329,18 +350,22 @@ function aggregateTestimony(args: {
   // SYNTHESIS: a coherent perfection picture. There is a DIRECT perfection when
   // the significators apply to a soft (or square) aspect and nothing breaks it.
   const breakers: PerfectionBreaker[] = [];
-  if (args.prohibition) breakers.push("prohibition");
+  // A RECEIVED prohibition does NOT break perfection (the matter perfects with
+  // labour), so it must not appear among the breakers — only a denying one does.
+  if (args.prohibition && !prohibitionReceived) breakers.push("prohibition");
   if (args.refranation) breakers.push("refranation");
   if (args.besieging.length > 0) breakers.push("besieging");
 
   const sa = args.significatorAspect;
   const directlyApplies = !!sa?.applying && sa.type !== "opposition";
   const direct = directlyApplies && breakers.length === 0;
-  // A surviving indirect path needs a SOUND carrier that is not itself the
+  // A surviving indirect path needs a SOUND carrier that is not itself a DENYING
   // prohibitor — if the carrier IS the prohibitor that is abscission (the same
-  // light cutting the matter off), so no path survives through it.
+  // light cutting the matter off), so no path survives through it. A RECEIVED
+  // prohibition denies nothing, so its prohibitor does not abscind the path.
+  const denyingProhibitor = prohibitionReceived ? undefined : args.prohibition?.prohibitor;
   const indirectPath =
-    soundIndirectCarrier && soundIndirectCarrier !== args.prohibition?.prohibitor
+    soundIndirectCarrier && soundIndirectCarrier !== denyingProhibitor
       ? soundIndirectCarrier
       : null;
 

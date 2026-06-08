@@ -245,6 +245,15 @@ export interface Prohibition {
   target: string;
   /** Aspect type of the intercepting (completing) contact. */
   aspect: string;
+  /** True when the prohibitor RECEIVES its target significator by domicile or
+   *  exaltation — i.e. the prohibitor is the domicile/exaltation lord of the sign
+   *  the target occupies. Classically (Lilly CA, Bonatti) a prohibition WITH
+   *  reception does NOT cut the matter off: it perfects with labour. When true the
+   *  denial is nullified. */
+  receivesTarget: boolean;
+  /** True when prohibitor and target are in MUTUAL reception (each receives the
+   *  other by domicile/exaltation) — the strongest non-denial case. */
+  mutualReception: boolean;
 }
 
 /** A significator that withdraws (retrograde/stationing) before the perfecting

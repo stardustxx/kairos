@@ -18,6 +18,7 @@
  * ephemeris lookup.
  */
 import { computeAspects } from "./aspects.js";
+import { receivesByDomicileOrExaltation } from "./dignities.js";
 import type { Besieging, PlanetPosition, Prohibition, Refranation } from "./types.js";
 
 /** Signed shortest angular path from lon1 to lon2, in (-180, 180]. Positive =
@@ -56,6 +57,12 @@ function byName(planets: PlanetPosition[], name: string): PlanetPosition | undef
  * relative-speed time-to-perfection of each third-planet applying aspect against
  * the significators' own applying aspect. Returns the soonest-perfecting
  * prohibitor, or null when none beats the significators (or they do not apply).
+ *
+ * The returned prohibition is ANNOTATED with reception: per Lilly CA / Bonatti, a
+ * prohibition only DENIES when there is no reception. `receivesTarget` is true
+ * when the prohibitor receives (by domicile or exaltation) the significator whose
+ * light it intercepts; `mutualReception` is true when the two also receive each
+ * other. With reception the matter is not cut off — it perfects with labour.
  */
 export function detectProhibition(
   sigA: string,
@@ -73,7 +80,7 @@ export function detectProhibition(
   const sigDays = daysToPerfection(A.speed, B.speed, sigAspect.orb);
   if (!Number.isFinite(sigDays)) return null;
 
-  let best: Prohibition | null = null;
+  let best: { prohibitor: PlanetPosition; target: PlanetPosition; aspect: string } | null = null;
   let bestDays = sigDays;
   for (const target of [A, B]) {
     for (const T of planets) {
@@ -83,12 +90,30 @@ export function detectProhibition(
         const days = daysToPerfection(T.speed, target.speed, asp.orb);
         if (Number.isFinite(days) && days < bestDays) {
           bestDays = days;
-          best = { prohibitor: T.name, target: target.name, aspect: asp.type };
+          best = { prohibitor: T, target, aspect: asp.type };
         }
       }
     }
   }
-  return best;
+  if (!best) return null;
+
+  // Reception annotation: the prohibitor RECEIVES the target it intercepts when it
+  // is the domicile/exaltation lord of the sign that target sits in. Mutual when
+  // the target ALSO receives the prohibitor. These STRONG receptions nullify the
+  // denial (term/face deliberately excluded).
+  const receivesTarget =
+    receivesByDomicileOrExaltation(best.prohibitor.name, best.target.longitude) !== null;
+  const targetReceivesProhibitor =
+    receivesByDomicileOrExaltation(best.target.name, best.prohibitor.longitude) !== null;
+  const mutualReception = receivesTarget && targetReceivesProhibitor;
+
+  return {
+    prohibitor: best.prohibitor.name,
+    target: best.target.name,
+    aspect: best.aspect,
+    receivesTarget,
+    mutualReception,
+  };
 }
 
 /**
