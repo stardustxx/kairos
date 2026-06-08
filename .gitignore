@@ -18,6 +18,9 @@ web/last-result.json
 .vscode/
 .idea/
 
+# Internal development planning docs (not part of the shipped project)
+docs/superpowers/
+
 # OS
 .DS_Store
 Thumbs.db
