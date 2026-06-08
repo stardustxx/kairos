@@ -1,4 +1,4 @@
-import { ASPECTS } from "./constants.js";
+import { ASPECTS, DEFAULT_PLANET_ORB, PLANET_ORB } from "./constants.js";
 import { computePositionsAtJd } from "./positions.js";
 import { julianDayToUtcString } from "./time.js";
 import type { Aspect, PlanetPosition } from "./types.js";
@@ -7,6 +7,24 @@ import type { Aspect, PlanetPosition } from "./types.js";
 function separation(a: number, b: number): number {
   const d = Math.abs(a - b) % 360;
   return d > 180 ? 360 - d : d;
+}
+
+/** Full orb of a single body (Lilly's moiety table), with a small default for
+ *  non-classical points (modern planets, Node, Part of Fortune). */
+function planetOrb(name: string): number {
+  return PLANET_ORB[name] ?? DEFAULT_PLANET_ORB;
+}
+
+/**
+ * Operative orb for a PAIR of bodies = the mean of their two full orbs
+ * (equivalently the sum of their moieties = half-orbs). Per Lilly, an aspect is
+ * in orb when |separation - aspectAngle| <= operativeOrb; this single per-pair
+ * orb governs ALL five Ptolemaic aspects. E.g. operativeOrb("Sun","Moon")
+ * = (15 + 12) / 2 = 13.5; operativeOrb("Mercury","Venus") = 7;
+ * operativeOrb("Saturn","Mars") = (9 + 7.5) / 2 = 8.25.
+ */
+export function operativeOrb(nameA: string, nameB: string): number {
+  return (planetOrb(nameA) + planetOrb(nameB)) / 2;
 }
 
 /**
@@ -118,9 +136,10 @@ export function computeAspects(
       const A = planets[i];
       const B = planets[j];
       const sepNow = separation(A.longitude, B.longitude);
+      const pairOrb = operativeOrb(A.name, B.name);
       for (const def of ASPECTS) {
         const orb = Math.abs(sepNow - def.angle);
-        if (orb > def.orb) continue;
+        if (orb > pairOrb) continue;
 
         let applying: boolean;
         let perfectsAtUtc: string | null | undefined;
@@ -176,9 +195,10 @@ export function computeCrossAspects(
   for (const T of transiting) {
     for (const N of natal) {
       const sepNow = separation(T.longitude, N.longitude);
+      const pairOrb = operativeOrb(T.name, N.name);
       for (const def of ASPECTS) {
         const orb = Math.abs(sepNow - def.angle);
-        if (orb > def.orb) continue;
+        if (orb > pairOrb) continue;
 
         let applying: boolean;
         let perfectsAtUtc: string | null | undefined;
@@ -226,26 +246,33 @@ export function computeCrossAspects(
  * Aspects from each planet to the chart's angles (Ascendant, MC). A planet
  * closely aspecting an angle is one of the strongest testimonies of strength and
  * visibility. Angles are treated as fixed points; `applying` is approximated
- * from the planet's own motion toward the angle. Uses a tight 5° orb for all
- * aspect types, as is traditional for the angles.
+ * from the planet's own motion toward the angle.
+ *
+ * ANGLE-ASPECT ORB DECISION: an angle (Asc/MC) is a calculated cusp, not a body,
+ * so it has no light/moiety of its own. We therefore allow only the ASPECTING
+ * PLANET'S moiety (half its full orb) as the orb — the planet alone projects its
+ * ray onto the angle. This keeps the moiety doctrine consistent (a Sun-angle
+ * contact gets 7.5°, a Saturn-angle 4.5°, Mercury-angle 3.5°) instead of the old
+ * flat 5° per aspect, and it preserves the classical instinct that angle orbs are
+ * tighter than full planet-pair orbs (half, by construction).
  */
 export function computeAngleAspects(
   planets: PlanetPosition[],
   ascendant: number,
   mc: number,
 ): Aspect[] {
-  const ANGLE_ORB = 5;
   const angles = [
     { name: "Ascendant", lon: ascendant },
     { name: "MC", lon: mc },
   ];
   const out: Aspect[] = [];
   for (const P of planets) {
+    const moiety = planetOrb(P.name) / 2;
     for (const ang of angles) {
       const sepNow = separation(P.longitude, ang.lon);
       for (const def of ASPECTS) {
         const orb = Math.abs(sepNow - def.angle);
-        if (orb > Math.min(def.orb, ANGLE_ORB)) continue;
+        if (orb > moiety) continue;
         const sepNext = separation(P.longitude + P.speed, ang.lon);
         out.push({
           a: P.name,

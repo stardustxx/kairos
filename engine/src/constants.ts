@@ -57,13 +57,43 @@ export const SIGN_RULER: string[] = [
 export interface AspectDef {
   name: string;
   angle: number;
-  orb: number;
 }
 
+// The five Ptolemaic aspect ANGLES. Classically the allowed orb is NOT a
+// property of the aspect type but of the two PLANETS in contact (see PLANET_ORB
+// and operativeOrb in aspects.ts), so no per-aspect orb is stored here.
 export const ASPECTS: AspectDef[] = [
-  { name: "conjunction", angle: 0, orb: 8 },
-  { name: "sextile", angle: 60, orb: 4 },
-  { name: "square", angle: 90, orb: 7 },
-  { name: "trine", angle: 120, orb: 8 },
-  { name: "opposition", angle: 180, orb: 8 },
+  { name: "conjunction", angle: 0 },
+  { name: "sextile", angle: 60 },
+  { name: "square", angle: 90 },
+  { name: "trine", angle: 120 },
+  { name: "opposition", angle: 180 },
 ];
+
+// MOIETY-BASED ORBS. In traditional astrology an orb is the radius of a
+// planet's light/body, a property of the PLANET, not of the aspect. Two planets
+// are in aspect when their separation from exactness is within the MEAN of
+// their two full orbs (equivalently, the sum of their two moieties = half-orbs).
+// Source: William Lilly, Christian Astrology (1647), Bk. 1, "Of the Orbes of
+// the Planets" — full orbs (in degrees of diameter): Sun 15, Moon 12,
+// Mercury 7, Venus 7, Mars 7.5, Jupiter 9, Saturn 9.
+// The operative orb for a PAIR = (orbA + orbB) / 2 (see operativeOrb), applied
+// to ALL five Ptolemaic aspects alike. Worked examples:
+//   Sun-Moon      = (15 + 12) / 2 = 13.5
+//   Mercury-Venus = ( 7 +  7) / 2 = 7
+//   Saturn-Mars   = ( 9 + 7.5) / 2 = 8.25
+export const PLANET_ORB: Record<string, number> = {
+  Sun: 15,
+  Moon: 12,
+  Mercury: 7,
+  Venus: 7,
+  Mars: 7.5,
+  Jupiter: 9,
+  Saturn: 9,
+};
+
+// Default full orb for bodies Lilly's table does not cover (modern planets,
+// Node, Part of Fortune, etc.). Chosen as a conservative small orb so these
+// non-classical points do not claim wide aspects; they never carry horary
+// significator weight, so this only affects descriptive aspect listings.
+export const DEFAULT_PLANET_ORB = 5;

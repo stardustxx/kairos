@@ -186,7 +186,13 @@ describe("horary golden charts (verdict regression baseline)", () => {
       perfection: { direct: false, broken: [], indirectPath: "Jupiter" },
       timing: null,
       testimonies: [
-        "No direct aspect between the significators (0)",
+        // Saturn (querent) 334.72° and Mars (quesited) 278.76° are 55.96° apart:
+        // 4.04° off a sextile. Under moiety orbs the Mars-Saturn pair allows
+        // (9 + 7.5)/2 = 8.25°, so this sextile is now IN orb (the old flat 4°
+        // sextile orb excluded it -> "No direct aspect"). Saturn is the slower
+        // body and separating, so the contact carries 0 weight — score is
+        // unchanged at 48 and the verdict is identical.
+        "Significators only separating (sextile) — the matter is past, not forming (0)",
         "Moon applies by square to the quesited — testimony with difficulty (+5)",
         "Translation of light by Jupiter (Mars → Saturn) (+18)",
         "Collection of light by Mercury (+15)",
@@ -284,34 +290,49 @@ describe("horary golden charts (verdict regression baseline)", () => {
     });
   });
 
-  // 11. ORDINARY MIXED chart, 7th house (relationship/other party): a clean direct
-  //     sextile perfection with a weeks-scale timing narrative.
-  it("ordinary mixed, 7th house: direct sextile perfection (London, 7th)", () => {
+  // 11. ORDINARY MIXED chart, 7th house (relationship/other party): a direct
+  //     applying sextile perfection that is now PROHIBITED by the Moon. Under
+  //     moiety orbs the Moon (343.69°) and quesited Venus (81.31°) are 97.62°
+  //     apart — 7.62° off a square — which fits their (12 + 7)/2 = 9.5° pair orb
+  //     but NOT the old flat 7° square orb. So the Moon now perfects a square
+  //     with Venus before the significators do: a prohibition (-25). The direct
+  //     sextile (+40) survives in the testimony but perfection.direct flips false
+  //     and the score falls 40 -> 20, dropping confidence high -> medium.
+  it("ordinary mixed, 7th house: direct sextile prohibited by the Moon (London, 7th)", () => {
     expect(judge(LONDON, "2026-05-11T20:00:00", 7)).toEqual({
       lean: "favorable",
-      confidence: "high",
-      score: 40,
-      perfection: { direct: true, broken: [], indirectPath: null },
+      confidence: "medium",
+      score: 20,
+      perfection: { direct: false, broken: ["prohibition"], indirectPath: null },
       timing: { unit: "weeks", amount: 3 },
       testimonies: [
         "Significators perfect by applying sextile (+40)",
+        "Moon applies by square to the quesited — testimony with difficulty (+5)",
         "Querent significator Mars well-dignified (dignity +7) (+5)",
         "Quesited significator Venus debilitated (dignity -5) (-5)",
+        "Prohibition: Moon perfects by square with Venus before the significators — the matter is cut off (-25)",
       ],
     });
   });
 
   // 12. ORDINARY MIXED chart, 10th house (career/outcome): direct trine perfection
-  //     with reception and a months-scale timing — the slow-but-clean "yes".
-  it("ordinary mixed, 10th house: direct trine with reception (NYC, 10th)", () => {
+  //     with reception (the slow-but-clean "yes"), now REINFORCED by a Mercury
+  //     translation. Under moiety orbs Mercury (81.51°) and the Moon (252.28°,
+  //     querent co-significator) are 170.77° apart — 9.23° off an opposition —
+  //     which fits their (7 + 12)/2 = 9.5° pair orb but exceeded the old flat 8°
+  //     opposition orb. That newly in-orb Mercury-Moon opposition lets Mercury
+  //     translate light (Jupiter -> Moon), adding +18 and an indirectPath, so the
+  //     score rises 45 -> 63 (still favorable/high; the direct trine is intact).
+  it("ordinary mixed, 10th house: direct trine with reception and Mercury translation (NYC, 10th)", () => {
     expect(judge(NEW_YORK, "2027-05-21T08:00:00", 10)).toEqual({
       lean: "favorable",
       confidence: "high",
-      score: 45,
-      perfection: { direct: true, broken: [], indirectPath: null },
+      score: 63,
+      perfection: { direct: true, broken: [], indirectPath: "Mercury" },
       timing: { unit: "months", amount: 7 },
       testimonies: [
         "Significators perfect by applying trine (+40)",
+        "Translation of light by Mercury (Jupiter → Moon) (+18)",
         "One-way reception (Jupiter receives the other by domicile) (+5)",
       ],
     });

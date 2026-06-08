@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import { computeAspects } from "./aspects.js";
+import { computeAspects, operativeOrb } from "./aspects.js";
 import { buildChart } from "./chart.js";
 import { DEGREES_PER_SIGN, SIGN_COUNT, SIGN_RULER } from "./constants.js";
 import { moonVoidStatus } from "./horary.js";
@@ -52,16 +52,16 @@ export function findSignificators(
  *  - trine / sextile: favorable (soft)
  *  - conjunction: favorable only between/with benefics, else unfavorable
  *  - square / opposition: unfavorable (hard)
- * `strength` scales 0..1 with orb tightness within the aspect's allowed orb
- * (we approximate the orb cap from the aspect type).
+ * `strength` scales 0..1 with orb tightness within the aspect's allowed orb,
+ * using the SAME per-pair moiety orb as the in-orb gate (operativeOrb), so the
+ * tightness ramp stays consistent with which aspects the engine admits.
  */
 export function evaluateAspectQuality(aspect: Aspect): {
   favorable: boolean;
   strength: number;
 } {
-  const orbCap =
-    aspect.type === "sextile" ? 4 : aspect.type === "square" ? 7 : 8;
-  const strength = Math.max(0, 1 - aspect.orb / orbCap);
+  const orbCap = operativeOrb(aspect.a, aspect.b);
+  const strength = orbCap > 0 ? Math.max(0, 1 - aspect.orb / orbCap) : 0;
 
   let favorable: boolean;
   if (aspect.type === "trine" || aspect.type === "sextile") {

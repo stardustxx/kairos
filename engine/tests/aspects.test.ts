@@ -186,10 +186,23 @@ describe("computeAngleAspects", () => {
     expect(satAsc!.type).toBe("opposition");
   });
 
-  it("respects the tight 5° angle orb", () => {
-    // 7° off a conjunction is within the 8° planet orb but beyond the 5° angle orb.
+  it("respects the planet's moiety as the angle orb", () => {
+    // An angle has no light of its own, so the orb is the aspecting planet's
+    // moiety = half its full orb. Mars full orb 7.5 -> moiety 3.75. At 7° off a
+    // conjunction Mars is well beyond its 3.75° moiety, so no aspect to the Asc.
     const aspects = computeAngleAspects([p("Mars", 7, 0.5)], 0, 270);
     expect(aspects.find((a) => a.b === "Ascendant")).toBeUndefined();
+  });
+
+  it("admits an aspect within the planet's moiety", () => {
+    // Sun full orb 15 -> moiety 7.5. At 7° off a conjunction the Sun is within
+    // its 7.5° moiety of the Ascendant, so the contact IS in orb (it would have
+    // been excluded by the old flat 5° angle orb).
+    const aspects = computeAngleAspects([p("Sun", 7, 1)], 0, 270);
+    const sunAsc = aspects.find((a) => a.a === "Sun" && a.b === "Ascendant");
+    expect(sunAsc).toBeTruthy();
+    expect(sunAsc!.type).toBe("conjunction");
+    expect(sunAsc!.orb).toBeCloseTo(7, 5);
   });
 });
 
@@ -204,7 +217,9 @@ describe("buildChart angle aspects", () => {
     expect(Array.isArray(chart.angleAspects)).toBe(true);
     for (const a of chart.angleAspects) {
       expect(["Ascendant", "MC"]).toContain(a.b);
-      expect(a.orb).toBeLessThanOrEqual(5);
+      // Angle orb = the aspecting planet's moiety; the widest possible is the
+      // Sun's (full orb 15 -> moiety 7.5).
+      expect(a.orb).toBeLessThanOrEqual(7.5);
     }
   });
 });

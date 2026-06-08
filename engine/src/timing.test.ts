@@ -170,11 +170,12 @@ describe("judgeHorary timing wiring", () => {
   });
 
   it("yields null timing when there is no applying significator aspect", () => {
-    // Sun & Saturn are ~100° apart — no major aspect between them, so no applying
-    // perfection and therefore no timing.
+    // Sun & Saturn are 105° apart — between the square (90) and trine (120),
+    // 15° off either, which exceeds their moiety orb of (15+9)/2 = 12. So no
+    // major aspect between them, no applying perfection, and therefore no timing.
     const planets = [
       planet("Sun", 5, 1.0),
-      planet("Saturn", 105, 0.03),
+      planet("Saturn", 110, 0.03),
       planet("Moon", 200, 13.0),
       planet("Mercury", 250, 1.2),
       planet("Venus", 260, 1.1),
