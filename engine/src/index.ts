@@ -32,17 +32,24 @@ export type {
   JournalEntry,
   Outcome,
   Profile,
+  ProfileListing,
   ProfilePlace,
+  ProfileRef,
 } from "./memory.js";
 export {
+  activeSlug,
   appendJournal,
   clearProfile,
   computeCalibration,
+  createProfile,
+  listProfiles,
   loadJournal,
   loadProfile,
   memoryHome,
   recordOutcome,
+  removeProfile,
   saveProfile,
+  setActive,
 } from "./memory.js";
 export { detectBesieging, detectProhibition, detectRefranation } from "./perfection.js";
 export { annualProfection, completedYearsBetween } from "./profections.js";

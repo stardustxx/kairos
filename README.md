@@ -46,14 +46,21 @@ remember you and learn from its own track record:
 
 - **Profile** — `memory profile get|set|clear` stores your birth data (for
   transits/natal) and home/relocation location, so the skill doesn't re-ask.
+- **Multiple people** — `memory profile list|use <slug>|add "<Name>"|remove <slug>`
+  keep a separate profile per person you cast for (you, a partner, a friend).
+  `get`/`set`/`clear` act on the active profile; append `--profile <slug>` to any
+  command to act on another person for just that one call.
 - **Journal** — `memory log <json>` records every verdict (question, kind, lean,
-  confidence, score) and returns an `id`; `memory journal` lists them.
+  confidence, score) and returns an `id`; `memory journal` lists them. Entries are
+  tagged with the person they're about.
 - **Outcomes & calibration** — `memory outcome <id> <happened|did-not-happen|partial> [note]`
   records what actually happened, and `memory calibration` reports hit-rate by
-  confidence band. Small samples are noisy — it's a personal pattern, not proof.
+  confidence band (pooled across everyone; add `--profile <slug>` to narrow to one
+  person). Small samples are noisy — it's a personal pattern, not proof.
 
-All of this lives under `~/.kairos` and is **never synced** — your birth data
-and history stay on this machine. (Run with `pnpm -s`; the `-s` keeps pnpm's
+All of this lives under `~/.kairos` (one `profiles/<slug>/` directory per person,
+plus a pooled `journal.jsonl`) and is **never synced** — everyone's birth data and
+your history stay on this machine. (Run with `pnpm -s`; the `-s` keeps pnpm's
 banner out of the JSON.)
 
 ## Install the skill

@@ -12,9 +12,11 @@ import { randomBytes } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
@@ -33,7 +35,23 @@ export interface ProfilePlace {
 export interface Profile {
   birth?: ProfilePlace & { datetimeLocal: string };
   home?: ProfilePlace;
+  /** Human label for this person/context (e.g. "Partner", "Rectified 7:12am"). */
+  label?: string;
   updatedAt: string;
+}
+
+/** A lightweight reference to a stored profile, keyed by its filesystem slug. */
+export interface ProfileRef {
+  slug: string;
+  label?: string;
+}
+
+/** A profile plus the bits the CLI needs to render a listing. */
+export interface ProfileListing extends ProfileRef {
+  active: boolean;
+  hasBirth: boolean;
+  hasHome: boolean;
+  updatedAt?: string;
 }
 
 /** How a logged reading actually turned out. */
@@ -52,6 +70,9 @@ export interface JournalEntry {
   outcome?: Outcome;
   outcomeNote?: string;
   resolvedAt?: string;
+  /** Slug of the profile this reading is about. Absent on pre-multiprofile rows
+   * (treated as the default profile). */
+  ownerId?: string;
 }
 
 /** Calibration stats for a single confidence band. */
@@ -73,6 +94,14 @@ export interface CalibrationReport {
 
 const PROFILE_FILE = "profile.json";
 const JOURNAL_FILE = "journal.jsonl";
+/** Directory holding one subdir per profile (each with its own profile.json). */
+const PROFILES_DIR = "profiles";
+/** Root-level pointer to the active profile: `{ "slug": "<slug>" }`. */
+const ACTIVE_FILE = "active.json";
+/** The reserved slug the migrated/original single user lives under. */
+const DEFAULT_SLUG = "default";
+/** Slugs are filesystem path segments, so keep them strict to prevent escape. */
+const SLUG_RE = /^[a-z0-9-]+$/;
 
 const VALID_KINDS = new Set<ChartKind>(["natal", "transit", "horary", "electional"]);
 const VALID_LEANS = new Set<Lean>(["favorable", "unfavorable", "uncertain"]);
@@ -99,12 +128,85 @@ function ensureHome(): string {
   return dir;
 }
 
-function profilePath(): string {
-  return join(memoryHome(), PROFILE_FILE);
+/** Throw on any slug that isn't a safe single path segment (no traversal). */
+function assertSafeSlug(slug: string): void {
+  if (!SLUG_RE.test(slug)) {
+    throw new Error(`invalid profile slug ${JSON.stringify(slug)} (must match ${SLUG_RE})`);
+  }
 }
 
+/** Turn a human label into a slug; fall back to a time-based id if it empties out. */
+function slugify(label: string): string {
+  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || `p-${Date.now().toString(36)}`;
+}
+
+function profilesRoot(): string {
+  return join(memoryHome(), PROFILES_DIR);
+}
+
+function profileDir(slug: string): string {
+  assertSafeSlug(slug);
+  return join(profilesRoot(), slug);
+}
+
+function profilePath(slug: string): string {
+  return join(profileDir(slug), PROFILE_FILE);
+}
+
+/** The journal is a single pooled file at the root (one track record). */
 function journalPath(): string {
   return join(memoryHome(), JOURNAL_FILE);
+}
+
+function activePath(): string {
+  return join(memoryHome(), ACTIVE_FILE);
+}
+
+/** Write the active-profile pointer atomically (stage to .tmp, then rename). */
+function writeActivePointer(slug: string): void {
+  ensureHome();
+  const path = activePath();
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify({ slug }, null, 2)}\n`);
+  renameSync(tmp, path);
+}
+
+/**
+ * Lazily upgrade a pre-multiprofile store: a single `profile.json` at the root
+ * becomes `profiles/default/profile.json`, and a root `active.json` is written
+ * to mark the migration done. The pooled `journal.jsonl` stays at the root
+ * untouched (its rows are attributed to the default profile on read).
+ *
+ * Idempotent and crash-safe: guarded by `active.json`; each step is a no-op if
+ * already applied; the rename copies bytes verbatim (no parse), and a crash
+ * before `active.json` lands simply re-runs (the moved data already resolves to
+ * the default profile). Callers wrap this so a read on a read-only dir degrades
+ * to the default path rather than throwing.
+ */
+function ensureMigrated(): void {
+  if (existsSync(activePath())) return;
+  const legacy = join(memoryHome(), PROFILE_FILE);
+  if (!existsSync(legacy)) return; // fresh install (or journal-only) — nothing to move.
+  mkdirSync(profileDir(DEFAULT_SLUG), { recursive: true });
+  if (existsSync(legacy)) renameSync(legacy, profilePath(DEFAULT_SLUG));
+  writeActivePointer(DEFAULT_SLUG); // last, so a crash before this re-runs safely.
+}
+
+/**
+ * The slug of the active profile. Runs migration first (wrapped so reads never
+ * throw), then reads `active.json`, defaulting to `default` when absent/garbled.
+ */
+export function activeSlug(): string {
+  try {
+    ensureMigrated();
+    const path = activePath();
+    if (!existsSync(path)) return DEFAULT_SLUG;
+    const ptr = JSON.parse(readFileSync(path, "utf8")) as { slug?: unknown };
+    return typeof ptr.slug === "string" && SLUG_RE.test(ptr.slug) ? ptr.slug : DEFAULT_SLUG;
+  } catch {
+    return DEFAULT_SLUG;
+  }
 }
 
 /**
@@ -119,9 +221,9 @@ function writeJournalAtomic(content: string): void {
   renameSync(tmp, path);
 }
 
-/** Load the stored profile, or null if none has been saved yet. */
-export function loadProfile(): Profile | null {
-  const path = profilePath();
+/** Load a stored profile (the active one by default), or null if unsaved. */
+export function loadProfile(slug: string = activeSlug()): Profile | null {
+  const path = profilePath(slug);
   if (!existsSync(path)) return null;
   try {
     return JSON.parse(readFileSync(path, "utf8")) as Profile;
@@ -131,12 +233,13 @@ export function loadProfile(): Profile | null {
 }
 
 /**
- * Deep-merge a patch over the existing profile (birth/home merged field-wise),
- * refresh updatedAt, persist, and return the merged profile.
+ * Deep-merge a patch over a profile (the active one by default; birth/home
+ * merged field-wise), refresh updatedAt, persist, and return the merged profile.
  */
-export function saveProfile(patch: Partial<Profile>): Profile {
+export function saveProfile(patch: Partial<Profile>, slug: string = activeSlug()): Profile {
   ensureHome();
-  const existing = loadProfile();
+  mkdirSync(profileDir(slug), { recursive: true });
+  const existing = loadProfile(slug);
   const merged: Profile = {
     ...existing,
     ...patch,
@@ -148,13 +251,13 @@ export function saveProfile(patch: Partial<Profile>): Profile {
   if (existing?.home || patch.home) {
     merged.home = { ...existing?.home, ...patch.home } as Profile["home"];
   }
-  writeFileSync(profilePath(), `${JSON.stringify(merged, null, 2)}\n`);
+  writeFileSync(profilePath(slug), `${JSON.stringify(merged, null, 2)}\n`);
   return merged;
 }
 
-/** Forget the user: delete profile.json if present. */
-export function clearProfile(): void {
-  const path = profilePath();
+/** Forget a profile's birth/home: delete its profile.json if present. */
+export function clearProfile(slug: string = activeSlug()): void {
+  const path = profilePath(slug);
   if (existsSync(path)) rmSync(path);
 }
 
@@ -202,8 +305,12 @@ function validateEntryFields(entry: {
   }
 }
 
-/** Read the journal, skipping blank or corrupt lines defensively. */
-export function loadJournal(): JournalEntry[] {
+/**
+ * Read the pooled journal, skipping blank or corrupt lines defensively. With a
+ * `slug`, return only that profile's entries (rows with no `ownerId` predate
+ * multiprofile and count as the default profile); without one, return all.
+ */
+export function loadJournal(slug?: string): JournalEntry[] {
   const path = journalPath();
   if (!existsSync(path)) return [];
   const entries: JournalEntry[] = [];
@@ -216,15 +323,18 @@ export function loadJournal(): JournalEntry[] {
       // Skip a corrupt line rather than failing the whole read.
     }
   }
-  return entries;
+  if (slug == null) return entries;
+  return entries.filter((e) => (e.ownerId ?? DEFAULT_SLUG) === slug);
 }
 
 /**
- * Append a reading to the journal. Assigns id and askedAt if absent, writes one
- * JSON line, and returns the stored entry (so the caller can keep the id).
+ * Append a reading to the pooled journal. Assigns id/askedAt if absent, stamps
+ * the owning profile (the active one by default), writes one JSON line, and
+ * returns the stored entry (so the caller can keep the id).
  */
 export function appendJournal(
   entry: Omit<JournalEntry, "id" | "askedAt"> & Partial<Pick<JournalEntry, "id" | "askedAt">>,
+  slug: string = activeSlug(),
 ): JournalEntry {
   validateEntryFields(entry);
   ensureHome();
@@ -233,6 +343,7 @@ export function appendJournal(
     ...entry,
     id: entry.id ?? nextId(existing),
     askedAt: entry.askedAt ?? nowIso(),
+    ownerId: entry.ownerId ?? slug,
   };
   writeFileSync(journalPath(), `${JSON.stringify(stored)}\n`, { flag: "a" });
   return stored;
@@ -292,8 +403,8 @@ function creditFor(lean: Lean, outcome: Outcome): number {
  * Compute Kairos's calibration: hit-rate by confidence band over resolved,
  * directional (favorable/unfavorable) readings. "partial" counts as half credit.
  */
-export function computeCalibration(): CalibrationReport {
-  const entries = loadJournal();
+export function computeCalibration(slug?: string): CalibrationReport {
+  const entries = loadJournal(slug);
   const bands: CalibrationBand[] = CONFIDENCE_BANDS.map((confidence) => ({
     confidence,
     resolved: 0,
@@ -334,4 +445,73 @@ export function computeCalibration(): CalibrationReport {
     total: entries.length,
     note: "Small samples are noisy — this is a personal pattern, not proof.",
   };
+}
+
+// ── Profile management ──────────────────────────────────────────────────────
+
+/** Switch the active profile. Throws if no profile exists under `slug`. */
+export function setActive(slug: string): ProfileRef {
+  assertSafeSlug(slug);
+  ensureMigrated();
+  if (!existsSync(profileDir(slug))) throw new Error(`no profile "${slug}"`);
+  writeActivePointer(slug);
+  return { slug, label: loadProfile(slug)?.label };
+}
+
+/** List every stored profile, marking which one is active. */
+export function listProfiles(): ProfileListing[] {
+  ensureMigrated();
+  const active = activeSlug();
+  const root = profilesRoot();
+  if (!existsSync(root)) return [];
+  const slugs = readdirSync(root).filter((name) => {
+    try {
+      return SLUG_RE.test(name) && statSync(join(root, name)).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+  return slugs.map((slug) => {
+    const profile = loadProfile(slug);
+    return {
+      slug,
+      label: profile?.label,
+      active: slug === active,
+      hasBirth: profile?.birth != null,
+      hasHome: profile?.home != null,
+      updatedAt: profile?.updatedAt,
+    };
+  });
+}
+
+/**
+ * Create a new profile from a human label (slugified, with `-2`/`-3`… added on
+ * collision). Seeds birth/home from an optional patch. Does NOT switch active.
+ */
+export function createProfile(label: string, patch?: Partial<Profile>): ProfileRef {
+  ensureMigrated();
+  const base = slugify(label);
+  let slug = base;
+  for (let n = 2; existsSync(profileDir(slug)); n += 1) slug = `${base}-${n}`;
+  saveProfile({ ...patch, label }, slug);
+  return { slug, label };
+}
+
+/**
+ * Delete a profile's birth/home (its `profiles/<slug>/` dir). Refuses to remove
+ * the last remaining profile. If the removed profile was active, repoints active
+ * to a surviving profile. Pooled journal rows owned by the slug are left intact
+ * — the readings still happened and stay in the overall track record.
+ */
+export function removeProfile(slug: string): void {
+  assertSafeSlug(slug);
+  ensureMigrated();
+  const all = listProfiles();
+  if (all.length <= 1) throw new Error("cannot remove the last remaining profile");
+  if (!all.some((p) => p.slug === slug)) throw new Error(`no profile "${slug}"`);
+  rmSync(profileDir(slug), { recursive: true, force: true });
+  if (activeSlug() === slug) {
+    const survivor = all.find((p) => p.slug !== slug);
+    if (survivor) writeActivePointer(survivor.slug);
+  }
 }
