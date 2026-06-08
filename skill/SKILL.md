@@ -38,9 +38,37 @@ pnpm -s memory profile set '{"birth":{"datetimeLocal":"1990-03-12T07:45:00","lat
 
 - A place is `{latitude, longitude, timezone?, place?}`; `birth` also carries
   `datetimeLocal` (local civil time, no offset).
-- `pnpm -s memory profile clear` forgets the user entirely.
+- `pnpm -s memory profile clear` forgets the active profile's birth/home.
 
 Horary needs no birth data, so a missing profile is fine — just proceed.
+
+### Multiple people
+
+Kairos can remember **several people** you cast for (yourself, a partner, a
+friend) — each its own profile with its own birth/home, all on this machine.
+`profile get`/`set`/`clear` always act on the **active** profile. To work with
+others:
+
+```bash
+pnpm -s memory profile list                 # all profiles; one is "active":true
+pnpm -s memory profile add "Partner"        # create a profile (does NOT switch to it)
+pnpm -s memory profile use partner          # switch the active profile
+pnpm -s memory profile remove partner       # delete a profile's birth/home
+```
+
+- **When the question is about someone other than the active person** ("read this
+  for my partner", "use my rectified 7:12am time"), run `profile list` first. If a
+  matching profile exists, either `profile use <slug>` to switch, or — to read for
+  them **without** changing the active profile — append `--profile <slug>` to that
+  one command (works with `get`/`set`/`log`/`journal`/`calibration`). If no profile
+  matches, `profile add "<Name>"` and set their birth data. Tell the user which
+  person you're reading for.
+- If only the default profile exists, behave exactly as before — no need to mention
+  profiles at all.
+- The reading **journal is pooled** across everyone (it's your engine's single
+  honest track record), but each entry is tagged with the person it's about, so
+  `calibration --profile <slug>` (or `journal --profile <slug>`) can narrow to one
+  person while plain `calibration` reports the overall hit-rate.
 
 ## Step 1 — Start from the QUESTION, then gather only what it needs
 
@@ -90,8 +118,8 @@ Classify first; ask for birth data only if you land on transit/natal.
 **1d. Gather only the inputs the classified kind needs** (recall from Step 0 first;
 ask only for what's still missing):
 
-- **Horary** — the user's **current location** (city → lat/lon; you may estimate
-  from a city name). The moment is **now**. No birth data.
+- **Horary** — the user's **current location** (city → lat/lon; resolve it with
+  the geocode lookup below). The moment is **now**. No birth data.
 - **Electional** — a **window** (start/end local dates), the **location** where the
   action happens, a **step** (scan granularity — 15–60 min is typical), and the
   **house** of the matter (1c). If the window is vague ("next month"), pick concrete
@@ -100,6 +128,24 @@ ask only for what's still missing):
   `birth` profile from Step 0 if present). If they don't know the exact time,
   proceed but add an explicit caveat that house-based and rising-sign claims are
   unreliable. If they refuse or can't provide birth data, **fall back to horary**.
+
+**Resolving a city to coordinates — prefer the geocoder over estimating.** Whenever
+you need lat/lon for a city (the horary/electional location, a birth or home place),
+look it up with the bundled geocoder rather than estimating from memory — it returns
+**authoritative lat/lon AND the IANA timezone**, which especially fixes timezone
+accuracy:
+
+```bash
+cd /Users/ericlee/Documents/Projects/kairos && pnpm -s geocode '<city>'
+```
+
+- One-time setup: `cd /Users/ericlee/Documents/Projects/kairos && pnpm -s geocode:install`
+  (installs the offline gazetteer; the lookup errors until it's installed).
+- It prints a JSON array of matches, most populous first — take the best match's
+  lat/lon and `timezone` and feed them into the request you build in Step 3.
+- **Fall back to estimating** lat/lon (and omitting `timezone` so the engine derives
+  it) **only if** the lookup is unavailable (gazetteer not installed and you can't
+  install it).
 
 ## Step 3 — Call the engine
 
@@ -166,6 +212,27 @@ pnpm -s wheel:render '<the same request JSON from Step 3>'
 **Every chart** now carries richer context you can draw on for any kind:
 - `chart.sect` (`"day"`/`"night"`), and `chart.partOfFortune` (sign + house) — a
   classical point of benefit; note its house for "where fortune favors."
+- `chart.lots` — the classical Hermetic lots beyond Fortune: an array of `Lot`
+  (`name`, `sign`, `degInSign`, `house`) in the order **Spirit, Eros, Necessity,
+  Courage, Victory, Nemesis**. Each is a sensitive point with its own theme —
+  Spirit (mind/career/action), Eros (desire/love), Necessity (constraint/fate),
+  Courage (boldness/conflict), Victory (success/hope), Nemesis (downfall/limit).
+  Read alongside the Part of Fortune: note the **house** a relevant lot falls in
+  for where that theme plays out (e.g. "the Lot of Victory sits in your 10th —
+  success shows through career").
+- `chart.fixedStars` — conjunctions of planets or the Asc/MC to major fixed stars
+  (precessed to the chart year, tight ≤1° orb), each a `StarContact` with `star`,
+  `body` (the planet name, or `"Ascendant"`/`"MC"`), `orb`, `nature`, and `tone`
+  (`"benefic"`/`"malefic"`/`"mixed"`). A planet or angle on a **malefic** star
+  (e.g. Algol, Antares, Scheat) is a notable **affliction** — name it as such; on
+  a **benefic** star (e.g. Regulus, Spica, Sirius) it's a notable **benefit**. A
+  `"mixed"` tone is genuinely ambivalent. Empty when nothing is within orb.
+- `chart.antiscia` — antiscia / contra-antiscia contacts among the planets:
+  **hidden conjunctions** via the solstitial (antiscia) and equinoctial
+  (contra-antiscia) mirror. Each is an `AntisciaContact` with `a`, `b`, `kind`
+  (`"antiscia"`/`"contra-antiscia"`), and `orb`. Present them as **subtle
+  connections** between the two bodies — a link that isn't visible as an ordinary
+  aspect but still binds them. Empty when none are within orb.
 - Each classical planet has `dignities` (domicile/exaltation/triplicity/term/face,
   with a net `score` and `labels`). Use it to say whether a relevant planet is
   **strong or compromised** — e.g. "Venus is in detriment, so her promise is weak."
@@ -180,7 +247,28 @@ pnpm -s wheel:render '<the same request JSON from Step 3>'
   reversal, or things going backward — the horary score already debits it.
 
 **Horary:**
-- The engine now returns an **aggregated judgment** you should anchor on:
+- **Lead the judgment with `HoraryJudgment.perfection`** — the engine's single
+  synthesised picture of whether the matter comes together. It is a
+  `PerfectionSynthesis` with:
+  - `direct` (boolean) — `true` when the two significators apply to a perfecting
+    aspect AND **no breaker** cuts it off: the matter comes together directly.
+  - `broken` — an array of the breakers present (`"prohibition"`/`"refranation"`/
+    `"besieging"`), in detection order; empty when nothing breaks the perfection.
+  - `indirectPath` (string or `null`) — the carrying/gathering planet of a **sound**
+    indirect perfection (translation or collection by an **unimpeded** carrier), or
+    `null` when no indirect path survives. **An impeded carrier — combust or
+    besieged — does NOT deliver**, so the engine reports `null` here even when a
+    translation/collection geometrically exists; do not promise an outcome through
+    a damaged carrier.
+  - `summary` — a plain-language one-line read of the whole picture.
+
+  Open your judgment with this: state whether there's **direct perfection**, name
+  **what breaks it** (the `broken` breakers, identified planet-by-planet from the
+  detail fields below), and whether an **indirect path survives** (`indirectPath`).
+  The independent signals below (`significatorAspect`, `translationOfLight`, the
+  breakers, etc.) are the supporting detail behind this synthesis — `perfection` is
+  the headline they roll up into.
+- The engine also returns an **aggregated judgment** you should anchor on:
   `lean` (`"favorable"` / `"unfavorable"` / `"uncertain"`), `confidence`
   (`"low"` / `"medium"` / `"high"`), a numeric `score`, and a `testimonies[]`
   array of signed factors (e.g. `"Significators perfect by applying trine (+40)"`,
@@ -236,9 +324,22 @@ pnpm -s wheel:render '<the same request JSON from Step 3>'
     besieged `significator`/`planet`.
 - Each significator's house placement (`querentSignificatorHouse` /
   `quesitedSignificatorHouse`) gives context on where the querent and matter "sit."
-- `moonNextAspect` and aspect `orb` hint at **timing**: a tight orb means sooner.
-  Loosely map remaining degrees to the house matter's unit (days/weeks/months) and
-  state it as an estimate, not a promise.
+- **Timing — `HoraryJudgment.timing`.** When the significators form an applying
+  perfection, the engine returns a `Timing` object (else `null`):
+  - `degreesToPerfection` — degrees the applying significator is short of exact.
+  - `unit` (`"days"`/`"weeks"`/`"months"`/`"years"`) and `amount` — the estimate's
+    unit and rounded count (unit set by the sign's modality and the significator's
+    angularity).
+  - `text` — the ready-made plain phrase (e.g. `"about 4 days"`, or `"about 4 days
+    (perfects on 2026-06-21)"`). **Use `text` for the "Timing" line of your output**,
+    presented as an **estimate**, not a promise.
+  - `perfectsAtUtc` — the exact perfection time (ISO 8601 UTC) when known, else
+    `null`. **Prefer `perfectsAtUtc` when present** — name that concrete date as
+    the likely "when" instead of the rough unit estimate. When it's `null`, fall
+    back to the `text` estimate.
+  When `timing` is `null` (no applying significator aspect), say timing is unclear.
+  You can still cross-check with `moonNextAspect` and aspect `orb` for texture
+  (a tighter orb means sooner), but `timing.text` / `perfectsAtUtc` is the source.
 
 **Transit:**
 - Read `transitAspects` from transiting planets to natal planets. Slow transiting
@@ -302,15 +403,70 @@ pnpm -s wheel:render '<the same request JSON from Step 3>'
 
 ## Step 5 — Output (always this shape)
 
-1. **Verdict** — the lean + a confidence word (low / moderate / strong).
-   Example: "Leans yes — moderate confidence."
-2. **Key signals** — the specific placements and aspects, quoting the **exact
-   degrees from the engine** (e.g. "your significator Venus at 12.4° Libra applies
-   to a trine with Jupiter at 9.1° Aquarius").
-3. **Timing** — windows/dates where the data supports it; otherwise say timing is
-   unclear.
-4. **Caveats** — what lowers confidence (void Moon, rough birth time, wide orb),
-   and the reminder that this is one input to the decision.
+Write in **two layers**. Layer 1 (the plain read) leads and is self-sufficient: a
+non-astrologer who stops after it has the whole answer. Layer 2 (the chart detail)
+is a clearly separated, optional appendix that carries every degree, house,
+dignity, and aspect name. **Never lead with mechanics.**
+
+### Layer 1 — the plain read (no jargon, no degrees, no aspect names)
+
+1. **Verdict** — ONE bolded plain sentence, the first thing on screen, plus a
+   confidence word (low / moderate / strong).
+   - **Horary / Electional:** the lean. "**Leans yes — moderate confidence.**"
+   - **Transit / Natal:** window quality, *not* a yes/no. "**Most likely: a
+     demanding, foundation-building year — moderate confidence on the texture, not
+     on any one event.**"
+   No degrees, house numbers, or aspect names on this line.
+
+2. **Most likely → least likely** — rank the outcomes by weight of signal,
+   most-probable first; the final item is always the explicit **Least likely**.
+   Each scenario gets a **bold headline** (the only other bold allowed), 1–3 plain
+   sentences of what it means for the person's life, and a plain confidence word in
+   parentheses *(low / moderate / strong)* — the least-likely item carries *(low)*.
+   Preserve **every** scenario and the **full** real-world flavor of each placement
+   (don't truncate "travel / foreign / remote / further study / publishing /
+   teaching" to a subset). When one mechanic is the dominant driver of the year,
+   say so in plain words here — "the defining pattern of the year" — not only in
+   Layer 2. Demote the mechanism's *name*, never its meaning or its weight.
+
+3. **Timing** — concrete dates/windows in plain language, attached to the relevant
+   scenario ("a strong launch window around Sept 12, or daytime July 24"; "the
+   career theme runs through Dec 26 2026"); if timing is unclear, say so. **Dates
+   are plain-read content and stay in Layer 1 — only DEGREES get demoted, never
+   timing.**
+
+4. **The honest boundary** — one short plain paragraph: what this can and cannot
+   tell them, the magnitude-not-direction limit in plain words, and — whenever a
+   directional lean was given — the falsifiability line naming the outcome that
+   would prove it wrong. Point to where the directional answers actually live (the
+   yes/no charts, the launch-timing search) when relevant. This is one input, not
+   destiny.
+
+### Layer 2 — "The chart detail, if you want it —" (separated, explicitly optional)
+
+5. A clearly separated block under the heading **"The chart detail, if you want
+   it —"**, opening with a skip-line ("*Skip this unless you want the mechanics —
+   every number behind the read lives here.*"). Here, and **only** here, do degrees,
+   orbs, house numbers, dignity scores, aspect names, profection / Lord-of-the-Year
+   terms, perfects-at dates, void Moon, retrogrades, and almuten appear. Group the
+   bullets under the **same scenario order** as Layer 1, and label each with the
+   plain scenario it powers ("The hard way → Lord of the Year is Mars at 14.8°
+   Taurus, in detriment (−5), in the 9th house…"). The falsifiability line for each
+   directional claim may sit here next to the mechanic it tests. A practitioner must
+   be able to reconstruct the reading exactly from this layer — **nothing dropped,
+   only relocated.**
+
+**Bold discipline.** Bold is reserved for exactly two things: the Verdict line and
+each scenario headline. Nothing else is ever bold — not signals, not dates, not
+caveats, and not the scenario back-references in Layer 2. (Aim for ~5 bold phrases
+per screen, not ~15.)
+
+**Pre-send mapping check.** Before sending, confirm every degree, house, dignity,
+aspect, scenario, flavor, and date the engine returned appears *somewhere* — plain
+meaning in Layer 1, numbers in Layer 2. Nothing is deleted; only relocated.
+
+The rules below still govern *what* the verdict may claim and how confident it may
+be — they apply within this two-layer shape:
 
 **Per-kind confidence rule.** Only **Horary** and **Electional** are engine-scored
 and may carry a directional lean with up to `strong` confidence. For **Transit**
@@ -330,8 +486,8 @@ the same placement to "explain" the opposite result. A signal that fits any
 outcome predicted nothing — so a hard transit that's compatible with both "yes"
 and "no" cannot be quoted as evidence for either.
 
-Never present a verdict without the signals. Never invent a degree the engine
-did not return.
+Never present a verdict without the signals to back it (they live in Layer 2, but
+they must be there). Never invent a degree the engine did not return.
 
 ## Step 6 — Log the reading
 
@@ -368,6 +524,10 @@ small-sample caveat: a personal track record is noisy, and finding a pattern in
 a handful of readings is pattern-finding, **not** proof that astrology works.
 (The report even ships a `note` field saying as much.)
 
+Plain `calibration` pools **every** profile's readings into one overall track
+record. To narrow it to a single person, add `--profile <slug>`:
+`pnpm -s memory calibration --profile partner`.
+
 When the user reports **what actually happened** for a prior question, resolve
 that entry by id:
 
@@ -393,5 +553,6 @@ whether the **verdict** held, not whether some fragment of the narrative survive
 
 ## Privacy
 
-Memory is stored **locally** under `~/.kairos` (profile + journal) and is
-**never synced** — birth data and your history stay on this machine.
+Memory is stored **locally** under `~/.kairos` (one `profiles/<slug>/` directory
+per person, plus the pooled `journal.jsonl`) and is **never synced** — every
+person's birth data and your reading history stay on this machine.
