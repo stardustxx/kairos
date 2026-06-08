@@ -1,11 +1,14 @@
 {
-  "name": "kairos",
+  "name": "kairos-astrology",
   "version": "1.1.0",
   "description": "Astrology-based decision support: a Swiss Ephemeris engine that computes accurate charts (horary, transit, natal, electional) with classical dignities and returns calibrated verdicts.",
-  "private": true,
+  "private": false,
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "bin": {
+    "kairos": "dist/src/bin.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
@@ -15,16 +18,26 @@
   "files": [
     "dist",
     "skill",
-    "web"
+    "web/index.html",
+    "web/app.js",
+    "web/chart.js",
+    "web/style.css",
+    "web/example-output.json",
+    "web/README.md",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "biome check engine",
     "lint:fix": "biome check --write engine",
     "compute": "tsx engine/src/cli.ts",
     "memory": "tsx engine/src/memory-cli.ts",
+    "mcp": "tsx engine/src/mcp-server.ts",
     "wheel": "tsx engine/src/wheel.ts",
     "wheel:render": "tsx engine/src/wheel.ts --write",
     "ephe:install": "tsx engine/src/install-ephe.ts",
@@ -48,9 +61,11 @@
     }
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "luxon": "^3.7.2",
     "sweph": "2.10.3-5",
-    "tz-lookup": "^6.1.25"
+    "tz-lookup": "^6.1.25",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",

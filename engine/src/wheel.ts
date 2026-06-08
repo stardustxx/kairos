@@ -28,6 +28,7 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCompute } from "./cli.js";
+import { isMainModule } from "./run-guard.js";
 import type { ComputeRequest, ComputeResult } from "./types.js";
 
 const WEB_DIR = join(fileURLToPath(import.meta.url), "..", "..", "..", "web");
@@ -47,8 +48,7 @@ interface Cli {
   requestArg?: string;
 }
 
-function parseArgs(argv: string[]): Cli {
-  const args = argv.slice(2);
+function parseArgs(args: string[]): Cli {
   let writeMode = false;
   let outPath: string | undefined;
   const rest: string[] = [];
@@ -187,8 +187,12 @@ function serveStatic(port: number): Promise<number> {
   });
 }
 
-async function main(): Promise<void> {
-  const cli = parseArgs(process.argv);
+/**
+ * Wheel entrypoint. `args` is the post-script argv
+ * (i.e. `process.argv.slice(2)`): flags plus the JSON request.
+ */
+export async function main(args: string[]): Promise<void> {
+  const cli = parseArgs(args);
   const raw = readRequestArg(cli.requestArg);
   if (!raw.trim()) {
     console.error(
@@ -235,4 +239,10 @@ async function main(): Promise<void> {
   openBrowser(url);
 }
 
-main();
+// Executed only when run as a script (not when imported by the dispatcher).
+if (isMainModule(import.meta.url)) {
+  main(process.argv.slice(2)).catch((err) => {
+    console.error(`Error: ${(err as Error).message}`);
+    process.exit(1);
+  });
+}

@@ -29,6 +29,7 @@ import {
   saveProfile,
   setActive,
 } from "./memory.js";
+import { isMainModule } from "./run-guard.js";
 
 const USAGE = [
   "Usage: pnpm -s memory <command> [--profile <slug>]",
@@ -69,9 +70,13 @@ function extractProfileFlag(argv: string[]): { slug?: string; rest: string[] } {
   return { slug, rest };
 }
 
-function main(): void {
-  // argv[0]=node, argv[1]=script; parse the rest, pulling out --profile.
-  const { slug, rest } = extractProfileFlag(process.argv.slice(2));
+/**
+ * Memory CLI entrypoint. `args` is the post-script argv
+ * (i.e. `process.argv.slice(2)`); the subcommand is args[0].
+ */
+export function main(args: string[]): void {
+  // Parse the args, pulling out a global --profile <slug>.
+  const { slug, rest } = extractProfileFlag(args);
   const command = rest[0];
   // When a slug is given, scope per-profile ops to it; else use the active one.
   const withSlug = <T>(fn: (slug?: string) => T): T => (slug ? fn(slug) : fn());
@@ -148,10 +153,10 @@ function main(): void {
   }
 }
 
-// Executed only when run as a script (not when imported by tests).
-if (process.argv[1]?.endsWith("memory-cli.ts")) {
+// Executed only when run as a script (not when imported by tests/dispatcher).
+if (isMainModule(import.meta.url)) {
   try {
-    main();
+    main(process.argv.slice(2));
   } catch (err) {
     process.stderr.write(JSON.stringify({ error: (err as Error).message }));
     process.exit(1);

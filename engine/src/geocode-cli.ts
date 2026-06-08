@@ -13,13 +13,18 @@
 import { existsSync, readFileSync } from "node:fs";
 import { type GeoCity, searchCities } from "./geocode.js";
 import { gazetteerPath } from "./install-geocode.js";
+import { isMainModule } from "./run-guard.js";
 
 function emit(value: unknown): void {
   process.stdout.write(JSON.stringify(value));
 }
 
-function main(): void {
-  const query = process.argv.slice(2).join(" ").trim();
+/**
+ * Geocode CLI entrypoint. `args` is the post-script argv
+ * (i.e. `process.argv.slice(2)`); the joined tokens are the city query.
+ */
+export function main(args: string[]): void {
+  const query = args.join(" ").trim();
   if (!query) {
     process.stderr.write("Usage: pnpm -s geocode '<city>'");
     process.exit(1);
@@ -34,10 +39,10 @@ function main(): void {
   emit(searchCities(query, tsv) satisfies GeoCity[]);
 }
 
-// Executed only when run as a script (not when imported by tests).
-if (process.argv[1]?.endsWith("geocode-cli.ts")) {
+// Executed only when run as a script (not when imported by tests/dispatcher).
+if (isMainModule(import.meta.url)) {
   try {
-    main();
+    main(process.argv.slice(2));
   } catch (err) {
     process.stderr.write(JSON.stringify({ error: (err as Error).message }));
     process.exit(1);

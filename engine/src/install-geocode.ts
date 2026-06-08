@@ -20,6 +20,7 @@ import { existsSync, mkdirSync, statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { isMainModule } from "./run-guard.js";
 
 const ZIP_URL = "https://download.geonames.org/export/dump/cities15000.zip";
 const ZIP_NAME = "cities15000.zip";
@@ -51,8 +52,12 @@ function hasUnzip(): boolean {
   return probe.status === 0 || probe.error == null;
 }
 
-async function main(): Promise<void> {
-  const force = process.argv.includes("--force");
+/**
+ * Installer entrypoint. `args` is the post-script argv
+ * (i.e. `process.argv.slice(2)`); pass `--force` to re-download.
+ */
+export async function main(args: string[]): Promise<void> {
+  const force = args.includes("--force");
   const dir = geonamesDir();
   const txtDest = gazetteerPath();
 
@@ -116,8 +121,8 @@ async function main(): Promise<void> {
 
 // Run the installer only when invoked as a script — geocode-cli.ts imports the
 // path helpers from this module, and importing must not trigger a download.
-if (process.argv[1]?.endsWith("install-geocode.ts")) {
-  main().catch((err) => {
+if (isMainModule(import.meta.url)) {
+  main(process.argv.slice(2)).catch((err) => {
     console.error(`Error: ${(err as Error).message}`);
     process.exit(1);
   });

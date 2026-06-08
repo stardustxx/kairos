@@ -6,6 +6,7 @@ import { judgeHorary } from "./horary.js";
 import { appendJournal } from "./memory.js";
 import { computePositions } from "./positions.js";
 import { annualProfection, completedYearsBetween } from "./profections.js";
+import { isMainModule } from "./run-guard.js";
 import { resolveJulianDay } from "./time.js";
 import type { ComputeRequest, ComputeResult } from "./types.js";
 import { validateRequest } from "./validate.js";
@@ -150,9 +151,12 @@ function readStdin(): string {
   }
 }
 
-// Executed only when run as a script (not when imported by tests).
-if (process.argv[1]?.endsWith("cli.ts")) {
-  const raw = process.argv[2] ?? readStdin();
+/**
+ * CLI entrypoint. `args` is the post-script argv (i.e. `process.argv.slice(2)`):
+ * args[0] is the JSON request, falling back to stdin when absent.
+ */
+export function main(args: string[]): void {
+  const raw = args[0] ?? readStdin();
   if (!raw.trim()) {
     console.error('Usage: pnpm compute \'{"kind":"horary","quesitedHouse":10,"moment":{...}}\'');
     process.exit(1);
@@ -164,4 +168,9 @@ if (process.argv[1]?.endsWith("cli.ts")) {
     console.error(`Error: ${(err as Error).message}`);
     process.exit(1);
   }
+}
+
+// Executed only when run as a script (not when imported by tests/dispatcher).
+if (isMainModule(import.meta.url)) {
+  main(process.argv.slice(2));
 }

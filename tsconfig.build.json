@@ -4,5 +4,6 @@
     "declaration": true,
     "noEmit": false
   },
-  "include": ["engine/src"]
+  "include": ["engine/src"],
+  "exclude": ["engine/src/**/*.test.ts", "engine/tests"]
 }
