@@ -187,7 +187,10 @@ function chartOf(planets: PlanetPosition[], cusps: number[]): Chart {
       degInSign: 0,
       house: 1,
     },
+    lots: [],
     angleAspects: [],
+    fixedStars: [],
+    antiscia: [],
   };
 }
 

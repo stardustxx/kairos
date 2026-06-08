@@ -1,6 +1,12 @@
+import type { AntisciaContact } from "./antiscia.js";
 import type { Sign } from "./constants.js";
+import type { StarContact } from "./fixedstars.js";
 
 export type ChartKind = "natal" | "transit" | "horary" | "electional";
+
+/** Chart sect: "day" if the Sun is above the horizon, else "night". Drives
+ *  triplicity rulership, the Part of Fortune, and the Hermetic lots' reversal. */
+export type Sect = "day" | "night";
 
 /** A moment + place the engine can compute for. */
 export interface MomentInput {
@@ -125,6 +131,19 @@ export interface PartOfFortune {
   house: number;
 }
 
+/** A classical Hermetic lot (Arabic part) — a derived sensitive point cast
+ *  from the Ascendant, with its formula reversed between day and night charts.
+ *  Same sign/degree/house derivation as the Part of Fortune. */
+export interface Lot {
+  /** Lot name, e.g. "Spirit", "Eros", "Necessity", "Courage", "Victory", "Nemesis". */
+  name: string;
+  longitude: number;
+  sign: Sign;
+  degInSign: number; // 0..30
+  /** House (1..12) it falls in. */
+  house: number;
+}
+
 export interface Houses {
   system: string;
   cusps: number[]; // 12 cusp longitudes, index 0 = 1st house
@@ -156,12 +175,21 @@ export interface Chart {
   aspects: Aspect[];
   /** Chart sect: "day" if the Sun is above the horizon, else "night". Drives
    *  triplicity rulership and the Part of Fortune formula. */
-  sect: "day" | "night";
+  sect: Sect;
   /** The Part of Fortune for this chart. */
   partOfFortune: PartOfFortune;
+  /** The classical Hermetic lots beyond Fortune: Spirit, Eros, Necessity,
+   *  Courage, Victory, Nemesis (in that order), each with the sect reversal. */
+  lots: Lot[];
   /** Tight aspects from planets to the angles (Ascendant/MC). `b` is "Ascendant"
    *  or "MC". A planet on an angle is a strong testimony. */
   angleAspects: Aspect[];
+  /** Conjunctions of planets or the Asc/MC to major fixed stars (precessed to
+   *  the chart year), within a tight 1° orb. Sorted by tightest orb. */
+  fixedStars: StarContact[];
+  /** Antiscia / contra-antiscia contacts among the planets (hidden conjunctions
+   *  across the solstitial / equinoctial axes), within a tight 1° orb. */
+  antiscia: AntisciaContact[];
 }
 
 /** Two significators each dignifying the other's position — a perfecting aid. */
@@ -223,6 +251,47 @@ export interface Besieging {
 export type Confidence = "low" | "medium" | "high";
 export type Lean = "favorable" | "unfavorable" | "uncertain";
 
+/** The kinds of perfection-breaker that can cut a direct perfection off. */
+export type PerfectionBreaker = "prohibition" | "refranation" | "besieging";
+
+/**
+ * Synthesised perfection picture — the single coherent summary the skill can
+ * lead with, instead of reading the independent translation/collection/breaker
+ * signals separately. Describes whether the significators perfect DIRECTLY, what
+ * (if anything) BREAKS that direct perfection, and whether a SOUND indirect path
+ * (a translation or collection by an unimpeded carrier) survives.
+ */
+export interface PerfectionSynthesis {
+  /** True when the two significators apply to a perfecting aspect AND no breaker
+   *  cuts it off — the matter comes together directly. */
+  direct: boolean;
+  /** The breakers present on the chart (prohibition / refranation / besieging),
+   *  in detection order. Empty when nothing breaks the perfection. */
+  broken: PerfectionBreaker[];
+  /** The carrying/gathering planet of a SOUND indirect perfection (translation or
+   *  collection by an unimpeded carrier), or null when there is no surviving
+   *  indirect path. */
+  indirectPath: string | null;
+  /** Plain-language one-line summary of the perfection picture. */
+  summary: string;
+}
+
+/** Plain-language "when" estimate from an applying perfection. The number of
+ *  units is degrees-to-perfection; the unit is set by the modality (and
+ *  angularity) of the applying significator. An estimate, not a prediction. */
+export interface Timing {
+  /** Degrees the applying significator is short of exact perfection (the orb). */
+  degreesToPerfection: number;
+  /** The time unit the estimate is expressed in. */
+  unit: "days" | "weeks" | "months" | "years";
+  /** Number of units (rounded from degreesToPerfection, minimum 1). */
+  amount: number;
+  /** Plain-language phrase, e.g. "about 4 days" (+ "perfects on …" when known). */
+  text: string;
+  /** Exact perfection time from the aspect, ISO 8601 UTC, or null when unknown. */
+  perfectsAtUtc: string | null;
+}
+
 export interface HoraryJudgment {
   querentSignificator: string;
   quesitedSignificator: string;
@@ -270,6 +339,10 @@ export interface HoraryJudgment {
   /** Besieged significators: each significator hemmed bodily between Mars and
    *  Saturn. Empty when neither is besieged. A real affliction per significator. */
   besieging: Array<{ significator: string; planet: string }>;
+  /** Plain-language "when" estimate, present only when the significators form an
+   *  applying perfection. Descriptive — never folded into the score. Null when
+   *  there is no applying significator aspect. */
+  timing: Timing | null;
   /** Aggregate testimony score (negative = unfavorable, positive = favorable).
    *  A calibration aid for the skill, NOT a verdict on its own. */
   score: number;
@@ -277,6 +350,10 @@ export interface HoraryJudgment {
   confidence: Confidence;
   /** Overall lean from the aggregated testimonies. */
   lean: Lean;
+  /** Synthesised perfection picture: whether the significators perfect directly,
+   *  what breaks it, and whether a sound indirect path (translation/collection by
+   *  an unimpeded carrier) survives. The single field the skill can lead with. */
+  perfection: PerfectionSynthesis;
   /** Human-readable factors behind the score (parallels electional reasons). */
   testimonies: string[];
 }

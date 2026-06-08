@@ -1,11 +1,14 @@
+import { antisciaContacts } from "./antiscia.js";
 import { computeAngleAspects, computeAspects } from "./aspects.js";
 import { sunProximity } from "./conditions.js";
 import { DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGNS } from "./constants.js";
 import { computeDignities } from "./dignities.js";
+import { starContacts } from "./fixedstars.js";
 import { computeHouses, houseOf } from "./houses.js";
+import { computeLots } from "./lots.js";
 import { computePositions } from "./positions.js";
 import { resolveJulianDay } from "./time.js";
-import type { Chart, ChartKind, MomentInput, PartOfFortune } from "./types.js";
+import type { Chart, ChartKind, Lot, MomentInput, PartOfFortune, Sect } from "./types.js";
 
 const CLASSICAL = new Set(PLANETS.filter((d) => d.classical).map((d) => d.name));
 
@@ -13,11 +16,21 @@ function norm360(x: number): number {
   return ((x % 360) + 360) % 360;
 }
 
+/**
+ * Extract the calendar year from a chart's UTC string (the leading 4 digits,
+ * e.g. "2028" from "2028-03-14T...Z"). Used to precess fixed-star longitudes to
+ * the chart epoch. Falls back to J2000 if the string is malformed.
+ */
+function chartYear(utc: string): number {
+  const m = /^(\d{4})/.exec(utc);
+  return m ? Number(m[1]) : 2000;
+}
+
 function partOfFortune(
   asc: number,
   sun: number,
   moon: number,
-  sect: "day" | "night",
+  sect: Sect,
   cusps: number[],
 ): PartOfFortune {
   // Day: Asc + Moon - Sun. Night: Asc + Sun - Moon.
@@ -29,6 +42,34 @@ function partOfFortune(
     degInSign: lon - si * DEGREES_PER_SIGN,
     house: houseOf(lon, cusps),
   };
+}
+
+/**
+ * Build the Hermetic lots (Spirit, Eros, Necessity, Courage, Victory, Nemesis)
+ * from the chart's planets, Ascendant, sect, Part of Fortune, and house cusps.
+ * Pulls each required planet longitude from the positions list.
+ */
+function buildLots(
+  planets: { name: string; longitude: number }[],
+  asc: number,
+  fortune: number,
+  sect: Sect,
+  cusps: number[],
+): Lot[] {
+  const lon = (name: string): number => planets.find((p) => p.name === name)!.longitude;
+  return computeLots({
+    ascendant: asc,
+    sun: lon("Sun"),
+    moon: lon("Moon"),
+    mercury: lon("Mercury"),
+    venus: lon("Venus"),
+    mars: lon("Mars"),
+    jupiter: lon("Jupiter"),
+    saturn: lon("Saturn"),
+    fortune,
+    sect,
+    cusps,
+  });
 }
 
 export interface BuildChartOptions {
@@ -68,7 +109,7 @@ export function buildChart(
   const sun = planets.find((p) => p.name === "Sun")!;
   const moon = planets.find((p) => p.name === "Moon")!;
   const sunHouse = houseOf(sun.longitude, houses.cusps);
-  const sect: "day" | "night" = sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
+  const sect: Sect = sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
 
   // Attach essential dignities to the seven classical planets (the only bodies
   // with traditional rulerships); outer points have no essential dignity. Solar
@@ -85,9 +126,26 @@ export function buildChart(
   }
 
   const fortune = partOfFortune(houses.ascendant, sun.longitude, moon.longitude, sect, houses.cusps);
+  const lots = buildLots(planets, houses.ascendant, fortune.longitude, sect, houses.cusps);
   const angleAspects = computeAngleAspects(planets, houses.ascendant, houses.mc);
+  const year = chartYear(utc);
+  const fixedStars = starContacts(planets, { ascendant: houses.ascendant, mc: houses.mc }, year);
+  const antiscia = antisciaContacts(planets);
 
-  return { kind, julianDayUt, utc, planets, houses, aspects, sect, partOfFortune: fortune, angleAspects };
+  return {
+    kind,
+    julianDayUt,
+    utc,
+    planets,
+    houses,
+    aspects,
+    sect,
+    partOfFortune: fortune,
+    lots,
+    angleAspects,
+    fixedStars,
+    antiscia,
+  };
 }
 
 /**
@@ -111,7 +169,7 @@ export function relocateChart(
   const sun = chart.planets.find((p) => p.name === "Sun")!;
   const moon = chart.planets.find((p) => p.name === "Moon")!;
   const sunHouse = houseOf(sun.longitude, houses.cusps);
-  const sect: "day" | "night" = sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
+  const sect: Sect = sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
 
   const planets = chart.planets.map((p) => {
     const np = { ...p };
@@ -123,6 +181,15 @@ export function relocateChart(
   });
 
   const fortune = partOfFortune(houses.ascendant, sun.longitude, moon.longitude, sect, houses.cusps);
+  const lots = buildLots(planets, houses.ascendant, fortune.longitude, sect, houses.cusps);
   const angleAspects = computeAngleAspects(planets, houses.ascendant, houses.mc);
-  return { ...chart, planets, houses, sect, partOfFortune: fortune, angleAspects };
+  // Antiscia depend only on planet longitudes (unchanged by relocation) and
+  // carry over via the spread; fixed-star contacts include the Asc/MC, which
+  // move, so recompute them for the relocated angles.
+  const fixedStars = starContacts(
+    planets,
+    { ascendant: houses.ascendant, mc: houses.mc },
+    chartYear(chart.utc),
+  );
+  return { ...chart, planets, houses, sect, partOfFortune: fortune, lots, angleAspects, fixedStars };
 }

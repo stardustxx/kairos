@@ -4,6 +4,7 @@ import { DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGN_RULER } from "./constants.j
 import { receptionBetween } from "./dignities.js";
 import { houseOf } from "./houses.js";
 import { detectBesieging, detectProhibition, detectRefranation } from "./perfection.js";
+import { estimateTiming } from "./timing.js";
 import type {
   Aspect,
   Chart,
@@ -11,11 +12,14 @@ import type {
   Confidence,
   HoraryJudgment,
   Lean,
+  PerfectionBreaker,
+  PerfectionSynthesis,
   PlanetPosition,
   Prohibition,
   Reception,
   Refranation,
   SolarPhase,
+  Timing,
   TranslationOfLight,
 } from "./types.js";
 
@@ -109,11 +113,24 @@ function findCollection(
  * This is a transparent heuristic over the classical perfection signals — a
  * calibration aid for the skill, not an oracle.
  */
+/** A carrier (translator/collector) is "impeded" when it is itself combust or
+ *  besieged — an indirect perfection cannot deliver through a damaged carrier. */
+interface CarrierSoundness {
+  /** True when the carrier is combust or besieged, so it cannot deliver. */
+  impeded: boolean;
+  /** Plain-language reason ("combust" / "besieged …"), or null when sound. */
+  reason: string | null;
+}
+
 function aggregateTestimony(args: {
   significatorAspect: Aspect | null;
   moonApplyingToQuesited: Aspect | null;
   translation: TranslationOfLight | null;
   collection: CollectionOfLight | null;
+  /** Soundness of the translation's carrier; null when there is no translation. */
+  translationCarrier: CarrierSoundness | null;
+  /** Soundness of the collection's carrier; null when there is no collection. */
+  collectionCarrier: CarrierSoundness | null;
   reception: Reception | null;
   querentSig: string;
   quesitedSig: string;
@@ -127,7 +144,13 @@ function aggregateTestimony(args: {
   prohibition: Prohibition | null;
   refranation: Refranation | null;
   besieging: Array<{ significator: string; planet: string }>;
-}): { score: number; confidence: Confidence; lean: Lean; testimonies: string[] } {
+}): {
+  score: number;
+  confidence: Confidence;
+  lean: Lean;
+  perfection: PerfectionSynthesis;
+  testimonies: string[];
+} {
   const t: string[] = [];
   let score = 0;
 
@@ -160,16 +183,38 @@ function aggregateTestimony(args: {
     }
   }
 
+  // Indirect perfection only DELIVERS if the carrying/gathering planet is itself
+  // sound. A combust or besieged carrier is impeded — suppress the positive
+  // testimony and note the impedance instead. Track the FIRST sound carrier so
+  // the synthesis (and any prohibition rescue) can name the surviving path.
+  let soundIndirectCarrier: string | null = null;
   if (args.translation) {
-    score += 18;
-    t.push(
-      `Translation of light by ${args.translation.translator} ` +
-        `(${args.translation.from} → ${args.translation.to}) (+18)`,
-    );
+    if (args.translationCarrier?.impeded) {
+      t.push(
+        `Translation of light by ${args.translation.translator} ` +
+          `(${args.translation.from} → ${args.translation.to}) FAILS — the carrier is ` +
+          `impeded (${args.translationCarrier.reason}); the light is not delivered (0)`,
+      );
+    } else {
+      score += 18;
+      soundIndirectCarrier = args.translation.translator;
+      t.push(
+        `Translation of light by ${args.translation.translator} ` +
+          `(${args.translation.from} → ${args.translation.to}) (+18)`,
+      );
+    }
   }
   if (args.collection) {
-    score += 15;
-    t.push(`Collection of light by ${args.collection.collector} (+15)`);
+    if (args.collectionCarrier?.impeded) {
+      t.push(
+        `Collection of light by ${args.collection.collector} FAILS — the collector is ` +
+          `impeded (${args.collectionCarrier.reason}); the light is not gathered (0)`,
+      );
+    } else {
+      score += 15;
+      if (!soundIndirectCarrier) soundIndirectCarrier = args.collection.collector;
+      t.push(`Collection of light by ${args.collection.collector} (+15)`);
+    }
   }
 
   const r = args.reception;
@@ -256,10 +301,73 @@ function aggregateTestimony(args: {
     );
   }
 
+  // INDIRECT RESCUE: when the significators are PROHIBITED directly but a SOUND
+  // translation/collection of light survives, the matter can still come together
+  // indirectly — keep the prohibition debit but add a partial recovery. Guard
+  // against double-counting the SAME light: if the prohibitor IS the carrier, the
+  // intercepting body and the "rescuing" body are one planet — that is abscission
+  // (a cutting-off), not a rescue, so award no recovery.
+  let rescuePath: string | null = null;
+  if (
+    args.prohibition &&
+    soundIndirectCarrier &&
+    soundIndirectCarrier !== args.prohibition.prohibitor
+  ) {
+    rescuePath = soundIndirectCarrier;
+    score += 12;
+    t.push(
+      `Indirect recovery: though prohibited directly, ${rescuePath} carries the light ` +
+        `between the significators — the matter can still come together that way (+12)`,
+    );
+  }
+
   if (args.moonVoid) {
     score -= 30;
     t.push("Moon void of course — little is likely to come of the matter (-30)");
   }
+
+  // SYNTHESIS: a coherent perfection picture. There is a DIRECT perfection when
+  // the significators apply to a soft (or square) aspect and nothing breaks it.
+  const breakers: PerfectionBreaker[] = [];
+  if (args.prohibition) breakers.push("prohibition");
+  if (args.refranation) breakers.push("refranation");
+  if (args.besieging.length > 0) breakers.push("besieging");
+
+  const sa = args.significatorAspect;
+  const directlyApplies = !!sa?.applying && sa.type !== "opposition";
+  const direct = directlyApplies && breakers.length === 0;
+  // A surviving indirect path needs a SOUND carrier that is not itself the
+  // prohibitor — if the carrier IS the prohibitor that is abscission (the same
+  // light cutting the matter off), so no path survives through it.
+  const indirectPath =
+    soundIndirectCarrier && soundIndirectCarrier !== args.prohibition?.prohibitor
+      ? soundIndirectCarrier
+      : null;
+
+  let summary: string;
+  if (direct) {
+    // A square perfects directly too, but classically "the hard way" — name the
+    // friction rather than presenting it as a clean, easy perfection.
+    summary =
+      sa && !SOFT_ASPECTS.has(sa.type)
+        ? `Direct perfection by ${sa.type}, but with friction — it completes the hard way.`
+        : `Direct perfection: the significators apply to ${sa?.type} and nothing breaks it.`;
+  } else if (breakers.length > 0 && rescuePath) {
+    summary =
+      `Direct perfection is broken (${breakers.join(", ")}), ` +
+      `but a sound indirect path survives through ${rescuePath}.`;
+  } else if (breakers.length > 0) {
+    summary = `Direct perfection is broken (${breakers.join(", ")}) with no surviving indirect path.`;
+  } else if (indirectPath) {
+    summary = `No direct perfection, but the light is carried indirectly through ${indirectPath}.`;
+  } else if (directlyApplies) {
+    // Applying but the synthesis treats opposition-only as not a clean perfection.
+    summary = "The significators apply, but only by a difficult aspect.";
+  } else {
+    summary = "No perfection: the significators neither perfect directly nor through a sound carrier.";
+  }
+
+  const perfection: PerfectionSynthesis = { direct, broken: breakers, indirectPath, summary };
 
   const lean: Lean = score > 15 ? "favorable" : score < -15 ? "unfavorable" : "uncertain";
 
@@ -270,7 +378,7 @@ function aggregateTestimony(args: {
   // A void Moon contradicting a favorable lean caps confidence — mixed signals.
   if (args.moonVoid && lean === "favorable") confidence = "low";
 
-  return { score, confidence, lean, testimonies: t };
+  return { score, confidence, lean, perfection, testimonies: t };
 }
 
 /** The Moon is void of course if it perfects no further major aspect to a
@@ -312,6 +420,27 @@ export function moonVoidStatus(planets: PlanetPosition[]): { void: boolean; next
   }
   const isVoid = soonestDays > daysToSignChange;
   return { void: isVoid, next };
+}
+
+/**
+ * Soundness of an indirect-perfection carrier (translator/collector). The light
+ * is only delivered if the carrying planet is itself sound — a combust or
+ * besieged carrier is impeded and cannot carry the matter to completion. The
+ * carrier's combustion is read from its attached sunProximity; besieging is
+ * detected over the same classical bodies.
+ */
+function carrierSoundness(
+  carrier: string,
+  classical: PlanetPosition[],
+): CarrierSoundness {
+  const body = classical.find((p) => p.name === carrier);
+  if (body?.sunProximity?.state === "combust") {
+    return { impeded: true, reason: "combust" };
+  }
+  if (detectBesieging(carrier, classical)) {
+    return { impeded: true, reason: "besieged between Mars and Saturn" };
+  }
+  return { impeded: false, reason: null };
 }
 
 export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment {
@@ -400,11 +529,22 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
   const querentAlmutenDiffersFromRuler = querentAlmuten.planet !== querentSig;
   const quesitedAlmutenDiffersFromRuler = quesitedAlmuten.planet !== quesitedSig;
 
-  const { score, confidence, lean, testimonies } = aggregateTestimony({
+  // Soundness of each indirect-perfection carrier — a combust or besieged carrier
+  // cannot deliver, so its positive testimony is suppressed downstream.
+  const translationCarrier = translationOfLight
+    ? carrierSoundness(translationOfLight.translator, classical)
+    : null;
+  const collectionCarrier = collectionOfLight
+    ? carrierSoundness(collectionOfLight.collector, classical)
+    : null;
+
+  const { score, confidence, lean, perfection, testimonies } = aggregateTestimony({
     significatorAspect,
     moonApplyingToQuesited,
     translation: translationOfLight,
     collection: collectionOfLight,
+    translationCarrier,
+    collectionCarrier,
     reception: significatorReception,
     querentSig,
     quesitedSig,
@@ -419,6 +559,17 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     refranation,
     besieging,
   });
+
+  // Timing narrative: when the significators form an applying perfection, turn
+  // it into a plain-language "when". The moving (faster) significator is the one
+  // whose motion carries the aspect to exact, so it sets the unit. Descriptive
+  // only — never folded into the score.
+  let timing: Timing | null = null;
+  if (significatorAspect?.applying && sigA && sigB) {
+    const movingPlanet =
+      Math.abs(sigA.speed) >= Math.abs(sigB.speed) ? sigA : sigB;
+    timing = estimateTiming(significatorAspect, movingPlanet);
+  }
 
   // Informational almuten testimonies: when the almuten of a cusp is NOT its
   // domicile ruler, name the planet that truly has the most say over the matter.
@@ -459,9 +610,11 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     prohibition,
     refranation,
     besieging,
+    timing,
     score,
     confidence,
     lean,
+    perfection,
     testimonies,
   };
 }

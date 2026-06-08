@@ -7,6 +7,8 @@
 
 export type { AlmutenContribution, AlmutenResult } from "./almuten.js";
 export { almutenOfDegree } from "./almuten.js";
+export type { AntisciaContact } from "./antiscia.js";
+export { antisciaContacts, antiscion, contraAntiscion } from "./antiscia.js";
 export { computeAngleAspects, computeAspects, computeCrossAspects } from "./aspects.js";
 export { buildChart, relocateChart } from "./chart.js";
 export { runCompute } from "./cli.js";
@@ -14,7 +16,16 @@ export { sunProximity } from "./conditions.js";
 export type { DignityLords } from "./dignities.js";
 export { computeDignities, receptionBetween } from "./dignities.js";
 export { searchElectionalMoments } from "./electional.js";
+export type { FixedStar, StarContact, StarTone } from "./fixedstars.js";
+export {
+  FIXED_STARS,
+  precessedLongitude,
+  signOfLongitude,
+  starContacts,
+} from "./fixedstars.js";
 export { judgeHorary, moonVoidStatus } from "./horary.js";
+export type { LotInputs } from "./lots.js";
+export { computeLots } from "./lots.js";
 export type {
   CalibrationBand,
   CalibrationReport,
@@ -35,6 +46,8 @@ export {
 } from "./memory.js";
 export { detectBesieging, detectProhibition, detectRefranation } from "./perfection.js";
 export { annualProfection, completedYearsBetween } from "./profections.js";
+export type { TimingUnit } from "./timing.js";
+export { estimateTiming } from "./timing.js";
 
 export type {
   Aspect,
@@ -52,8 +65,11 @@ export type {
   HouseShift,
   Houses,
   Lean,
+  Lot,
   MomentInput,
   PartOfFortune,
+  PerfectionBreaker,
+  PerfectionSynthesis,
   PlanetDignities,
   PlanetPosition,
   Profection,
@@ -61,8 +77,10 @@ export type {
   Reception,
   Refranation,
   RelocationResult,
+  Sect,
   SignificatorHints,
   SolarPhase,
   SunProximity,
+  Timing,
   TranslationOfLight,
 } from "./types.js";
