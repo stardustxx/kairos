@@ -1,191 +1,176 @@
 # Kairos
 
-Astrology-based decision support as a Claude Skill. Ask a real-life question
-("will I get this job?", "is now the right time to switch?") and Kairos computes
-an astronomically accurate chart (Swiss Ephemeris) and returns a calibrated
-verdict — a clear lean, a confidence level, the specific signals behind it, and
-honest caveats.
+Astrology-based decision support. Ask a real-life question ("will I get this job?", "is now the right time to switch?") and Kairos computes an astronomically accurate chart (Swiss Ephemeris) and returns a calibrated verdict — a clear lean, a confidence level, the specific signals behind it, and honest caveats.
+
+Kairos is available as:
+- A Claude Code **plugin** (includes both the skill and the MCP server)
+- A standalone **MCP server** (`npx -y kairos-astrology mcp`)
+- A **CLI tool** (`kairos compute`, `kairos memory`, `kairos geocode`)
+- A **Docker image** (fallback for Intel Mac, musl, and unprebuilt ABIs)
 
 ## How it works
 
-- **`engine/`** — a TypeScript CLI (`pnpm compute <json>`) that computes planetary
-  positions, houses, aspects, and horary significators. Pure math, fully tested.
-- **`skill/SKILL.md`** — the Claude Skill: classifies the question, calls the
-  engine, and interprets the result. Pure judgment, no math.
+- **`engine/`** — a TypeScript CLI that computes planetary positions, houses, aspects, and horary significators. Pure math, fully tested.
+- **`.claude-plugin/`** — a Claude Code plugin that bundles the MCP server and the skill. Install via Claude Code's plugin marketplace.
+- **`skills/kairos/SKILL.md`** — the Claude Skill (bundled in the plugin): classifies the question, calls the MCP tools, and interprets the result. Pure judgment, no math.
 
-## Install (for anyone)
+## Install
 
-Kairos runs anywhere, not just on the author's machine:
+### Primary: Claude Code Plugin
+
+The easiest way to use Kairos in Claude Code:
 
 ```bash
-git clone <repo-url> kairos
+/plugin marketplace add stardustxx/kairos
+/plugin install kairos@stardustxx
+```
+
+This installs both the skill and the MCP server. The skill is automatically available as `/kairos:kairos`.
+
+### Alternative: Register the MCP Server Directly
+
+If you already have Claude Code set up and want to just use the MCP tools without the full plugin:
+
+```bash
+# Start the server standalone
+npx -y kairos-astrology mcp
+
+# Or use the bundled MCP server via Claude Code's MCP configuration
+```
+
+### Alternative: CLI Tool
+
+For direct command-line access:
+
+```bash
+# Install globally
+npm install -g kairos-astrology
+
+# Or use npx without installation
+npx -y kairos-astrology compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T14:30:00","latitude":40.7128,"longitude":-74.0060}}'
+
+# Geocode a location
+npx -y kairos-astrology geocode 'Tokyo'
+
+# Check past readings
+npx -y kairos-astrology memory due
+
+# Set birth profile
+npx -y kairos-astrology memory profile set '{"birth":{"datetimeLocal":"1990-03-12T07:45:00","latitude":37.57,"longitude":126.98,"timezone":"Asia/Seoul","place":"Seoul"}}'
+```
+
+### Docker (Intel Mac, musl, Fallback)
+
+If you cannot install the prebuilt sweph binary (Intel Mac, Alpine Linux, or other musl environments):
+
+```bash
+docker build -t kairos:latest .
+docker run --rm -i kairos:latest mcp
+```
+
+This provides the MCP server via stdio, suitable for forwarding to Claude Code or other MCP clients.
+
+## Development: Build from Source
+
+```bash
+git clone https://github.com/stardustxx/kairos.git
 cd kairos
 pnpm install
-pnpm test                       # run the engine test suite — all should pass
+pnpm test                       # run the engine test suite
 ```
 
-Then install the Claude Skill and point it at your checkout:
-
-1. **Install the skill** — copy or symlink `skill/` into your Claude skills
-   directory as `kairos` (it is typically *symlinked* there, so the skill file
-   lives outside the repo and cannot locate the engine by walking up its own
-   directory tree):
-
-   ```bash
-   ln -s "$(pwd)/skill" ~/.claude/skills/kairos
-   ```
-
-2. **Tell the skill where the engine lives** — export `KAIROS_ROOT` (the path to
-   *this* checkout) so every engine command the skill runs can find it:
-
-   ```bash
-   export KAIROS_ROOT="$(pwd)"   # add to your shell profile to persist it
-   ```
-
-   `KAIROS_ROOT` is the **repo/engine** location. It is separate from
-   `KAIROS_HOME`, which (if set) overrides where the engine stores your **data**
-   (`~/.kairos`) — don't conflate them.
-
-3. **Optional installers** — the offline geocoder and full-precision ephemeris
-   are opt-in:
-
-   ```bash
-   pnpm geocode:install            # offline city → lat/lon + timezone gazetteer
-   pnpm ephe:install               # full Swiss Ephemeris .se1 data files
-   ```
-
-## Setup
+### Try the engine directly
 
 ```bash
-pnpm install
-pnpm test        # run the engine test suite
+pnpm compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T09:00:00","latitude":40.7128,"longitude":-74.006,"timezone":"America/New_York"}}'
 ```
 
-## Try the engine directly
-
-```bash
-pnpm compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-02T09:00:00","latitude":40.7128,"longitude":-74.006,"timezone":"America/New_York"}}'
-```
-
-## Geocode a place (offline)
-
-Instead of looking up coordinates by hand, resolve a city name to authoritative
-lat/lon + timezone from a local gazetteer (no network at query time):
+### Geocode a place (offline)
 
 ```bash
 pnpm geocode:install            # one-time: download the GeoNames cities15000 set
 pnpm -s geocode 'Tokyo'         # → [{ name, country, latitude, longitude, timezone, ... }]
 ```
 
-It returns the top matches, most populous first, as JSON. The data lives under
-`~/.kairos/geonames` (outside the repo). Run with `pnpm -s` so stdout stays clean
-JSON.
-
-## Render a chart wheel
-
-`pnpm wheel <json>` computes a request and opens an interactive SVG chart wheel
-in your browser, pre-loaded with the result. For an **electional** request it
-renders the chart of the #1 elected moment and shows its score and reasons.
+### Render a chart wheel
 
 ```bash
-pnpm wheel '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-02T09:00:00","latitude":40.7128,"longitude":-74.006,"timezone":"America/New_York"}}'
+pnpm wheel '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T09:00:00","latitude":40.7128,"longitude":-74.006,"timezone":"America/New_York"}}'
 ```
 
-The UI also runs standalone: open `web/index.html` and paste any `pnpm compute`
-JSON (or click **Load Example**). See `web/README.md`.
+The UI also runs standalone: open `web/index.html` and paste any `pnpm compute` JSON (or click **Load Example**). See `web/README.md`.
+
+### Start the MCP server locally
+
+```bash
+pnpm mcp
+```
 
 ## Memory
 
-Kairos keeps a small **local** memory (`pnpm -s memory <command>`) so it can
-remember you and learn from its own track record:
+Kairos keeps a small **local** memory so it can remember you and learn from its own track record:
 
-- **Profile** — `memory profile get|set|clear` stores your birth data (for
-  transits/natal) and home/relocation location, so the skill doesn't re-ask.
-- **Multiple people** — `memory profile list|use <slug>|add "<Name>"|remove <slug>`
-  keep a separate profile per person you cast for (you, a partner, a friend).
-  `get`/`set`/`clear` act on the active profile; append `--profile <slug>` to any
-  command to act on another person for just that one call.
-- **Journal** — `memory log <json>` records every verdict (question, kind, lean,
-  confidence, score) and returns an `id`; `memory journal` lists them. Entries are
-  tagged with the person they're about.
-- **Outcomes & calibration** — `memory outcome <id> <happened|did-not-happen|partial> [note]`
-  records what actually happened, and `memory calibration` reports hit-rate by
-  confidence band (pooled across everyone; add `--profile <slug>` to narrow to one
-  person). Small samples are noisy — it's a personal pattern, not proof.
+- **Profile** — stores your birth data (for transits/natal) and home/relocation location
+- **Multiple people** — keep separate profiles per person you cast for (yourself, a partner, a friend)
+- **Journal** — every verdict (question, kind, lean, confidence, score) is recorded
+- **Outcomes & calibration** — record what actually happened and see hit-rate by confidence band
 
-All of this lives under `~/.kairos` (one `profiles/<slug>/` directory per person,
-plus a pooled `journal.jsonl`) and is **never synced** — everyone's birth data and
-your history stay on this machine. (Run with `pnpm -s`; the `-s` keeps pnpm's
-banner out of the JSON.)
-
-## Install the skill
-
-Copy or symlink `skill/` into your Claude skills directory as `kairos`, or point
-your skill loader at `skill/SKILL.md`. The skill runs `pnpm compute` from this
-project root, so keep the engine installed alongside it.
+All memory is stored **locally** under `~/.kairos` (one `profiles/<slug>/` directory per person, plus a pooled `journal.jsonl`) and is **never synced** — everyone's birth data and your reading history stay on this machine.
 
 ## Conventions
 
 - Western **tropical** zodiac.
-- Houses: **Placidus** (`"P"`) for natal/transit, **Regiomontanus** (`"R"`) for
-  horary; pass `houseSystem` to override.
-- Computation: Swiss Ephemeris **Moshier mode** by default — no data files,
-  sub-arcsecond accuracy for the modern era. See "Ephemeris precision" below to
-  opt into full SWIEPH precision.
+- Houses: **Placidus** for natal/transit, **Regiomontanus** for horary
+- Computation: Swiss Ephemeris **Moshier mode** by default — no data files, sub-arcsecond accuracy for the modern era. Opt into full SWIEPH precision:
 
-## Ephemeris precision (SWIEPH opt-in)
+  ```bash
+  pnpm ephe:install            # download full .se1 data files
+  ```
 
-By default, the engine uses the **Moshier analytical ephemeris** — accurate for
-the modern era, no data files required. To use full Swiss Ephemeris (SWIEPH)
-precision:
+## Distribution & Publishing
 
-1. Download the `.se1` data files (planets + Moon, 1800–2399 CE) into `./ephe`:
+Kairos is published to npm as `kairos-astrology`:
 
-   ```bash
-   pnpm ephe:install            # or: pnpm ephe:install /custom/dir
-   ```
+```bash
+pnpm publish                # publish the current version to npm
+```
 
-2. Enable SWIEPH computation by pointing at that directory:
+The package includes:
+- The compiled engine (`dist/`)
+- The Claude skill and plugin manifests (`.claude-plugin/`)
+- The web UI (`web/`)
+- License and documentation
 
-   ```bash
-   KAIROS_SWIEPH=1 KAIROS_EPHE_PATH=./ephe pnpm -s compute '...'
-   ```
-
-   This shifts positions by up to ~1″ vs Moshier (e.g. the Moon), which is
-   negligible for judgment but available if you want full JPL-derived precision.
-
-If `KAIROS_SWIEPH=1` but the data files are unavailable, the engine logs a
-warning to **stderr** and gracefully falls back to Moshier. Missing files never
-crash the engine, and stdout JSON stays clean. The flags are resolved once at
-process start (see `engine/src/ephemeris.ts`).
-
-## Scope
-
-The engine covers **horary**, **transits**, **natal**, and **electional**
-(best-window search — scan a future window and rank candidate moments by
-classical electional rules). Every chart also carries **essential dignities**
-(Lilly's domicile/exaltation/triplicity/term/face scoring), **sect**, and the
-**Part of Fortune**; horary judgments add **reception** and dignity-weighted
-significator strength on top of translation/collection of light. Charts can be
-**relocated** — pass a `relocation` place to recast the houses/angles for where
-someone lives now (same birth moment, planets unchanged, only the houses move). An
-interactive chart-wheel web UI ships in `web/` (`pnpm wheel`), with a
-Birthplace/Relocated view switch and detail tables.
+The maintainer will:
+1. Make the GitHub repo public (`github.com/stardustxx/kairos`)
+2. Push tags to trigger releases
+3. Register the MCP server in the official MCP registry (optional)
 
 ## License
 
-Kairos is licensed under the **GNU Affero General Public License v3.0 or later**
-(AGPL-3.0-or-later). The full text is in [`LICENSE`](./LICENSE); third-party
-credits are in [`NOTICE`](./NOTICE).
+Kairos is licensed under the **GNU Affero General Public License v3.0 or later** (`AGPL-3.0-or-later`). See `LICENSE` for details.
 
-**In plain English:** you can run, study, modify, and share Kairos freely. The
-one extra string the AGPL attaches (beyond the regular GPL) is the *network*
-clause: if you ever host a modified Kairos as a service that other people use over
-a network, you must also offer those users the corresponding source code. For the
-intended **local, personal** use — running it on your own machine — this changes
-nothing; you're free to do whatever you like.
+This means:
+- You can use, modify, and distribute Kairos freely
+- If you modify it and distribute the modified version, you must make your modifications available under the same license
+- If you run a modified version as a service (including as part of Claude Code), you must offer the source code to users
 
-`sweph` (Swiss Ephemeris) is dual-licensed AGPL / commercial. Distributing Kairos
-under the AGPL is fine for personal and open use; if you ever embed it in a
-closed-source or commercial product, obtain a commercial Swiss Ephemeris license
-from Astrodienst AG first (see `NOTICE`).
+See `NOTICE` for additional attribution.
+
+## Testing
+
+```bash
+pnpm test                       # run the engine test suite
+pnpm typecheck                  # check TypeScript types
+pnpm lint                       # lint the engine code
+```
+
+All 216 tests pass on the current build.
+
+## Technical Details
+
+- **Engine language:** TypeScript
+- **MCP SDK:** `@modelcontextprotocol/sdk` (Node.js)
+- **Native dependency:** `sweph` (Swiss Ephemeris bindings; includes prebuilds for darwin-arm64, linux-x64, linux-arm64, win32-x64; Intel Mac and musl fall back to Docker or source compile)
+- **Data storage:** `~/.kairos` (profiles, journal, geocoder gazetteer)
+

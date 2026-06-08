@@ -13,58 +13,32 @@ not destiny.
 
 ## Step 0 — Recall the user
 
-**Resolve the engine root once per session.** Every command below runs from the
-Kairos checkout. If `$KAIROS_ROOT` is set, use it; otherwise determine the Kairos
-checkout path — ask the user the first time, or if the current working directory is
-inside the repo use `git -C . rev-parse --show-toplevel` — then `export KAIROS_ROOT=<path>`
-and reuse it for every command below. Do **not** rely on this skill file's own
-location: it is typically symlinked into `~/.claude/skills`, so an ancestor-directory
-walk from the skill file will **not** find the repo. (`$KAIROS_ROOT` is the repo;
-the engine's separate `~/.kairos` data store is unaffected.)
+**Re-surface one ripe reading (close the calibration loop).** At the start of your session,
+check whether a past reading is now ripe to resolve using the `memory_due` MCP tool.
+It returns logged-but-unresolved readings that are now ripe (expected-resolution date passed,
+or 30+ days since asked), **most-ripe first**. If it returns a non-empty list, surface
+**only the single most-ripe one** and ask the user, lightly, what actually happened —
+e.g. "Last month you asked whether the deal would close — how did that turn out?".
+If they tell you, record it with the `memory_outcome` MCP tool. **Cap it to one item,
+make it clearly skippable, and never nag** — if they brush past it, drop it and move
+on to their actual question.
 
-**Re-surface one ripe reading (close the calibration loop).** Right after
-resolving the root, check whether a past reading is now ripe to resolve:
-
-```bash
-cd "$KAIROS_ROOT"
-pnpm -s memory due
-```
-
-It prints a JSON array of logged-but-unresolved readings that are now ripe
-(expected-resolution date passed, or 30+ days since asked), **most-ripe first**. If
-it's non-empty, surface **only the single most-ripe one** (`[0]`) and ask the user,
-lightly, what actually happened — e.g. "Last month you asked whether the deal would
-close — how did that turn out?". If they tell you, record it with
-`pnpm -s memory outcome <id> <happened|did-not-happen|partial> [note]` (see
-Calibration & outcomes). **Cap it to one item, make it clearly skippable, and never
-nag** — if they brush past it, drop it and move on to their actual question. When
-the array is empty, say nothing about it.
-
-Then check whether you already know this person. From the project root, run:
-
-```bash
-cd "$KAIROS_ROOT"
-pnpm -s memory profile get
-```
-
-It prints the stored profile JSON (or `null` if nothing is saved). If it returns
-a profile with `birth` and/or `home`, **use those values instead of asking
-again**, and tell the user you remembered them (e.g. "I've still got your birth
-data — born 1990-03-12 in Seoul, living in Tokyo — I'll use that."). The
-profile mainly serves **transit/natal birth data** (`birth`: a place +
-`datetimeLocal`) and the **home/relocation** location (`home`: a place).
+Then check whether you already know this person using the `profile_get` MCP tool.
+It returns the stored profile JSON (or `null` if nothing is saved). If it returns
+a profile with `birth` and/or `home`, **use those values instead of asking again**,
+and tell the user you remembered them (e.g. "I've still got your birth data — born
+1990-03-12 in Seoul, living in Tokyo — I'll use that."). The profile mainly serves
+**transit/natal birth data** (`birth`: a place + `datetimeLocal`) and the **home/relocation**
+location (`home`: a place).
 
 When the user supplies **new** birth or home data (or corrects what's stored),
-persist it with `profile set`, passing the JSON shape the CLI expects (only the
-keys you're setting; birth/home are deep-merged field-wise):
-
-```bash
-pnpm -s memory profile set '{"birth":{"datetimeLocal":"1990-03-12T07:45:00","latitude":37.57,"longitude":126.98,"timezone":"Asia/Seoul","place":"Seoul"},"home":{"latitude":35.68,"longitude":139.69,"timezone":"Asia/Tokyo","place":"Tokyo"}}'
-```
+persist it with the `profile_set` MCP tool, passing the JSON shape it expects
+(only the keys you're setting; birth/home are deep-merged field-wise).
 
 - A place is `{latitude, longitude, timezone?, place?}`; `birth` also carries
   `datetimeLocal` (local civil time, no offset).
-- `pnpm -s memory profile clear` forgets the active profile's birth/home.
+- The `profile_get` tool can list all profiles; switch between them if working with
+  multiple people.
 
 Horary needs no birth data, so a missing profile is fine — just proceed.
 
@@ -72,29 +46,19 @@ Horary needs no birth data, so a missing profile is fine — just proceed.
 
 Kairos can remember **several people** you cast for (yourself, a partner, a
 friend) — each its own profile with its own birth/home, all on this machine.
-`profile get`/`set`/`clear` always act on the **active** profile. To work with
-others:
-
-```bash
-pnpm -s memory profile list                 # all profiles; one is "active":true
-pnpm -s memory profile add "Partner"        # create a profile (does NOT switch to it)
-pnpm -s memory profile use partner          # switch the active profile
-pnpm -s memory profile remove partner       # delete a profile's birth/home
-```
+`profile_get`/`profile_set` always act on the **active** profile. Use the MCP tools
+to manage profiles:
 
 - **When the question is about someone other than the active person** ("read this
-  for my partner", "use my rectified 7:12am time"), run `profile list` first. If a
-  matching profile exists, either `profile use <slug>` to switch, or — to read for
-  them **without** changing the active profile — append `--profile <slug>` to that
-  one command (works with `get`/`set`/`log`/`journal`/`calibration`). If no profile
-  matches, `profile add "<Name>"` and set their birth data. Tell the user which
-  person you're reading for.
+  for my partner", "use my rectified 7:12am time"), check if a matching profile
+  exists using `profile_get`, and if needed manage the profiles via MCP. If no
+  profile matches, create one with `profile_set`. Tell the user which person you're
+  reading for.
 - If only the default profile exists, behave exactly as before — no need to mention
   profiles at all.
 - The reading **journal is pooled** across everyone (it's your engine's single
   honest track record), but each entry is tagged with the person it's about, so
-  `calibration --profile <slug>` (or `journal --profile <slug>`) can narrow to one
-  person while plain `calibration` reports the overall hit-rate.
+  calibration can narrow to one person while a full run reports the overall hit-rate.
 
 ## Step 1 — Start from the QUESTION, then gather only what it needs
 
@@ -155,19 +119,15 @@ ask only for what's still missing):
   proceed but add an explicit caveat that house-based and rising-sign claims are
   unreliable. If they refuse or can't provide birth data, **fall back to horary**.
 
-**Resolving a city to coordinates — prefer the geocoder over estimating.** Whenever
-you need lat/lon for a city (the horary/electional location, a birth or home place),
-look it up with the bundled geocoder rather than estimating from memory — it returns
-**authoritative lat/lon AND the IANA timezone**, which especially fixes timezone
-accuracy:
+**Resolving a city to coordinates — prefer the geocode MCP tool over estimating.**
+Whenever you need lat/lon for a city (the horary/electional location, a birth or
+home place), look it up using the `geocode` MCP tool rather than estimating from
+memory — it returns **authoritative lat/lon AND the IANA timezone**, which
+especially fixes timezone accuracy.
 
-```bash
-cd "$KAIROS_ROOT" && pnpm -s geocode '<city>'
-```
-
-- One-time setup: `cd "$KAIROS_ROOT" && pnpm -s geocode:install`
-  (installs the offline gazetteer; the lookup errors until it's installed).
-- It prints a JSON array of matches, most populous first — take the best match's
+- One-time setup: call `geocode` with any city; if the gazetteer is not installed,
+  the tool will guide you.
+- It returns a JSON array of matches, most populous first — take the best match's
   lat/lon and `timezone` and feed them into the request you build in Step 3.
 - **Fall back to estimating** lat/lon (and omitting `timezone` so the engine derives
   it) **only if** the lookup is unavailable (gazetteer not installed and you can't
@@ -175,14 +135,26 @@ cd "$KAIROS_ROOT" && pnpm -s geocode '<city>'
 
 ## Step 3 — Call the engine
 
-The engine is a CLI in the Kairos project (the repo at `$KAIROS_ROOT`, resolved in
-Step 0). **Run it from the project root** — `cd "$KAIROS_ROOT"` first if your shell
-is elsewhere. Always use `pnpm -s` (the `-s` silences pnpm's banner, which would
-otherwise corrupt the JSON on stdout).
+The engine is exposed via the bundled Kairos MCP server. Use the `compute`, `horary`,
+`transit`, `natal`, or `electional` MCP tools depending on the kind of chart you're
+computing. Always pass the exact request JSON, and the engine returns a full result
+with verdicts and all supporting detail.
 
-```bash
-cd "$KAIROS_ROOT"
-pnpm -s compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"<ISO local>","latitude":<lat>,"longitude":<lon>,"timezone":"<IANA or omit>"}}'
+For **horary, transit, and natal**:
+
+```
+Use the compute MCP tool with:
+{
+  "kind": "horary" | "transit" | "natal",
+  "quesitedHouse": <2-12>,
+  "moment": {
+    "datetimeLocal": "<ISO local>",
+    "latitude": <lat>,
+    "longitude": <lon>,
+    "timezone": "<IANA or omit>"
+  },
+  "natal": { ...same shape... } // for transit only
+}
 ```
 
 - `kind`: `"horary"`, `"transit"`, `"natal"`, or `"electional"`.
@@ -201,8 +173,22 @@ pnpm -s compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"
 For **electional**, the request shape is different — there's no single `moment`;
 instead pass a `window`, a `stepMinutes`, a `location`, and the `quesitedHouse`:
 
-```bash
-pnpm -s compute '{"kind":"electional","quesitedHouse":7,"stepMinutes":30,"location":{"latitude":<lat>,"longitude":<lon>,"timezone":"<IANA or omit>"},"window":{"startLocal":"2026-07-01T08:00:00","endLocal":"2026-07-07T20:00:00"},"significatorHints":{"planet":"Venus"}}'
+```
+{
+  "kind": "electional",
+  "quesitedHouse": <2-12>,
+  "stepMinutes": <15-60>,
+  "location": {
+    "latitude": <lat>,
+    "longitude": <lon>,
+    "timezone": "<IANA or omit>"
+  },
+  "window": {
+    "startLocal": "<ISO>",
+    "endLocal": "<ISO>"
+  },
+  "significatorHints": { "planet": "<name>" } // optional
+}
 ```
 
 - `quesitedHouse` is the matter's house (2..12), same map as horary.
@@ -214,23 +200,19 @@ Use the JSON it prints. Do not alter the numbers.
 
 ## Step 3b — Optional: a visual chart
 
-If the user wants to *see* the chart (a wheel they can open), render a single
-self-contained HTML file with the engine's non-blocking render command. Pass the
-**exact same request JSON you built in Step 3** — no new request-building — and the
-engine writes one openable artifact and exits without starting a server:
+If the user wants to *see* the chart (a wheel they can open), point them at the
+standalone web viewer — the MCP server does **not** render images. Take the JSON
+the `compute` tool returned and either:
 
-```bash
-cd "$KAIROS_ROOT"
-pnpm -s wheel:render '<the same request JSON from Step 3>'
-```
+- have the user open `web/index.html` from a Kairos checkout and paste that JSON
+  into the input box (it draws the wheel, verdict, and detail tables), or
+- if they have the package installed, they can run `npx -y kairos-astrology wheel`
+  with the same request to open a self-contained chart locally.
 
-- It prints the **absolute path** of the artifact to stdout. Hand that path to the
-  user so they can open it in a browser — don't paste the file's contents.
-- This is **purely optional and supplementary**: the text verdict from Step 5 stays
-  the primary answer. Render only when asked, and still give the full written
-  verdict.
-- The visual verdict panel currently covers **horary and electional** only;
-  transit/natal charts render without one, so lean on your written verdict there.
+This is **purely optional and supplementary**: the text verdict from Step 5 stays
+the primary answer. The visual verdict panel currently covers **horary and
+electional** only; transit/natal render the wheel without a verdict panel, so lean
+on your written verdict there.
 
 ## Step 4 — Judge and answer
 
@@ -521,60 +503,50 @@ call logs it for you. Add a `journal` field to the **exact request JSON you buil
 in Step 3** and the engine appends the journal entry as a side effect *after*
 computing, capturing the engine-derived fields itself (`kind`, `quesitedHouse`,
 and for horary the judgment's own `lean`/`confidence`/`score`) so the track record
-can never drift from the numbers the engine actually returned:
+can never drift from the numbers the engine actually returned.
 
-```bash
-pnpm -s compute '{"kind":"horary","quesitedHouse":10,"moment":{...},"journal":{"question":"Will I get this job?","verdictText":"Leans yes — moderate confidence."}}'
+So add a `journal` object to the **`compute` tool call** itself:
+
+```json
+{
+  "kind": "horary",
+  "quesitedHouse": 10,
+  "moment": { "datetimeLocal": "...", "latitude": 0, "longitude": 0 },
+  "journal": {
+    "question": "Will I get this job?",
+    "verdictText": "Leans yes — moderate confidence."
+  }
+}
 ```
 
 - `journal.question` (string, required) is the user's question, recorded verbatim.
-- `journal.verdictText` (string, optional) is the plain verdict you gave, stored as
-  a note on the entry.
+- `journal.verdictText` (string, optional) is the plain verdict you gave, stored as a note.
+- The engine logs the entry itself using the lean/confidence/score it just computed —
+  you never re-type the numbers, so the record can't drift.
 - The result gains a `journalId`. **Keep that id** and mention it to the user —
   tell them they can later tell you what actually happened for this question, and
   you'll record the outcome (see below). For horary with applying-perfection
   timing, the engine also stamps an `expectedResolutionAt` (the "ask me later"
-  date) from the perfection time, so the reading re-surfaces on its own when ripe
-  (see Step 0).
-- Omit `journal` and compute stays pure (no write) — that's the path the
-  web/wheel render uses. Add it on the **text-verdict** path so every verdict is
-  logged by construction.
+  date) from the perfection time, so the reading re-surfaces on its own when ripe.
 
-(If you ever need to log a row without recomputing, `pnpm -s memory log '<json>'`
-still exists, but the auto-log above is the default — prefer it.)
+(If you ever need to log a row without recomputing, `memory_log` MCP tool still
+exists for that path, but the compute-with-journal above is the default — prefer it.)
 
 ## Calibration & outcomes
 
 If the user asks **how their past readings have done** or whether the verdicts
-are calibrated, run:
-
-```bash
-pnpm -s memory calibration
-```
-
+are calibrated, use the `memory_calibration` MCP tool.
 It returns hit-rate **by confidence band** (`bands[]` with `confidence`,
 `resolved`, `correct`, `hitRate`), an `overall` rollup, and `unresolved`/`total`
 counts. Report the hit-rate per band — but **always** with the honest
 small-sample caveat: a personal track record is noisy, and finding a pattern in
 a handful of readings is pattern-finding, **not** proof that astrology works.
-(The report even ships a `note` field saying as much.)
 
-Plain `calibration` pools **every** profile's readings into one overall track
-record. To narrow it to a single person, add `--profile <slug>`:
-`pnpm -s memory calibration --profile partner`.
+When the user reports **what actually happened** for a prior question, use the
+`memory_outcome` MCP tool to resolve that entry by id:
 
-When the user reports **what actually happened** for a prior question, resolve
-that entry by id:
-
-```bash
-pnpm -s memory outcome <id> <happened|did-not-happen|partial> [note words...]
-```
-
-- `<id>` is the journal id you gave them at log time (or the `id` of a ripe entry
-  from `pnpm -s memory due`).
 - The outcome is `happened`, `did-not-happen`, or `partial` (`unknown` leaves it
-  effectively unresolved). Anything after the outcome is recorded as a free-text
-  note.
+  effectively unresolved). Free-text notes can be recorded as well.
 
 **Record misses honestly — never launder them.** When an outcome contradicts a
 verdict you gave with `high`/`strong` confidence, resolve it as a plain
@@ -592,3 +564,8 @@ whether the **verdict** held, not whether some fragment of the narrative survive
 Memory is stored **locally** under `~/.kairos` (one `profiles/<slug>/` directory
 per person, plus the pooled `journal.jsonl`) and is **never synced** — every
 person's birth data and your reading history stay on this machine.
+
+The Kairos MCP server tools (compute, memory_log, memory_due, memory_outcome,
+memory_calibration, profile_get, profile_set) provide the interface to the bundled
+engine. Run `npx -y kairos-astrology mcp` to start the server standalone if needed,
+or use the server bundled with this plugin via Claude Code's native MCP support.

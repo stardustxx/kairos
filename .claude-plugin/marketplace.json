@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace-manifest.json",
+  "name": "stardustxx",
+  "owner": {
+    "name": "Dustin Lee",
+    "email": "e811226@gmail.com"
+  },
+  "description": "Kairos Astrology — decision support via Swiss Ephemeris",
+  "version": "1.1.0",
+  "plugins": [
+    {
+      "name": "kairos",
+      "displayName": "Kairos Astrology",
+      "description": "Astrology-based decision support using Swiss Ephemeris. Computes accurate charts (horary, transit, natal, electional) with classical dignities and returns calibrated verdicts.",
+      "source": {
+        "source": "github",
+        "repo": "stardustxx/kairos"
+      },
+      "version": "1.1.0",
+      "author": {
+        "name": "Dustin Lee",
+        "url": "https://github.com/stardustxx"
+      },
+      "homepage": "https://github.com/stardustxx/kairos",
+      "repository": "https://github.com/stardustxx/kairos",
+      "license": "AGPL-3.0-or-later",
+      "keywords": ["astrology", "swiss-ephemeris", "horary", "electional", "decision-support"]
+    }
+  ]
+}

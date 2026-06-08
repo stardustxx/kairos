@@ -1,0 +1,71 @@
+name: Release Check — Zero-Compile Install
+
+# Proves the published package installs and runs from its own tarball with NO
+# native source compilation (the sweph prebuild must resolve) on the three
+# platforms that ship a sweph prebuild. Intel macOS (darwin-x64) has no prebuild
+# and is intentionally NOT in this matrix — it compiles from source by design.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  cold-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Build and pack the tarball
+        id: pack
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm pack
+          echo "tarball=$PWD/$(ls kairos-astrology-*.tgz | head -1)" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Cold-install the tarball in an isolated project
+        run: |
+          mkdir -p coldtest && cd coldtest
+          npm init -y >/dev/null 2>&1
+          # Install the LOCAL tarball (not the registry name) so we exercise THIS build.
+          npm install "${{ steps.pack.outputs.tarball }}" 2>&1 | tee install.log
+        shell: bash
+
+      - name: Assert the sweph prebuild resolved (no source compile)
+        run: |
+          cd coldtest
+          if grep -Eiq 'node-gyp rebuild|gyp ERR!|cc1plus|node-gyp.*build' install.log; then
+            echo "FAIL: native source compilation detected on ${{ runner.os }} — sweph prebuild did not resolve."
+            exit 1
+          fi
+          echo "OK: no source compile — prebuilt binary used."
+        shell: bash
+
+      - name: Run a horary compute via the installed bin and assert a verdict
+        run: |
+          cd coldtest
+          out=$(node node_modules/kairos-astrology/dist/src/bin.js compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T14:30:00","latitude":40.7128,"longitude":-74.0060,"timezone":"America/New_York"}}')
+          echo "$out"
+          if echo "$out" | grep -q '"lean"'; then
+            echo "OK: verdict present in compute output."
+          else
+            echo "FAIL: no verdict in output."
+            exit 1
+          fi
+        shell: bash

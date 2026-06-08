@@ -17,7 +17,8 @@
   },
   "files": [
     "dist",
-    "skill",
+    "skills",
+    ".claude-plugin",
     "web/index.html",
     "web/app.js",
     "web/chart.js",
@@ -51,8 +52,9 @@
     "electional",
     "decision-support"
   ],
-  "author": "",
+  "author": "Dustin Lee",
   "license": "AGPL-3.0-or-later",
+  "mcpName": "io.github.stardustxx/kairos",
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
