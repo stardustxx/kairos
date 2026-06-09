@@ -200,19 +200,17 @@ Use the JSON it prints. Do not alter the numbers.
 
 ## Step 3b — Optional: a visual chart
 
-If the user wants to *see* the chart (a wheel they can open), point them at the
-standalone web viewer — the MCP server does **not** render images. Take the JSON
-the `compute` tool returned and either:
-
-- have the user open `web/index.html` from a Kairos checkout and paste that JSON
-  into the input box (it draws the wheel, verdict, and detail tables), or
-- if they have the package installed, they can run `npx -y kairos-astrology wheel`
-  with the same request to open a self-contained chart locally.
+If the user wants to *see* the chart (a wheel they can open), call the
+`render_wheel` MCP tool with the **same request** you passed to `compute`. It runs
+the engine and writes one self-contained, openable `.html` chart (web assets + the
+ComputeResult inlined, no network needed), returning the artifact's **absolute
+path**. Hand that path to the user to open in a browser.
 
 This is **purely optional and supplementary**: the text verdict from Step 5 stays
 the primary answer. The visual verdict panel currently covers **horary and
 electional** only; transit/natal render the wheel without a verdict panel, so lean
-on your written verdict there.
+on your written verdict there. (Fallback if the tool is unavailable: a package
+checkout can open `web/index.html` and paste the `compute` JSON into the input box.)
 
 ## Step 4 — Judge and answer
 

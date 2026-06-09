@@ -21,7 +21,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -138,6 +138,22 @@ function buildSelfContainedHtml(result: ComputeResult): string {
   return html;
 }
 
+/**
+ * Build the self-contained HTML artifact for a result and write it to a temp
+ * file under os.tmpdir(), returning its ABSOLUTE path. Single implementation
+ * shared by the wheel `--write` CLI mode and the render_wheel MCP tool, so the
+ * filename scheme (`kairos-chart-<ts>.html`) stays in one place. Caller must
+ * ensure `result.chart` exists (an electional with no candidates has none).
+ */
+export function renderWheelToFile(result: ComputeResult, outPath?: string): string {
+  const out = outPath
+    ? resolve(outPath)
+    : join(tmpdir(), `kairos-chart-${Date.now()}.html`);
+  const htmlDoc = buildSelfContainedHtml(result);
+  writeFileSync(out, htmlDoc, "utf8");
+  return out;
+}
+
 function openBrowser(url: string): void {
   const cmd =
     process.platform === "darwin"
@@ -220,11 +236,7 @@ export async function main(args: string[]): Promise<void> {
   // Non-blocking render mode: write a single self-contained artifact and exit
   // BEFORE any server work, so no socket is opened and the process terminates.
   if (cli.writeMode) {
-    const out = cli.outPath
-      ? resolve(cli.outPath)
-      : join(tmpdir(), `kairos-chart-${Date.now()}.html`);
-    const htmlDoc = buildSelfContainedHtml(result);
-    await writeFile(out, htmlDoc, "utf8");
+    const out = renderWheelToFile(result, cli.outPath);
     console.log(out); // absolute path, sole stdout line for the skill
     process.exit(0); // never start the server; never block
   }

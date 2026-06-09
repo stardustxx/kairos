@@ -6,7 +6,7 @@
  * handlers return MCP results (structured JSON text content) and surface errors
  * as `isError` tool results rather than throwing.
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -21,6 +21,7 @@ import {
   handleMemoryOutcome,
   handleProfileGet,
   handleProfileSet,
+  handleRenderWheel,
 } from "./mcp-server.js";
 import type { ComputeRequest } from "./types.js";
 
@@ -168,6 +169,42 @@ describe("profile handlers", () => {
 
   it("profile_get is null on a fresh store", () => {
     expect(parsed(handleProfileGet({}))).toBeNull();
+  });
+});
+
+describe("render_wheel handler", () => {
+  it("writes a self-contained HTML chart for a horary request and returns its path", () => {
+    const req: ComputeRequest = {
+      kind: "horary",
+      quesitedHouse: 10,
+      moment: { datetimeLocal: "2020-03-20T12:00:00", ...LONDON },
+    };
+    const result = handleRenderWheel(req);
+    expect(result.isError).toBeFalsy();
+
+    const value = parsed(result) as { path: string; note: string };
+    expect(value.path).toMatch(/kairos-chart-\d+\.html$/);
+    expect(value.note).toMatch(/browser/i);
+
+    try {
+      // The artifact exists on disk and holds the inlined chart markup.
+      expect(existsSync(value.path)).toBe(true);
+      const html = readFileSync(value.path, "utf8");
+      expect(html).toContain("<svg");
+      expect(html).toContain('id="kairos-data"');
+      // The ComputeResult itself is inlined (the horary judgment lean field).
+      expect(html).toMatch(/"horary"/);
+    } finally {
+      rmSync(value.path, { force: true });
+    }
+  });
+
+  it("returns a tool error for an invalid request (rejected by validateRequest)", () => {
+    // An electional missing window/stepMinutes/location fails validation before
+    // compute, so render_wheel surfaces a tool error rather than throwing.
+    const bad = { kind: "electional", quesitedHouse: 10 } as ComputeRequest;
+    const result = handleRenderWheel(bad);
+    expect(result.isError).toBe(true);
   });
 });
 

@@ -37,6 +37,7 @@ import {
 import { isMainModule } from "./run-guard.js";
 import type { ComputeRequest } from "./types.js";
 import { validateRequest } from "./validate.js";
+import { renderWheelToFile } from "./wheel.js";
 
 /** Read this package's version for the server identity, resolved from the
  *  module location (../../package.json) so it works in both dev (engine/src)
@@ -89,6 +90,27 @@ export function handleCompute(req: ComputeRequest): CallToolResult {
   return guard(() => {
     validateRequest(req);
     return runCompute(req);
+  });
+}
+
+/**
+ * render_wheel — validate a ComputeRequest, run it, then write a single
+ * self-contained openable HTML chart to a temp file and return its ABSOLUTE
+ * path. Errors (as a proper MCP tool error) when the request produces no chart
+ * (e.g. an electional with no candidates). This never writes to stdout — it
+ * returns the path as structured JSON content for the transport to emit.
+ */
+export function handleRenderWheel(req: ComputeRequest): CallToolResult {
+  return guard(() => {
+    validateRequest(req);
+    const result = runCompute(req);
+    if (!result.chart) {
+      throw new Error(
+        "nothing to render: this request produced no chart (an electional with no candidates?)",
+      );
+    }
+    const path = renderWheelToFile(result);
+    return { path, note: "open this file in a browser" };
   });
 }
 
@@ -258,6 +280,17 @@ export function buildServer(): McpServer {
       inputSchema: computeRequestShape,
     },
     async (args) => handleCompute(args as unknown as ComputeRequest),
+  );
+
+  server.registerTool(
+    "render_wheel",
+    {
+      title: "Render a chart wheel to an openable HTML file",
+      description:
+        "Takes the SAME request as compute (a ComputeRequest), runs the engine, and writes ONE self-contained chart wheel as an openable .html file (web assets + the ComputeResult inlined, no network needed). Returns { path, note } with the artifact's absolute path for the user to open in a browser. The visual verdict panel covers horary/electional; transit/natal render the wheel without one. Errors when the request produces no chart (e.g. an electional with no candidates).",
+      inputSchema: computeRequestShape,
+    },
+    async (args) => handleRenderWheel(args as unknown as ComputeRequest),
   );
 
   server.registerTool(
