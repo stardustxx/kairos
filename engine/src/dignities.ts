@@ -6,14 +6,26 @@
  * a net score.
  *
  * Tables follow the standard traditional set: Ptolemaic exaltations, Dorothean
- * triplicities (day/night rulers), Egyptian terms (bounds), and Chaldean faces
- * (decans).
+ * triplicities (day / night / PARTICIPATING rulers), Egyptian terms (bounds),
+ * and Chaldean faces (decans).
  */
 import { DEGREES_PER_SIGN, SIGN_COUNT, SIGN_RULER, SIGNS } from "./constants.js";
 import type { PlanetDignities, Reception } from "./types.js";
 
-// Lilly point values.
-const POINTS = { domicile: 5, exaltation: 4, triplicity: 3, term: 2, face: 1, detriment: -5, fall: -4, peregrine: -5 };
+// Lilly point values. The in-sect triplicity ruler keeps the full +3; the
+// Dorothean PARTICIPATING (third) ruler co-rules every triplicity regardless of
+// sect and earns a reduced +1 share (see TRIPLICITY below for the source).
+const POINTS = {
+  domicile: 5,
+  exaltation: 4,
+  triplicity: 3,
+  triplicityParticipating: 1,
+  term: 2,
+  face: 1,
+  detriment: -5,
+  fall: -4,
+  peregrine: -5,
+};
 
 // Exaltation lord by sign index (Aries..Pisces); null where no planet exalts.
 const EXALTATION: (string | null)[] = [
@@ -31,12 +43,32 @@ const EXALTATION: (string | null)[] = [
   "Venus",   // Pisces
 ];
 
-// Element index 0=Fire,1=Earth,2=Air,3=Water -> { day, night } triplicity ruler.
-const TRIPLICITY: { day: string; night: string }[] = [
-  { day: "Sun", night: "Jupiter" },   // Fire (Aries/Leo/Sagittarius)
-  { day: "Venus", night: "Moon" },    // Earth (Taurus/Virgo/Capricorn)
-  { day: "Saturn", night: "Mercury" },// Air (Gemini/Libra/Aquarius)
-  { day: "Mars", night: "Mars" },     // Water (Cancer/Scorpio/Pisces)
+// Element index 0=Fire,1=Earth,2=Air,3=Water -> { day, night, participating }.
+//
+// The full DOROTHEAN (Hellenistic) triplicity set: each element has a day ruler,
+// a night ruler, AND a third "participating" ruler that co-rules the triplicity
+// in BOTH day and night charts. Earlier this table dropped the participating
+// ruler (and gave Water a flat Mars/Mars day+night), understating triplicity
+// dignity and skewing the almuten of a degree.
+//
+// Sources (cross-checked, all agree on the four-element set below, incl. Water =
+// Venus day / Mars night / Moon participating):
+//   - Dorotheus of Sidon, Carmen Astrologicum, Bk I (via Anthony Louis,
+//     "Triplicity: The Third Essential Dignity", tonylouis.wordpress.com 2012-04-03)
+//   - Seven Stars Astrology, "Triplicity Rulers: One or Three?"
+//
+// SCORING (the (+3 / 0 / +1) weighted convention — Robert Hand, *Night & Day:
+// Planetary Sect in Astrology*; as implemented by modern almuten calculators,
+// e.g. kerykeion's Almuten Figuris): the in-sect ruler keeps the full triplicity
+// +3; the PARTICIPATING ruler is a minor dignity worth +1, "akin to Face in the
+// five-fold system" — it contributes regardless of sect. The out-of-sect ruler
+// scores 0 here (no separate share), keeping the table consistent with Lilly's
+// 5-point essential-dignity scale that the rest of the engine uses.
+const TRIPLICITY: { day: string; night: string; participating: string }[] = [
+  { day: "Sun", night: "Jupiter", participating: "Saturn" },   // Fire (Aries/Leo/Sagittarius)
+  { day: "Venus", night: "Moon", participating: "Mars" },      // Earth (Taurus/Virgo/Capricorn)
+  { day: "Saturn", night: "Mercury", participating: "Jupiter" },// Air (Gemini/Libra/Aquarius)
+  { day: "Venus", night: "Mars", participating: "Moon" },      // Water (Cancer/Scorpio/Pisces)
 ];
 
 // Egyptian terms (bounds): per sign, ordered segments [upperBoundDeg, ruler].
@@ -93,7 +125,13 @@ function faceRuler(signIndex: number, deg: number): string {
 export interface DignityLords {
   domicile: string;
   exaltation: string | null;
+  /** The in-sect triplicity ruler (full +3). */
   triplicity: string;
+  /** The Dorothean PARTICIPATING triplicity ruler — co-rules day and night and
+   *  earns the reduced +1 share. May coincide with the in-sect `triplicity`
+   *  ruler in some sect/element combinations; consumers must not double-award
+   *  in that case (the in-sect +3 supersedes the participating +1). */
+  triplicityParticipating: string;
   term: string;
   face: string;
 }
@@ -108,6 +146,7 @@ export function dignityLordsAtDegree(longitude: number, sect: "day" | "night"): 
     domicile: SIGN_RULER[si],
     exaltation: EXALTATION[si],
     triplicity: TRIPLICITY[element][sect],
+    triplicityParticipating: TRIPLICITY[element].participating,
     term: termRuler(si, deg),
     face: faceRuler(si, deg),
   };
@@ -131,6 +170,12 @@ export function computeDignities(
   const exaltation = EXALTATION[si] === planet;
   const element = si % 4; // 0 Fire,1 Earth,2 Air,3 Water (Aries..Pisces cycles)
   const triplicity = TRIPLICITY[element][sect] === planet;
+  // Participating (Dorothean third) ruler co-rules day AND night. It only counts
+  // as a SEPARATE +1 dignity when this planet is NOT already the in-sect ruler at
+  // this degree (the in-sect +3 supersedes — never double-award). The three
+  // Dorothean rulers per element are distinct planets, so this can't collide
+  // with the in-sect ruler except via that guard.
+  const triplicityParticipating = !triplicity && TRIPLICITY[element].participating === planet;
   const term = termRuler(si, deg) === planet;
   const face = faceRuler(si, deg) === planet;
 
@@ -138,20 +183,21 @@ export function computeDignities(
   const detriment = SIGN_RULER[(si + 6) % 12] === planet;
   const fall = EXALTATION[(si + 6) % 12] === planet;
 
-  const anyPositive = domicile || exaltation || triplicity || term || face;
+  const anyPositive = domicile || exaltation || triplicity || triplicityParticipating || term || face;
   const peregrine = !anyPositive && !detriment && !fall;
 
   let score = 0;
   if (domicile) { score += POINTS.domicile; labels.push(`domicile in ${SIGNS[si]} (+5)`); }
   if (exaltation) { score += POINTS.exaltation; labels.push(`exaltation in ${SIGNS[si]} (+4)`); }
   if (triplicity) { score += POINTS.triplicity; labels.push(`${sect} triplicity ruler (+3)`); }
+  if (triplicityParticipating) { score += POINTS.triplicityParticipating; labels.push(`participating triplicity ruler (+1)`); }
   if (term) { score += POINTS.term; labels.push(`term ruler (+2)`); }
   if (face) { score += POINTS.face; labels.push(`face ruler (+1)`); }
   if (detriment) { score += POINTS.detriment; labels.push(`detriment in ${SIGNS[si]} (-5)`); }
   if (fall) { score += POINTS.fall; labels.push(`fall in ${SIGNS[si]} (-4)`); }
   if (peregrine) { score += POINTS.peregrine; labels.push(`peregrine — no essential dignity (-5)`); }
 
-  return { domicile, exaltation, triplicity, term, face, detriment, fall, peregrine, score, labels };
+  return { domicile, exaltation, triplicity, triplicityParticipating, term, face, detriment, fall, peregrine, score, labels };
 }
 
 /** Does `host` planet dignify whatever sits at `longitude`, by domicile or

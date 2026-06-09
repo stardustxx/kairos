@@ -105,6 +105,7 @@ export interface PlanetDignities {
   domicile: boolean; // in its own sign (+5)
   exaltation: boolean; // in its exaltation sign (+4)
   triplicity: boolean; // in-sect triplicity ruler of its element (+3)
+  triplicityParticipating: boolean; // Dorothean participating (third) triplicity ruler, day+night (+1); only set when not the in-sect ruler
   term: boolean; // ruler of its Egyptian term/bound (+2)
   face: boolean; // ruler of its face/decan (+1)
   detriment: boolean; // in the sign opposite its rulership (-5)
@@ -269,6 +270,31 @@ export interface Besieging {
   betweenOf: [string, string];
 }
 
+/**
+ * A planet ENCLOSED between two flanking bodies — one immediately ahead and one
+ * immediately behind it in zodiacal longitude — each touching it by BODY or by a
+ * Ptolemaic RAY (aspect within orb), with NO other body or ray intervening on
+ * either side. Two classical conditions share this geometry:
+ *   - malefic-besieging (affliction): the two flanking bodies are Mars and
+ *     Saturn — the planet is hemmed by both infortunes ("besieged").
+ *   - benefic-enclosure (protection): the two flanking bodies are Jupiter and
+ *     Venus — the planet is shielded by both fortunes ("aided").
+ * Source: William Lilly, Christian Astrology (1647), Bk. 1, on a planet
+ * "besieged" between the two infortunes "by body or aspect, no other planet
+ * interposing"; the benefic counterpart ("aid") in the same enclosure geometry.
+ */
+export interface Enclosure {
+  /** "malefic" = besieged between Mars & Saturn (affliction); "benefic" =
+   *  enclosed between Jupiter & Venus (protection). */
+  kind: "malefic" | "benefic";
+  /** The two enclosing bodies, [behind, ahead] by longitude. For malefic these
+   *  are Mars/Saturn in some order; for benefic Jupiter/Venus in some order. */
+  betweenOf: [string, string];
+  /** How each flanking body touches the enclosed planet: "body" (bodily
+   *  adjacent, within conjunction orb) or "ray" (by a Ptolemaic aspect). */
+  by: ["body" | "ray", "body" | "ray"];
+}
+
 export type Confidence = "low" | "medium" | "high";
 export type Lean = "favorable" | "unfavorable" | "uncertain";
 
@@ -360,6 +386,12 @@ export interface HoraryJudgment {
   /** Besieged significators: each significator hemmed bodily between Mars and
    *  Saturn. Empty when neither is besieged. A real affliction per significator. */
   besieging: Array<{ significator: string; planet: string }>;
+  /** Enclosure of a significator between two flanking bodies by BODY or RAY, with
+   *  nothing intervening: malefic-enclosure (besieged between Mars & Saturn, an
+   *  affliction) or benefic-enclosure (shielded between Jupiter & Venus, a
+   *  protection). Reported once per significator, strongest form — never double-
+   *  counted with the body-besieging in `besieging`. Empty when none. */
+  enclosures: Array<{ significator: string; planet: string; enclosure: Enclosure }>;
   /** Plain-language "when" estimate, present only when the significators form an
    *  applying perfection. Descriptive — never folded into the score. Null when
    *  there is no applying significator aspect. */

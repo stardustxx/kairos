@@ -3,27 +3,34 @@
  * most essential dignity at a given ecliptic longitude, and therefore has the
  * strongest "say" over whatever sits there.
  *
- * It sums the SAME Lilly point values used in dignities.ts across the five
- * essential dignities (domicile=5, exaltation=4, triplicity[by sect]=3, term=2,
- * face=1) for each of the seven classical planets, and picks the highest total.
- * This is sometimes NOT the simple domicile ruler: a planet that exalts, rules
- * the triplicity, and bounds the term can out-dignify the lord of the sign.
+ * It sums the SAME Lilly point values used in dignities.ts across the essential
+ * dignities (domicile=5, exaltation=4, triplicity[by sect]=3, term=2, face=1,
+ * plus the Dorothean PARTICIPATING triplicity ruler=1) for each of the seven
+ * classical planets, and picks the highest total. This is sometimes NOT the
+ * simple domicile ruler: a planet that exalts, rules the triplicity, and bounds
+ * the term can out-dignify the lord of the sign — and the participating ruler's
+ * +1 can now tip a tie or carry a peregrine degree.
  *
  * Tie-break (deterministic, documented):
  *   1. Higher total essential-dignity score wins.
  *   2. On an exact tie, the planet contributing the WEIGHTIER single dignity
- *      wins (domicile > exaltation > triplicity > term > face).
+ *      wins (domicile > exaltation > triplicity > term > face > participating).
+ *      Participating ranks LAST: though it shares the +1 value of face, face is
+ *      one of the canonical five dignities and outranks the supplementary share.
  *   3. Still tied: traditional Chaldean order
  *      (Saturn, Jupiter, Mars, Sun, Venus, Mercury, Moon).
  */
 import { dignityLordsAtDegree } from "./dignities.js";
 
-// Lilly point values for the five essential dignities (mirrors dignities.ts).
-const DIGNITY_POINTS = { domicile: 5, exaltation: 4, triplicity: 3, term: 2, face: 1 } as const;
+// Lilly point values for the essential dignities (mirrors dignities.ts), with
+// the Dorothean participating triplicity ruler as a +1 minor dignity.
+const DIGNITY_POINTS = { domicile: 5, exaltation: 4, triplicity: 3, term: 2, face: 1, triplicityParticipating: 1 } as const;
 
 // Dignity kinds ordered by weight (weightiest first) — drives both the tie-break
-// "weightier single dignity" rule and the order of the breakdown sources.
-const DIGNITY_ORDER = ["domicile", "exaltation", "triplicity", "term", "face"] as const;
+// "weightier single dignity" rule and the order of the breakdown sources. The
+// participating triplicity ruler is appended LAST (a +1 supplementary share,
+// below face).
+const DIGNITY_ORDER = ["domicile", "exaltation", "triplicity", "term", "face", "triplicityParticipating"] as const;
 type DignityKind = (typeof DIGNITY_ORDER)[number];
 
 // The seven classical planets in Chaldean order (slowest..fastest). Used as the
@@ -55,13 +62,18 @@ export interface AlmutenResult {
 export function almutenOfDegree(longitude: number, sect: "day" | "night"): AlmutenResult {
   const lords = dignityLordsAtDegree(longitude, sect);
 
-  // Map each dignity kind to the planet holding it at this degree.
+  // Map each dignity kind to the planet holding it at this degree. The
+  // participating triplicity ruler is suppressed when it coincides with the
+  // in-sect triplicity ruler so a single planet never collects both the +3 and
+  // the +1 (the Dorothean tables keep them distinct; this is a defensive guard).
   const lordOf: Record<DignityKind, string | null> = {
     domicile: lords.domicile,
     exaltation: lords.exaltation,
     triplicity: lords.triplicity,
     term: lords.term,
     face: lords.face,
+    triplicityParticipating:
+      lords.triplicityParticipating === lords.triplicity ? null : lords.triplicityParticipating,
   };
 
   // Tally points + sources per planet, walking dignities weightiest-first so the
@@ -76,7 +88,8 @@ export function almutenOfDegree(longitude: number, sect: "day" | "night"): Almut
     const c = contributions.get(planet);
     if (!c) continue; // ignore any non-classical lord (defensive; tables are classical)
     c.points += DIGNITY_POINTS[kind];
-    c.sources.push(`${kind} (+${DIGNITY_POINTS[kind]})`);
+    const label = kind === "triplicityParticipating" ? "participating triplicity" : kind;
+    c.sources.push(`${label} (+${DIGNITY_POINTS[kind]})`);
   }
 
   const breakdown = CHALDEAN_ORDER.map((p) => contributions.get(p)!);

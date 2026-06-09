@@ -103,21 +103,33 @@ describe("horary golden charts (verdict regression baseline)", () => {
   // 2. Clearly UNFAVORABLE: a direct square is broken by BOTH a prohibition and a
   //    refranation with no surviving indirect path — the strong-denial floor.
   it("clearly unfavorable: prohibition + refranation break the perfection (NYC, 2nd)", () => {
+    // Participating-ruler re-baseline (two linked shifts, both from the
+    // Dorothean table fix):
+    //  • Quesited Jupiter is in Gemini (Air); Air's PARTICIPATING triplicity
+    //    ruler is Jupiter, so Jupiter now scores +1 there. That lifts its dignity
+    //    from peregrine -5 to detriment -5 + participating +1 = -4, which no
+    //    longer clears the "debilitated" (≤ -5) threshold — so the
+    //    "Quesited significator Jupiter debilitated (-5)" testimony drops and the
+    //    score rises -48 → -43.
+    //  • The 2nd cusp sits in Pisces (Water) in this DAY chart. The old table
+    //    wrongly gave Water Mars by day; the correct Dorothean Water DAY ruler is
+    //    Venus. Venus now holds exaltation (+4) + Water-day triplicity (+3) = 7
+    //    over the cusp, out-dignifying Mars (term+face = 3), so the 2nd-house
+    //    almuten flips Mars → Venus.
     expect(judge(NEW_YORK, "2024-08-01T20:00:00", 2)).toEqual({
       lean: "unfavorable",
       confidence: "high",
-      score: -48,
+      score: -43,
       perfection: { direct: false, broken: ["prohibition", "refranation"], indirectPath: null },
       timing: { unit: "days", amount: 4 },
       testimonies: [
         "Significators apply by square — perfection with friction (+8)",
         "One-way reception (Jupiter receives the other by domicile) (+5)",
         "Querent significator Saturn debilitated (dignity -5) (-5)",
-        "Quesited significator Jupiter debilitated (dignity -5) (-5)",
         "Querent significator Saturn retrograde — hesitation or reversal (-4)",
         "Prohibition: Moon perfects by trine with Saturn before the significators — the matter is cut off (-25)",
         "Refranation: Saturn turns back (retrograde/stationing) before the significators perfect — the matter withdraws (-22)",
-        "Almuten of the 2nd is Mars (more dignified than ruler Jupiter) — Mars has the strongest say over the matter (0)",
+        "Almuten of the 2nd is Venus (more dignified than ruler Jupiter) — Venus has the strongest say over the matter (0)",
       ],
     });
   });
@@ -159,17 +171,24 @@ describe("horary golden charts (verdict regression baseline)", () => {
     });
   });
 
-  // 5. VOID-OF-COURSE Moon: the dominant -30 testimony, with no other signal —
-  //    isolates the void-Moon weight and its lean/confidence effect.
-  it("void-of-course Moon: little comes of the matter (London, 2nd)", () => {
+  // 5. VOID-OF-COURSE Moon: the dominant -30 testimony, now offset by a benefic
+  //    enclosure (+10). The shared significator Saturn (333.27°) is tightly hemmed
+  //    between Venus (243.02°, a partile square, gap 0.25°) behind and Jupiter
+  //    (35.58°, a sextile, gap 2.31°) ahead — nothing intervening on either side —
+  //    so Saturn is enclosed between the two benefics ("aided"): a real protection
+  //    the engine now credits, lifting the score -30 → -20 (still unfavorable, but
+  //    the void Moon is partly softened). Enclosure verified: both flanking rays
+  //    are within the 6° enclosure cap and are the tightest contacts on their side.
+  it("void-of-course Moon, softened by benefic enclosure of Saturn (London, 2nd)", () => {
     expect(judge(LONDON, "2024-01-01T08:00:00", 2)).toEqual({
       lean: "unfavorable",
       confidence: "medium",
-      score: -30,
+      score: -20,
       perfection: { direct: false, broken: [], indirectPath: null },
       timing: null,
       testimonies: [
         "No direct aspect between the significators (0)",
+        "querent significator Saturn enclosed between Venus and Jupiter — shielded by both benefics (+10)",
         "Moon void of course — little is likely to come of the matter (-30)",
       ],
     });
@@ -197,7 +216,11 @@ describe("horary golden charts (verdict regression baseline)", () => {
         "Translation of light by Jupiter (Mars → Saturn) (+18)",
         "Collection of light by Mercury (+15)",
         "One-way reception (Saturn receives the other by domicile) (+5)",
-        "Quesited significator Mars well-dignified (dignity +4) (+5)",
+        // Quesited Mars is in Capricorn (Earth); Earth's PARTICIPATING triplicity
+        // ruler is Mars, so Mars now scores exaltation +4 + participating +1 = 5
+        // (was 4). Still "well-dignified" (≥ 4, +5), so only the displayed dignity
+        // number moves and the score is unchanged.
+        "Quesited significator Mars well-dignified (dignity +5) (+5)",
         "Almuten of the 1st (querent) is Mars (more dignified than ruler Saturn) — Mars has the strongest say over the querent (0)",
       ],
     });
@@ -206,17 +229,27 @@ describe("horary golden charts (verdict regression baseline)", () => {
   // 7. COLLECTION of light: the significators are separating (matter past), but a
   //    sound Jupiter both apply to gathers their light (+15) — the indirect path
   //    survives without any direct/translation credit.
-  it("collection of light: Jupiter gathers both significators (London, 7th)", () => {
+  it("collection of light: Jupiter gathers both significators, quesited Mars benefic-enclosed (London, 7th)", () => {
+    // Benefic-enclosure re-baseline: the quesited significator Mars (306.60°) is
+    // enclosed between Venus (306.39°, a partile conjunction by BODY, gap 0.21°)
+    // behind and Jupiter (39.99°, a square by RAY, gap 3.39°) ahead, with nothing
+    // intervening — Mars is shielded between the two benefics ("aided", +10). Both
+    // flankers are the tightest contact on their side and within the 6° enclosure
+    // cap, so this is a genuine protection. It lifts the score 10 → 20, which
+    // crosses the +15 favorable cutoff (uncertain → favorable) and the 20-point
+    // confidence band (low → medium). Classically apt: a debilitated Mars hemmed
+    // by both fortunes is rescued, not merely weak.
     expect(judge(LONDON, "2024-02-21T20:00:00", 7)).toEqual({
-      lean: "uncertain",
-      confidence: "low",
-      score: 10,
+      lean: "favorable",
+      confidence: "medium",
+      score: 20,
       perfection: { direct: false, broken: [], indirectPath: "Jupiter" },
       timing: null,
       testimonies: [
         "Significators only separating (conjunction) — the matter is past, not forming (0)",
         "Collection of light by Jupiter (+15)",
         "Quesited significator Mars debilitated (dignity -5) (-5)",
+        "quesited significator Mars enclosed between Venus and Jupiter — shielded by both benefics (+10)",
         "Almuten of the 1st (querent) is Saturn (more dignified than ruler Venus) — Saturn has the strongest say over the querent (0)",
       ],
     });
@@ -228,10 +261,16 @@ describe("horary golden charts (verdict regression baseline)", () => {
   //    set. This is exactly the kind of chart the upcoming
   //    prohibition-with-reception work will revisit — pin it now.
   it("prohibition broken but rescued indirectly through Mars (London, 10th)", () => {
+    // Participating-ruler re-baseline: quesited Jupiter is in Gemini (Air), whose
+    // PARTICIPATING triplicity ruler is Jupiter (+1). Jupiter's dignity rises from
+    // peregrine -5 to detriment -5 + participating +1 = -4, which no longer clears
+    // the "debilitated" (≤ -5) threshold — so the "Quesited significator Jupiter
+    // debilitated (-5)" testimony drops, the score rises -21 → -16, and that
+    // crosses the |score| ≥ 20 confidence band so confidence falls medium → low.
     expect(judge(LONDON, "2024-08-11T20:00:00", 10)).toEqual({
       lean: "unfavorable",
-      confidence: "medium",
-      score: -21,
+      confidence: "low",
+      score: -16,
       perfection: { direct: false, broken: ["prohibition", "refranation"], indirectPath: "Mars" },
       timing: { unit: "days", amount: 2 },
       testimonies: [
@@ -239,7 +278,6 @@ describe("horary golden charts (verdict regression baseline)", () => {
         "Collection of light by Mars (+15)",
         "One-way reception (Jupiter receives the other by domicile) (+5)",
         "Querent significator Saturn debilitated (dignity -5) (-5)",
-        "Quesited significator Jupiter debilitated (dignity -5) (-5)",
         "Querent significator Saturn retrograde — hesitation or reversal (-4)",
         "Prohibition: Moon perfects by trine with Saturn before the significators — the matter is cut off (-25)",
         "Refranation: Saturn turns back (retrograde/stationing) before the significators perfect — the matter withdraws (-22)",
@@ -283,7 +321,10 @@ describe("horary golden charts (verdict regression baseline)", () => {
         "No direct aspect between the significators (0)",
         "Translation of light by Mercury (Mars → Jupiter) (+18)",
         "Querent significator Jupiter debilitated (dignity -5) (-5)",
-        "Quesited significator Mars well-dignified (dignity +6) (+5)",
+        // Quesited Mars is in Capricorn (Earth); Earth's PARTICIPATING triplicity
+        // ruler is Mars, so Mars now scores exaltation +4 + participating +1 +
+        // term +2 = 7 (was 6). Still "well-dignified" (+5), display number only.
+        "Quesited significator Mars well-dignified (dignity +7) (+5)",
         "Almuten of the 1st (querent) is Venus (more dignified than ruler Jupiter) — Venus has the strongest say over the querent (0)",
         "Almuten of the 2nd is Sun (more dignified than ruler Mars) — Sun has the strongest say over the matter (0)",
       ],

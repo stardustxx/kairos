@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DEGREES_PER_SIGN, SIGN_COUNT, SIGNS } from "./constants.js";
 import { judgeHorary } from "./horary.js";
-import { detectBesieging, detectProhibition, detectRefranation } from "./perfection.js";
+import {
+  detectBesieging,
+  detectEnclosure,
+  detectProhibition,
+  detectRefranation,
+} from "./perfection.js";
 import type { Chart, PlanetPosition } from "./types.js";
 
 /**
@@ -161,6 +166,106 @@ describe("detectBesieging", () => {
       planet("Saturn", 105, 0.03),
     ];
     expect(detectBesieging("Mars", planets)).toBeNull();
+  });
+});
+
+describe("detectEnclosure (besieging/aiding by body or ray)", () => {
+  it("flags a malefic enclosure when Mars and Saturn hem a planet by RAY (no bodies adjacent)", () => {
+    // Sun at 100°. Mars at 10° squares it from behind (sep -90), Saturn at 190°
+    // squares it from ahead (sep +90) — both partile squares, one each side, with
+    // no other body or ray intervening. The Sun is besieged by the rays of the
+    // two malefics, though neither is bodily near (so detectBesieging is null).
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Mars", 10, 0.5),
+      planet("Saturn", 190, 0.03),
+      planet("Moon", 300, 13.0), // far, no aspect
+    ];
+    expect(detectBesieging("Sun", planets)).toBeNull(); // not BODILY besieged
+    const e = detectEnclosure("Sun", planets);
+    expect(e).not.toBeNull();
+    expect(e?.kind).toBe("malefic");
+    expect(e?.betweenOf.slice().sort()).toEqual(["Mars", "Saturn"]);
+    expect(e?.by).toEqual(["ray", "ray"]);
+  });
+
+  it("flags a benefic enclosure when Jupiter and Venus hem a planet by body/ray", () => {
+    // Mars at 100°. Venus at 99° sits bodily just behind (conjunction by BODY),
+    // Jupiter at 160° trines/sextiles it from ahead. Mars is shielded between the
+    // two benefics ("aided") — a protection.
+    const planets = [
+      planet("Mars", 100, 0.5),
+      planet("Venus", 99, 1.1), // bodily behind
+      planet("Jupiter", 160, 0.08), // sextile ahead (60°)
+      planet("Moon", 300, 13.0),
+    ];
+    const e = detectEnclosure("Mars", planets);
+    expect(e).not.toBeNull();
+    expect(e?.kind).toBe("benefic");
+    expect(e?.betweenOf.slice().sort()).toEqual(["Jupiter", "Venus"]);
+    expect(e?.by).toEqual(["body", "ray"]);
+  });
+
+  it("a LOOSER neutral body on a side does not intervene (malefic enclosure survives)", () => {
+    // Sun at 100°, Mars square behind (10°, gap 0), Saturn square ahead (190°,
+    // gap 0). The Moon at 98° is bodily behind but LOOSER (gap 2) than Mars'
+    // partile square (gap 0), and Venus at 101.5° is bodily ahead but looser
+    // (gap 1.5) than Saturn's partile square (gap 0). Neither out-tights its
+    // malefic, so neither intervenes: the besieging stands.
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Mars", 10, 0.5), // square behind, gap 0
+      planet("Saturn", 190, 0.03), // square ahead, gap 0
+      planet("Moon", 98, 13.0), // bodily behind, gap 2 (looser than Mars)
+      planet("Venus", 101.5, 1.1), // bodily ahead, gap 1.5 (looser than Saturn)
+    ];
+    const e = detectEnclosure("Sun", planets);
+    expect(e?.kind).toBe("malefic");
+  });
+
+  it("returns null when a tighter body INTERVENES, breaking a clean malefic pair", () => {
+    // Sun at 100°, Mars squares from behind (10°, gap 0), Saturn squares from
+    // ahead but 3° off exact (193°, gap 3). Jupiter at 100.5° sits bodily ahead
+    // (conjunction, gap 0.5) — TIGHTER than Saturn's 3°-off square — so the
+    // tightest touch ahead is Jupiter, not Saturn. The flankers are now Mars
+    // (behind) and Jupiter (ahead): neither a pure malefic nor pure benefic pair,
+    // so no enclosure. The intervening body genuinely breaks the besieging.
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Mars", 10, 0.5), // square behind, gap 0
+      planet("Saturn", 193, 0.03), // square ahead, gap 3
+      planet("Jupiter", 100.5, 0.08), // bodily ahead, gap 0.5 — intervenes
+    ];
+    expect(detectEnclosure("Sun", planets)).toBeNull();
+  });
+
+  it("returns null on a clean chart with no flanking pair", () => {
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Mars", 5, 0.5), // 95° away, no aspect within orb of a square (gap 5 < orb but ahead?)
+      planet("Saturn", 300, 0.03),
+      planet("Venus", 250, 1.1),
+      planet("Jupiter", 30, 0.08),
+    ];
+    // Mars at 5° is 95° from the Sun: 5° off a square — within the Sun-Mars orb,
+    // but it is the only flanker on its side and there is no second flanker of a
+    // matching pair on the other side, so no enclosure.
+    const e = detectEnclosure("Sun", planets);
+    // Whatever the behind side resolves to, the ahead side has no Mars/Saturn or
+    // Jupiter/Venus partner forming a pure pair, so the result is null.
+    expect(e).toBeNull();
+  });
+
+  it("does not count an opposition as a flanking contact", () => {
+    // An opposition is a confrontation across the chart, not a flank — its "side"
+    // is arbitrary near 180°, so it must not act as a hemming contact. Here only
+    // Mars truly flanks (behind); Saturn merely opposes, so there is no enclosure.
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Mars", 95, 0.5), // bodily just behind
+      planet("Saturn", 280, 0.03), // exact opposition (180°), not a side
+    ];
+    expect(detectEnclosure("Sun", planets)).toBeNull();
   });
 });
 
@@ -343,5 +448,83 @@ describe("judgeHorary applies perfection-breaker debits", () => {
     expect(j.besieging[0]).toEqual({ significator: "querent", planet: "Venus" });
     const besiegedTestimonies = j.testimonies.filter((s) => s.includes("besieged"));
     expect(besiegedTestimonies).toHaveLength(1);
+  });
+
+  it("a significator besieged BY RAY (not bodily) pushes the -12 affliction", () => {
+    // Querent Sun at 250° (Sagittarius). Mars at 160° squares it from behind
+    // (sep -90), Saturn at 340° squares it from ahead (sep +90) — both partile,
+    // one each side, nothing intervening. Neither malefic is bodily near (so
+    // detectBesieging is null), but the Sun is besieged by their RAYS: a -12
+    // affliction reported once under `enclosures`. Filler bodies are parked so
+    // they make no interfering aspect to either significator.
+    const planets = [
+      planet("Sun", 250, 1.0),
+      planet("Saturn", 340, 0.03),
+      planet("Mars", 160, 0.5),
+      planet("Moon", 60, 13.0),
+      planet("Mercury", 50, 1.2),
+      planet("Venus", 70, 1.1),
+      planet("Jupiter", 80, 0.08),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
+    // Not BODILY besieged (the existing detector stays null) ...
+    expect(j.besieging).toEqual([]);
+    // ... but flagged as a malefic ray-enclosure.
+    expect(j.enclosures.some((e) => e.planet === "Sun" && e.enclosure.kind === "malefic")).toBe(true);
+    const ray = j.testimonies.find((s) => s.includes("besieged by the rays of"));
+    expect(ray).toBeDefined();
+    expect(ray).toContain("(-12)");
+    // Scored once; invariant holds.
+    expect(j.testimonies.filter((s) => s.includes("besieged")).length).toBe(1);
+    expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("a benefic-enclosed significator pushes the +10 protection", () => {
+    // Querent Sun at 250°. Venus at 160° sextiles/squares from behind, Jupiter at
+    // 340° from ahead — the Sun is enclosed between the two benefics ("aided").
+    // Venus 160° => sep -90 (square ray); Jupiter 340° => sep +90 (square ray).
+    // Both within the enclosure cap, one each side, nothing intervening => +10.
+    const planets = [
+      planet("Sun", 250, 1.0),
+      planet("Venus", 160, 1.1),
+      planet("Jupiter", 340, 0.08),
+      planet("Saturn", 70, 0.03),
+      planet("Mars", 60, 0.5),
+      planet("Moon", 50, 13.0),
+      planet("Mercury", 40, 1.2),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
+    expect(j.enclosures.some((e) => e.planet === "Sun" && e.enclosure.kind === "benefic")).toBe(true);
+    const shield = j.testimonies.find((s) => s.includes("shielded by both benefics"));
+    expect(shield).toBeDefined();
+    expect(shield).toContain("(+10)");
+    // The synthesis surfaces the shield in its summary.
+    expect(j.perfection.summary).toContain("shielded by both benefics");
+    expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("does NOT double-count when a significator is besieged by BOTH body and ray", () => {
+    // Querent Sun at 100° hemmed BODILY: Mars at 95° behind, Saturn at 105° ahead
+    // (within 7°, opposite sides) => detectBesieging flags. The same geometry is
+    // also a ray/body enclosure, but the engine must report the affliction ONCE
+    // (strongest form = the body-besieging entry), never -24. So `besieging` holds
+    // it, `enclosures` is empty for the Sun, and exactly one -12 appears.
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Mars", 95, 0.5),
+      planet("Saturn", 105, 0.03),
+      planet("Moon", 40, 13.0),
+      planet("Mercury", 200, 1.2),
+      planet("Venus", 250, 1.1),
+      planet("Jupiter", 300, 0.08),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
+    expect(j.besieging.some((b) => b.planet === "Sun")).toBe(true);
+    // The Sun is NOT additionally listed under enclosures (no double-count).
+    expect(j.enclosures.some((e) => e.planet === "Sun")).toBe(false);
+    // Exactly one besieging testimony, exactly one -12 from it.
+    const besiegedTestimonies = j.testimonies.filter((s) => s.includes("besieged"));
+    expect(besiegedTestimonies).toHaveLength(1);
+    expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
   });
 });

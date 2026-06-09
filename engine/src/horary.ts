@@ -3,13 +3,19 @@ import { computeAspects } from "./aspects.js";
 import { DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGN_RULER } from "./constants.js";
 import { receptionBetween } from "./dignities.js";
 import { houseOf } from "./houses.js";
-import { detectBesieging, detectProhibition, detectRefranation } from "./perfection.js";
+import {
+  detectBesieging,
+  detectEnclosure,
+  detectProhibition,
+  detectRefranation,
+} from "./perfection.js";
 import { estimateTiming } from "./timing.js";
 import type {
   Aspect,
   Chart,
   CollectionOfLight,
   Confidence,
+  Enclosure,
   HoraryJudgment,
   Lean,
   PerfectionBreaker,
@@ -144,6 +150,7 @@ function aggregateTestimony(args: {
   prohibition: Prohibition | null;
   refranation: Refranation | null;
   besieging: Array<{ significator: string; planet: string }>;
+  enclosures: Array<{ significator: string; planet: string; enclosure: Enclosure }>;
 }): {
   score: number;
   confidence: Confidence;
@@ -317,6 +324,29 @@ function aggregateTestimony(args: {
         `— hemmed by both malefics (-12)`,
     );
   }
+  // Enclosure by BODY or RAY, with nothing intervening (Lilly, CA Bk. 1). The
+  // caller has already excluded any significator counted under body-besieging
+  // above, so a malefic enclosure here is a distinct ray-affliction reported
+  // once (same -12 weight, strongest form). A benefic enclosure (between Jupiter
+  // and Venus) is a real RESCUE — the significator is shielded by both fortunes.
+  const beneficEnclosed: string[] = [];
+  for (const e of args.enclosures) {
+    const [b1, b2] = e.enclosure.betweenOf;
+    if (e.enclosure.kind === "malefic") {
+      score -= 12;
+      t.push(
+        `${e.significator} significator ${e.planet} besieged by the rays of ` +
+          `${b1} and ${b2} — hemmed by both malefics (-12)`,
+      );
+    } else {
+      score += 10;
+      if (!beneficEnclosed.includes(e.planet)) beneficEnclosed.push(e.planet);
+      t.push(
+        `${e.significator} significator ${e.planet} enclosed between ${b1} and ` +
+          `${b2} — shielded by both benefics (+10)`,
+      );
+    }
+  }
 
   // INDIRECT RESCUE: when the significators are PROHIBITED directly but a SOUND
   // translation/collection of light survives, the matter can still come together
@@ -354,7 +384,11 @@ function aggregateTestimony(args: {
   // labour), so it must not appear among the breakers — only a denying one does.
   if (args.prohibition && !prohibitionReceived) breakers.push("prohibition");
   if (args.refranation) breakers.push("refranation");
-  if (args.besieging.length > 0) breakers.push("besieging");
+  // Besieging (an affliction breaker) covers BOTH body-besieging and a malefic
+  // enclosure by ray; either hems a significator between the infortunes. Pushed
+  // once regardless of how many significators are afflicted.
+  const maleficEnclosed = args.enclosures.some((e) => e.enclosure.kind === "malefic");
+  if (args.besieging.length > 0 || maleficEnclosed) breakers.push("besieging");
 
   const sa = args.significatorAspect;
   const directlyApplies = !!sa?.applying && sa.type !== "opposition";
@@ -390,6 +424,15 @@ function aggregateTestimony(args: {
     summary = "The significators apply, but only by a difficult aspect.";
   } else {
     summary = "No perfection: the significators neither perfect directly nor through a sound carrier.";
+  }
+
+  // Benefic enclosure is a mitigation, not a perfection mechanism — append it to
+  // the synthesis summary so the shield is surfaced alongside the perfection
+  // picture without altering the direct/broken/indirectPath logic above.
+  if (beneficEnclosed.length > 0) {
+    const names = beneficEnclosed.join(" and ");
+    const verb = beneficEnclosed.length > 1 ? "are" : "is";
+    summary += ` ${names} ${verb} enclosed between Jupiter and Venus — shielded by both benefics.`;
   }
 
   const perfection: PerfectionSynthesis = { direct, broken: breakers, indirectPath, summary };
@@ -537,11 +580,33 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
   // affliction must not be counted twice — only push the quesited entry when it
   // is a distinct planet.
   const besieging: Array<{ significator: string; planet: string }> = [];
-  if (sigA && detectBesieging(querentSig, classical)) {
+  const querentBodyBesieged = !!(sigA && detectBesieging(querentSig, classical));
+  const quesitedBodyBesieged = !!(
+    sigB &&
+    quesitedSig !== querentSig &&
+    detectBesieging(quesitedSig, classical)
+  );
+  if (querentBodyBesieged) {
     besieging.push({ significator: "querent", planet: querentSig });
   }
-  if (sigB && quesitedSig !== querentSig && detectBesieging(quesitedSig, classical)) {
+  if (quesitedBodyBesieged) {
     besieging.push({ significator: "quesited", planet: quesitedSig });
+  }
+
+  // Enclosure by BODY or RAY (Lilly CA Bk. 1): a significator hemmed between
+  // Mars & Saturn (besieged, an affliction) or shielded between Jupiter & Venus
+  // (aided, a protection). NO DOUBLE-COUNT: a significator already flagged under
+  // body-besieging above is the strongest-form report, so suppress its malefic
+  // ray-enclosure (a benefic enclosure could still be reported, but a body
+  // cannot be enclosed by both pairs at once — the flankers are a single pair).
+  const enclosures: Array<{ significator: string; planet: string; enclosure: Enclosure }> = [];
+  if (sigA && !querentBodyBesieged) {
+    const e = detectEnclosure(querentSig, classical);
+    if (e) enclosures.push({ significator: "querent", planet: querentSig, enclosure: e });
+  }
+  if (sigB && quesitedSig !== querentSig && !quesitedBodyBesieged) {
+    const e = detectEnclosure(quesitedSig, classical);
+    if (e) enclosures.push({ significator: "quesited", planet: quesitedSig, enclosure: e });
   }
 
   // Almuten of the Ascendant (querent) and of the quesited-house cusp: the planet
@@ -583,6 +648,7 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     prohibition,
     refranation,
     besieging,
+    enclosures,
   });
 
   // Timing narrative: when the significators form an applying perfection, turn
@@ -635,6 +701,7 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
     prohibition,
     refranation,
     besieging,
+    enclosures,
     timing,
     score,
     confidence,

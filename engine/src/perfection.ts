@@ -17,9 +17,16 @@
  * the standard practical method, so these work on bare position lists without an
  * ephemeris lookup.
  */
-import { computeAspects } from "./aspects.js";
+import { computeAspects, operativeOrb } from "./aspects.js";
+import { ASPECTS } from "./constants.js";
 import { receivesByDomicileOrExaltation } from "./dignities.js";
-import type { Besieging, PlanetPosition, Prohibition, Refranation } from "./types.js";
+import type {
+  Besieging,
+  Enclosure,
+  PlanetPosition,
+  Prohibition,
+  Refranation,
+} from "./types.js";
 
 /** Signed shortest angular path from lon1 to lon2, in (-180, 180]. Positive =
  *  lon2 is ahead of lon1 in the direction of increasing longitude. */
@@ -180,4 +187,124 @@ export function detectBesieging(
   if (toMars === 0 || toSaturn === 0) return null;
 
   return { betweenOf: ["Mars", "Saturn"] };
+}
+
+/** A body's "touch" on the enclosed planet: how it reaches it (body or ray), on
+ *  which side (behind = -1 / ahead = +1 by longitude), and how tight (the gap in
+ *  degrees from exact — 0 = partile). The TIGHTEST touch on a side is the one
+ *  that "hems" from that side; a looser touch behind a tighter one intervenes. */
+interface Touch {
+  name: string;
+  side: -1 | 1;
+  by: "body" | "ray";
+  gap: number;
+}
+
+/**
+ * The nearest hemming body on each zodiacal side of `planet`, by BODY or RAY.
+ * For every OTHER body we test whether it touches `planet`: bodily (within the
+ * pair's conjunction orb) or by a Ptolemaic ray (separation within orb of a
+ * sextile/square/trine/opposition). The body's SIDE is the sign of its signed
+ * separation from the planet (behind / ahead); its GAP is how far off exact the
+ * tightest such contact is. The returned pair is the single TIGHTEST touch on
+ * each side — i.e. the bodies that actually enclose the planet, with anything
+ * looser behind them counted as intervening.
+ *
+ * Orbs reuse the moiety doctrine: a body↔planet contact is in orb when within
+ * operativeOrb(body, planet) of the aspect angle — the same per-pair orb the
+ * aspect engine uses, so no new orb constant is introduced.
+ */
+export function enclosingBodies(
+  planet: string,
+  planets: PlanetPosition[],
+): { behind: Touch | null; ahead: Touch | null } {
+  const P = byName(planets, planet);
+  if (!P) return { behind: null, ahead: null };
+
+  // Conservative enclosure cap. The moiety pair-orb is reused, but CLAMPED to a
+  // fixed maximum so a luminary's wide orb (the Sun's full orb is 15°, giving
+  // Sun-pair orbs up to ~11°) cannot flag a very loose ray as a hemming contact.
+  // 6° matches the tightness of the existing body-besieging orb (7°) and keeps
+  // ray-enclosure on par with bodily enclosure, per Lilly's tight reading.
+  const ENCLOSURE_ORB_CAP = 6;
+
+  let behind: Touch | null = null;
+  let ahead: Touch | null = null;
+
+  for (const B of planets) {
+    if (B.name === planet) continue;
+    const sep = signedSeparation(P.longitude, B.longitude);
+    if (sep === 0) continue; // exactly conjunct — no "side"
+    const side: -1 | 1 = sep < 0 ? -1 : 1;
+    const orb = Math.min(operativeOrb(P.name, B.name), ENCLOSURE_ORB_CAP);
+    const absSep = Math.abs(sep);
+
+    // Tightest in-orb contact across the five Ptolemaic angles (conjunction =
+    // bodily; the rest = ray). Pick the smallest gap-from-exact within orb.
+    let best: { by: "body" | "ray"; gap: number; angle: number } | null = null;
+    for (const def of ASPECTS) {
+      const gap = Math.abs(absSep - def.angle);
+      if (gap > orb) continue;
+      const by: "body" | "ray" = def.angle === 0 ? "body" : "ray";
+      if (!best || gap < best.gap) best = { by, gap, angle: def.angle };
+    }
+    if (!best) continue;
+    // An opposition is a confrontation ACROSS the chart, not a flank — its "side"
+    // via signedSeparation is arbitrary near 180° (179.5° ahead vs 180.5° flip on
+    // a hair). Lilly's besieging is by the two FLANKING bodies/rays, so an
+    // opposition ray is not counted as a hemming contact.
+    if (best.angle === 180) continue;
+
+    const touch: Touch = { name: B.name, side, by: best.by, gap: best.gap };
+    if (side < 0) {
+      if (!behind || touch.gap < behind.gap) behind = touch;
+    } else {
+      if (!ahead || touch.gap < ahead.gap) ahead = touch;
+    }
+  }
+
+  return { behind, ahead };
+}
+
+/**
+ * Enclosure of `planet` between two flanking bodies — one behind, one ahead by
+ * longitude — each touching by BODY or RAY, with NOTHING intervening (the pair
+ * are the TIGHTEST touch on their respective sides). Two cases:
+ *   - malefic: the flankers are Mars & Saturn (besieged — an affliction).
+ *   - benefic: the flankers are Jupiter & Venus (aided — a protection).
+ * Returns the strongest applicable enclosure (malefic preferred when both could
+ * apply, since an affliction governs the verdict), or null.
+ *
+ * Source: William Lilly, Christian Astrology (1647), Bk. 1 — a planet "besieged"
+ * sits between the two infortunes Saturn & Mars "by body or aspect, no other
+ * planet interposing his body or ray"; the benefic counterpart ("aid"), a planet
+ * enclosed between the two fortunes Jupiter & Venus, signifies ease/assistance.
+ * https://astrologyclub.org/besieged-aided-planet/
+ */
+export function detectEnclosure(
+  planet: string,
+  planets: PlanetPosition[],
+): Enclosure | null {
+  // A malefic/benefic cannot enclose itself as the named pair member.
+  const { behind, ahead } = enclosingBodies(planet, planets);
+  if (!behind || !ahead) return null;
+
+  const pair = (a: string, b: string): boolean =>
+    (behind.name === a && ahead.name === b) || (behind.name === b && ahead.name === a);
+
+  if (pair("Mars", "Saturn")) {
+    return {
+      kind: "malefic",
+      betweenOf: [behind.name, ahead.name],
+      by: [behind.by, ahead.by],
+    };
+  }
+  if (pair("Jupiter", "Venus")) {
+    return {
+      kind: "benefic",
+      betweenOf: [behind.name, ahead.name],
+      by: [behind.by, ahead.by],
+    };
+  }
+  return null;
 }
