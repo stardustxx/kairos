@@ -19,11 +19,18 @@ export function computePositions(julianDayUt: number): PlanetPosition[] {
       throw new Error(`sweph.calc_ut failed for ${def.name}: ${res.error}`);
     }
     const longitude = res.data[0];
+    // sweph returns ecliptic latitude in data[1]; we keep it so solar-proximity
+    // (combust/cazimi/under-beams) can use the TRUE angular separation from the
+    // Sun, not just the longitude difference. A body within arcminutes of the
+    // Sun in longitude can still be several degrees off in latitude (the Moon up
+    // to ~5.1°), nowhere near the Sun's body. The Sun's own latitude is ~0.
+    const eclipticLatitude = res.data[1];
     const speed = res.data[3];
     const signIndex = Math.floor(longitude / DEGREES_PER_SIGN) % SIGN_COUNT;
     return {
       name: def.name,
       longitude,
+      eclipticLatitude,
       sign: SIGNS[signIndex],
       degInSign: longitude - signIndex * DEGREES_PER_SIGN,
       retrograde: speed < 0,

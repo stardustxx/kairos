@@ -4,7 +4,7 @@ import type { PlanetPosition } from "./types.js";
 
 /** Minimal planet for contact tests — only name + longitude matter here. */
 function body(name: string, longitude: number): PlanetPosition {
-  return { name, longitude, sign: "Aries", degInSign: 0, retrograde: false, speed: 0 };
+  return { name, longitude, eclipticLatitude: 0, sign: "Aries", degInSign: 0, retrograde: false, speed: 0 };
 }
 
 const regulus = FIXED_STARS.find((s) => s.name === "Regulus")!.lonJ2000;

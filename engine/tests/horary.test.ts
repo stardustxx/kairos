@@ -9,7 +9,7 @@ function body(
   degInSign: number,
   speed: number,
 ): PlanetPosition {
-  return { name, longitude, sign: "Aries", degInSign, retrograde: speed < 0, speed };
+  return { name, longitude, eclipticLatitude: 0, sign: "Aries", degInSign, retrograde: speed < 0, speed };
 }
 
 describe("judgeHorary", () => {

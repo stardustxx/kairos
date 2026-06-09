@@ -26,6 +26,7 @@ function planet(
   return {
     name,
     longitude: lon,
+    eclipticLatitude: 0,
     sign: SIGNS[si],
     degInSign: lon - si * DEGREES_PER_SIGN,
     retrograde,

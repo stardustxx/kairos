@@ -3,7 +3,7 @@ import { antisciaContacts, antiscion, contraAntiscion } from "./antiscia.js";
 import type { PlanetPosition } from "./types.js";
 
 function body(name: string, longitude: number): PlanetPosition {
-  return { name, longitude, sign: "Aries", degInSign: 0, retrograde: false, speed: 0 };
+  return { name, longitude, eclipticLatitude: 0, sign: "Aries", degInSign: 0, retrograde: false, speed: 0 };
 }
 
 describe("antiscion / contraAntiscion", () => {

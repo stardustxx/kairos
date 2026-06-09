@@ -7,7 +7,7 @@ import { julianDayToUtcString, resolveJulianDay } from "../src/time.js";
 import type { PlanetPosition } from "../src/types.js";
 
 function p(name: string, longitude: number, speed: number): PlanetPosition {
-  return { name, longitude, sign: "Aries", degInSign: 0, retrograde: speed < 0, speed };
+  return { name, longitude, eclipticLatitude: 0, sign: "Aries", degInSign: 0, retrograde: speed < 0, speed };
 }
 
 describe("computeAspects", () => {

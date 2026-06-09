@@ -120,6 +120,11 @@ export interface PlanetDignities {
 export interface PlanetPosition {
   name: string;
   longitude: number; // ecliptic longitude 0..360
+  /** Ecliptic latitude in degrees (sweph data[1]); north positive, south
+   *  negative. The Sun's is ~0 by definition. Used by sunProximity to compute
+   *  the TRUE angular separation from the Sun (a body can be within arcminutes
+   *  in longitude yet several degrees off the Sun's body in latitude). */
+  eclipticLatitude: number;
   sign: Sign;
   degInSign: number; // 0..30
   retrograde: boolean;

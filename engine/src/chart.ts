@@ -121,7 +121,10 @@ export function buildChart(
       p.dignities = computeDignities(p.name, p.longitude, sect);
     }
     if (p.name !== "Sun") {
-      p.sunProximity = sunProximity(p.longitude, sun.longitude);
+      // TRUE angular separation: thread the body's own ecliptic latitude so a
+      // planet within arcminutes of the Sun in longitude but degrees away in
+      // latitude is not falsely flagged cazimi/combust. The Sun's latitude ~0.
+      p.sunProximity = sunProximity(p.longitude, sun.longitude, p.eclipticLatitude);
     }
   }
 
