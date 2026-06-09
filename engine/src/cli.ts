@@ -109,7 +109,7 @@ export function runCompute(req: ComputeRequest): ComputeResult {
     if (req.quesitedHouse == null) {
       throw new Error("horary request requires `quesitedHouse` (2..12)");
     }
-    result.horary = judgeHorary(chart, req.quesitedHouse);
+    result.horary = judgeHorary(chart, req.quesitedHouse, req.querentHouse);
   }
 
   // Relocation: recast this chart's houses/angles for another place (same moment).

@@ -62,6 +62,9 @@ export function validateRequest(req: ComputeRequest): void {
       if (req.quesitedHouse == null || req.quesitedHouse < 2 || req.quesitedHouse > 12) {
         throw new Error(`horary requires quesitedHouse in 2..12, got ${req.quesitedHouse}`);
       }
+      if (req.querentHouse != null && (req.querentHouse < 1 || req.querentHouse > 12)) {
+        throw new Error(`horary querentHouse must be in 1..12, got ${req.querentHouse}`);
+      }
     }
   }
 

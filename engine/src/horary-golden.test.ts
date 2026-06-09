@@ -103,27 +103,25 @@ describe("horary golden charts (verdict regression baseline)", () => {
   // 2. Clearly UNFAVORABLE: a direct square is broken by BOTH a prohibition and a
   //    refranation with no surviving indirect path — the strong-denial floor.
   it("clearly unfavorable: prohibition + refranation break the perfection (NYC, 2nd)", () => {
-    // Participating-ruler re-baseline (two linked shifts, both from the
-    // Dorothean table fix):
-    //  • Quesited Jupiter is in Gemini (Air); Air's PARTICIPATING triplicity
-    //    ruler is Jupiter, so Jupiter now scores +1 there. That lifts its dignity
-    //    from peregrine -5 to detriment -5 + participating +1 = -4, which no
-    //    longer clears the "debilitated" (≤ -5) threshold — so the
-    //    "Quesited significator Jupiter debilitated (-5)" testimony drops and the
-    //    score rises -48 → -43.
-    //  • The 2nd cusp sits in Pisces (Water) in this DAY chart. The old table
-    //    wrongly gave Water Mars by day; the correct Dorothean Water DAY ruler is
-    //    Venus. Venus now holds exaltation (+4) + Water-day triplicity (+3) = 7
-    //    over the cusp, out-dignifying Mars (term+face = 3), so the 2nd-house
-    //    almuten flips Mars → Venus.
+    // CATEGORICAL DENIAL-SPINE re-baseline (score -43 → -51, lean unchanged
+    // unfavorable/high). This chart carries a SURVIVING DENIAL: the Moon perfects a
+    // trine with Saturn before the significators (an UNRECEIVED prohibition —
+    // receivesTarget/mutualReception both false), AND Saturn refranes (retrograde),
+    // with NO sound translation/collection rescuing the matter. So the matter is
+    // categorically prohibited before it completes and earns NONE of the positive
+    // perfection points: the applying-square (+8) is now SUPPRESSED to (0). The
+    // denial debits (-25 prohibition, -22 refranation) and the conditions are kept,
+    // so the score drops by the suppressed +8 to -51. (The earlier participating-
+    // ruler/Dorothean-table fixes that set the prior -43 baseline still apply: the
+    // Jupiter peregrine→detriment lift and the 2nd-house almuten flip Mars→Venus.)
     expect(judge(NEW_YORK, "2024-08-01T20:00:00", 2)).toEqual({
       lean: "unfavorable",
       confidence: "high",
-      score: -43,
+      score: -51,
       perfection: { direct: false, broken: ["prohibition", "refranation"], indirectPath: null },
       timing: { unit: "days", amount: 4 },
       testimonies: [
-        "Significators apply by square — perfection with friction (+8)",
+        "Significators apply by square, but suppressed: the matter is prohibited before it completes — it earns nothing (0)",
         "One-way reception (Jupiter receives the other by domicile) (+5)",
         "Querent significator Saturn debilitated (dignity -5) (-5)",
         "Querent significator Saturn retrograde — hesitation or reversal (-4)",
@@ -332,23 +330,32 @@ describe("horary golden charts (verdict regression baseline)", () => {
   });
 
   // 11. ORDINARY MIXED chart, 7th house (relationship/other party): a direct
-  //     applying sextile perfection that is now PROHIBITED by the Moon. Under
-  //     moiety orbs the Moon (343.69°) and quesited Venus (81.31°) are 97.62°
-  //     apart — 7.62° off a square — which fits their (12 + 7)/2 = 9.5° pair orb
-  //     but NOT the old flat 7° square orb. So the Moon now perfects a square
-  //     with Venus before the significators do: a prohibition (-25). The direct
-  //     sextile (+40) survives in the testimony but perfection.direct flips false
-  //     and the score falls 40 -> 20, dropping confidence high -> medium.
-  it("ordinary mixed, 7th house: direct sextile prohibited by the Moon (London, 7th)", () => {
+  //     applying sextile that is PROHIBITED by the Moon. The Moon (343.69°) perfects
+  //     a square with quesited Venus (81.31°) before the significators do — an
+  //     UNRECEIVED prohibition (receivesTarget/mutualReception both false) — and
+  //     there is NO translation/collection to rescue the matter. So this is a
+  //     SURVIVING DENIAL.
+  //
+  //     CATEGORICAL DENIAL-SPINE re-baseline (VERDICT FLIP favorable → unfavorable;
+  //     score +20 → -25). Classically (Lilly CA Bk. III), a perfection prohibited
+  //     before it completes does NOT happen — the matter is denied. Under the old
+  //     flat additive score the +40 sextile out-weighed the -25 prohibition, netting
+  //     a wrong "favorable +20". Now the matter earns NONE of its perfection points:
+  //     the direct sextile (+40) AND the Moon-applies-to-quesited (+5) are both
+  //     SUPPRESSED to (0). The -25 prohibition debit dominates, the score goes
+  //     negative (-25 = -25 + dignity +5 - 5), and the lean is correctly unfavorable.
+  //     This is the showcase chart for the rule: a single surviving denial overturns
+  //     a direct perfection. confidence medium (|score| 25 ≥ 20).
+  it("surviving denial: direct sextile prohibited by the Moon is categorically denied (London, 7th)", () => {
     expect(judge(LONDON, "2026-05-11T20:00:00", 7)).toEqual({
-      lean: "favorable",
+      lean: "unfavorable",
       confidence: "medium",
-      score: 20,
+      score: -25,
       perfection: { direct: false, broken: ["prohibition"], indirectPath: null },
       timing: { unit: "weeks", amount: 3 },
       testimonies: [
-        "Significators perfect by applying sextile (+40)",
-        "Moon applies by square to the quesited — testimony with difficulty (+5)",
+        "Significators apply by sextile, but suppressed: the matter is prohibited before it completes — it earns nothing (0)",
+        "Moon applies by square to the quesited, but suppressed: the matter is prohibited before it completes — it earns nothing (0)",
         "Querent significator Mars well-dignified (dignity +7) (+5)",
         "Quesited significator Venus debilitated (dignity -5) (-5)",
         "Prohibition: Moon perfects by square with Venus before the significators — the matter is cut off (-25)",

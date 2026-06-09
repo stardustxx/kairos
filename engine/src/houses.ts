@@ -19,6 +19,17 @@ export function computeHouses(
   return { system, cusps, ascendant, mc };
 }
 
+/**
+ * Derived ("turned") house: the radix house number reached by counting `count`
+ * houses from radix house `from`, both 1-based and inclusive of the starting
+ * house (classical turning-the-chart counting). E.g. the 9th-from-7th (a third
+ * party's long journeys / lawsuits) is `derivedHouse(7, 9) = 3`; the 2nd-from-7th
+ * (their money) is `derivedHouse(7, 2) = 8`. Wraps modulo 12.
+ */
+export function derivedHouse(from: number, count: number): number {
+  return ((from - 1 + (count - 1)) % 12 + 12) % 12 + 1;
+}
+
 /** House number 1..12 that a longitude falls in, given the cusps. */
 export function houseOf(longitude: number, cusps: number[]): number {
   for (let i = 0; i < 12; i++) {

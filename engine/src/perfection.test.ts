@@ -528,4 +528,136 @@ describe("judgeHorary applies perfection-breaker debits", () => {
     expect(besiegedTestimonies).toHaveLength(1);
     expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
   });
+
+  // ============================================================================
+  // CATEGORICAL DENIAL SPINE (Lilly CA Bk. III): a SURVIVING denial suppresses the
+  // perfection. When the perfecting aspect is prohibited (unreceived) or refraned
+  // before it completes, with no sound translation/collection rescue, the matter
+  // does NOT perfect — so it earns NONE of the positive perfection points.
+  // ============================================================================
+
+  it("surviving denial: a DIRECT perfection + unreceived prohibition is suppressed → unfavorable", () => {
+    // Sun (querent) & Saturn (quesited) apply to a DIRECT conjunction (the +40 soft
+    // perfection) at 250° & 256° (Sagittarius). The Moon, 7° behind the Sun, perfects
+    // with it first — an UNRECEIVED prohibition (the Moon neither rules nor exalts in
+    // Sagittarius), with no translation/collection rescue. Classically the matter is
+    // categorically denied: the +40 must be SUPPRESSED to (0), the -25 prohibition
+    // dominates, the score goes negative, and the lean is unfavorable.
+    const planets = [
+      planet("Sun", 250, 1.0),
+      planet("Saturn", 256, 0.03),
+      planet("Moon", 243, 13.0),
+      planet("Mercury", 220, 1.2),
+      planet("Venus", 222, 1.1),
+      planet("Mars", 224, 0.5),
+      planet("Jupiter", 226, 0.08),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
+    // The denial survives (unreceived prohibition, no rescue).
+    expect(j.prohibition?.receivesTarget).toBe(false);
+    expect(j.prohibition?.mutualReception).toBe(false);
+    expect(j.perfection.indirectPath).toBeNull();
+    // The +40 soft-perfection line is SUPPRESSED — shown as a (0) suppressed line,
+    // and the un-suppressed "+40" perfection credit is gone.
+    expect(j.testimonies.some((s) => s.includes("Significators perfect by applying"))).toBe(false);
+    const suppressed = j.testimonies.find(
+      (s) => s.startsWith("Significators apply by conjunction") && s.includes("suppressed"),
+    );
+    expect(suppressed).toBeDefined();
+    expect(suppressed).toContain("(0)");
+    expect(suppressed).toContain("prohibited before it completes");
+    // The -25 denial is kept and now dominates: negative score, unfavorable lean.
+    expect(j.testimonies.some((s) => s.includes("the matter is cut off") && s.includes("(-25)"))).toBe(
+      true,
+    );
+    expect(j.score).toBeLessThan(0);
+    expect(j.lean).toBe("unfavorable");
+    // The synthesis records the categorical denial.
+    expect(j.perfection.summary).toContain("categorically denied");
+    // INVARIANT: score == sum of the (adjusted) signed testimony weights — the
+    // suppressed line contributes 0, so the sum still reconstructs the live score.
+    expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("RECEIVED prohibition is NOT a surviving denial: the same direct perfection stays favorable", () => {
+    // Identical geometry, but in Cancer: Sun & Saturn apply to a conjunction at
+    // 100° & 106°, and the Moon (93°) prohibits — BUT the Moon RULES Cancer, so it
+    // RECEIVES the Sun by domicile. Reception nullifies the denial (the matter
+    // perfects with labour), so this is NOT a surviving denial: the +40 direct
+    // perfection is KEPT (not suppressed) and the lean stays favorable, exactly as
+    // before the denial-spine change.
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Saturn", 106, 0.03),
+      planet("Moon", 93, 13.0),
+      planet("Mercury", 70, 1.2),
+      planet("Venus", 72, 1.1),
+      planet("Mars", 74, 0.5),
+      planet("Jupiter", 76, 0.08),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
+    expect(j.prohibition?.receivesTarget).toBe(true);
+    // The +40 direct perfection is KEPT (not suppressed) and earns its credit.
+    expect(j.testimonies.some((s) => s.includes("Significators perfect by applying"))).toBe(true);
+    expect(j.testimonies.some((s) => s.includes("suppressed"))).toBe(false);
+    // No -25 denial; the +5 perfects-with-labour testimony stands instead.
+    expect(j.testimonies.some((s) => s.includes("(-25)"))).toBe(false);
+    expect(j.testimonies.some((s) => s.includes("perfects with labour"))).toBe(true);
+    expect(j.lean).toBe("favorable");
+    expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("a RESCUED prohibition (sound carrier survives) is NOT a surviving denial — no suppression", () => {
+    // Sun (querent) & Saturn (quesited) apply to a conjunction at 250° & 256°; the
+    // Moon prohibits the Sun unreceived. BUT Jupiter (sound, ~253°) is applied to by
+    // BOTH significators, collecting their light — a sound indirect carrier that
+    // RESCUES the matter. A rescued matter is not a surviving denial: the +40 must
+    // NOT be suppressed, and the +12 indirect-recovery credit applies.
+    const planets = [
+      planet("Sun", 250, 1.0),
+      planet("Saturn", 256, 0.03),
+      planet("Moon", 243, 13.0),
+      // Jupiter ahead of both, slow — both Sun (applying +) and Saturn apply to it.
+      planet("Jupiter", 253, 0.0),
+      planet("Mercury", 200, 1.2),
+      planet("Venus", 202, 1.1),
+      planet("Mars", 204, 0.5),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
+    // A sound indirect path survives (collection through Jupiter).
+    expect(j.perfection.indirectPath).toBe("Jupiter");
+    // Because the matter is RESCUED, the perfection is NOT suppressed.
+    expect(j.testimonies.some((s) => s.includes("Significators perfect by applying"))).toBe(true);
+    expect(j.testimonies.some((s) => s.includes("suppressed"))).toBe(false);
+    // The indirect-recovery credit is present.
+    expect(j.testimonies.some((s) => s.startsWith("Indirect recovery"))).toBe(true);
+    expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("besieging is an AFFLICTION, not a denial — a direct perfection stays additive (not suppressed)", () => {
+    // Querent Sun at 100° applies to a DIRECT conjunction with quesited Saturn at
+    // 105° (Saturn is also a flanking malefic), and Mars at 95° hems the Sun from
+    // behind — the Sun is besieged between Mars & Saturn. Besieging is an affliction
+    // (-12), NOT a categorical denial: the +40 perfection must remain additive
+    // (NOT suppressed), so the score is +40 + ... - 12, still net positive.
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Mars", 95, 0.5),
+      planet("Saturn", 105, 0.03),
+      planet("Moon", 40, 13.0),
+      planet("Mercury", 200, 1.2),
+      planet("Venus", 250, 1.1),
+      planet("Jupiter", 300, 0.08),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeo)), 7);
+    expect(j.besieging.some((b) => b.planet === "Sun")).toBe(true);
+    expect(j.prohibition).toBeNull();
+    expect(j.refranation).toBeNull();
+    // The direct +40 perfection is KEPT (additive), NOT suppressed by the affliction.
+    expect(j.testimonies.some((s) => s.includes("Significators perfect by applying"))).toBe(true);
+    expect(j.testimonies.some((s) => s.includes("suppressed"))).toBe(false);
+    // The -12 besieging affliction is present and additive.
+    expect(j.testimonies.some((s) => s.includes("besieged") && s.includes("(-12)"))).toBe(true);
+    expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
+  });
 });

@@ -43,6 +43,14 @@ export interface ComputeRequest {
   natal?: MomentInput;
   /** Required for "horary"; reused by "electional" as the house of the matter (2..12). */
   quesitedHouse?: number;
+  /** Optional for "horary": the radix house (1..12) the QUERENT's significator is
+   *  read from. Default 1 (the asker themselves). Set this to TURN THE CHART for a
+   *  third-party question — when the matter is about someone else, the querent house
+   *  turns to the radix house of that person (e.g. 7 for a partner) and
+   *  `quesitedHouse` becomes the derived radix house of their concern (use the
+   *  `derivedHouse` helper to compute it). Turning is OPT-IN: omitting this leaves
+   *  the default 1st-house querent reading unchanged. */
+  querentHouse?: number;
   /** Required for kind "electional": local-time window to scan. */
   window?: ElectionalWindow;
   /** Required for kind "electional": scan interval in minutes (e.g. 15). */
@@ -345,6 +353,13 @@ export interface Timing {
 }
 
 export interface HoraryJudgment {
+  /** The radix house (1..12) the querent's significator was read from. Default 1;
+   *  differs only when the chart was turned for a third-party question. */
+  querentHouse: number;
+  /** The radix house (2..12) the quesited's significator was read from — the house
+   *  of the matter. For a turned third-party question this is the DERIVED radix
+   *  house (e.g. 8 = the 2nd-from-7th, a partner's money). */
+  quesitedHouse: number;
   querentSignificator: string;
   quesitedSignificator: string;
   /** House (1..12) the querent's significator planet occupies; 0 if not found. */

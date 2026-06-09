@@ -161,15 +161,68 @@ function aggregateTestimony(args: {
   const t: string[] = [];
   let score = 0;
 
+  // CATEGORICAL DENIAL SPINE (Lilly CA Bk. III). Perfection-or-denial is
+  // categorical: if the perfecting aspect is PROHIBITED (an unreceived prohibition)
+  // or REFRANED before it completes, and NO sound translation/collection rescues
+  // the matter, then the matter never comes together — so it earns NONE of the
+  // positive perfection testimony. A flat additive score would let a single +40
+  // perfection outweigh a -25 denial, which is classically wrong: a surviving
+  // denial means the matter does not perfect at all.
+  //
+  // Decide this BEFORE emitting the significator-perfection and Moon-applies lines,
+  // so those positive points can be SUPPRESSED (rewritten to "(0)") when a denial
+  // survives. The score then goes negative on the denial debit alone, the lean
+  // turns unfavorable, and the score STILL equals the sum of the displayed
+  // (adjusted) testimony weights — the sensitivity invariant is preserved.
+  //
+  // A RECEIVED prohibition is NOT a denial (the matter perfects with labour); a
+  // sound indirect carrier RESCUES the matter (the +12 recovery path), so neither
+  // is a surviving denial. Besieging is an AFFLICTION, not a denial — it stays
+  // additive and never suppresses.
+  const prohibitionReceived =
+    !!args.prohibition &&
+    (args.prohibition.receivesTarget || args.prohibition.mutualReception);
+  // Preview the sound indirect carrier (translation/collection) WITHOUT mutating
+  // score — the testimony-emitting blocks below own the actual scoring. The matter
+  // is rescued only when a SOUND carrier survives that is not the prohibitor itself
+  // (the prohibitor carrying its own light is abscission, not a rescue).
+  let soundCarrierPreview: string | null = null;
+  if (args.translation && !args.translationCarrier?.impeded) {
+    soundCarrierPreview = args.translation.translator;
+  } else if (args.collection && !args.collectionCarrier?.impeded) {
+    soundCarrierPreview = args.collection.collector;
+  }
+  const rescued =
+    !!soundCarrierPreview &&
+    (!args.prohibition || soundCarrierPreview !== args.prohibition.prohibitor);
+  const denyingProhibition = !!args.prohibition && !prohibitionReceived;
+  const survivingDenial = (denyingProhibition || !!args.refranation) && !rescued;
+
   const a = args.significatorAspect;
   if (a?.applying) {
     if (SOFT_ASPECTS.has(a.type)) {
-      score += 40;
-      t.push(`Significators perfect by applying ${a.type} (+40)`);
+      if (survivingDenial) {
+        t.push(
+          `Significators apply by ${a.type}, but suppressed: the matter is prohibited before ` +
+            `it completes — it earns nothing (0)`,
+        );
+      } else {
+        score += 40;
+        t.push(`Significators perfect by applying ${a.type} (+40)`);
+      }
     } else if (a.type === "square") {
-      score += 8;
-      t.push(`Significators apply by square — perfection with friction (+8)`);
+      if (survivingDenial) {
+        t.push(
+          `Significators apply by square, but suppressed: the matter is prohibited before ` +
+            `it completes — it earns nothing (0)`,
+        );
+      } else {
+        score += 8;
+        t.push(`Significators apply by square — perfection with friction (+8)`);
+      }
     } else {
+      // An applying OPPOSITION is a negative testimony (regret), not a perfection
+      // credit — it stays even under a surviving denial.
       score -= 8;
       t.push(`Significators apply by opposition — perfection but regret (-8)`);
     }
@@ -181,7 +234,14 @@ function aggregateTestimony(args: {
 
   const m = args.moonApplyingToQuesited;
   if (m) {
-    if (SOFT_ASPECTS.has(m.type)) {
+    if (survivingDenial) {
+      // The Moon's applying testimony to the quesited is also a perfection signal;
+      // when the matter is denied before completion it likewise earns nothing.
+      t.push(
+        `Moon applies by ${m.type} to the quesited, but suppressed: the matter is prohibited ` +
+          `before it completes — it earns nothing (0)`,
+      );
+    } else if (SOFT_ASPECTS.has(m.type)) {
       score += 20;
       t.push(`Moon (co-significator of querent) applies by ${m.type} to the quesited (+20)`);
     } else {
@@ -290,10 +350,8 @@ function aggregateTestimony(args: {
   // the prohibitor RECEIVES the significator it intercepts (by domicile/exaltation,
   // or in mutual reception), the matter is NOT cut off — it perfects with labour.
   // Treat that as a small positive instead of the -25 denial, and do NOT mark it as
-  // a perfection-breaker below.
-  const prohibitionReceived =
-    !!args.prohibition &&
-    (args.prohibition.receivesTarget || args.prohibition.mutualReception);
+  // a perfection-breaker below. (`prohibitionReceived` is computed at the top of
+  // this function, where it also gates the categorical denial-spine suppression.)
   if (args.prohibition && prohibitionReceived) {
     score += 5;
     const how = args.prohibition.mutualReception
@@ -417,6 +475,23 @@ function aggregateTestimony(args: {
       `but a sound indirect path survives through ${rescuePath}.`;
   } else if (breakers.length > 0) {
     summary = `Direct perfection is broken (${breakers.join(", ")}) with no surviving indirect path.`;
+    // A SURVIVING DENIAL (unreceived prohibition or refranation, with no rescue) is
+    // categorical: the matter does not perfect, so the perfection testimony was
+    // suppressed above. Besieging alone is an affliction, not a denial — it does not
+    // trigger this note.
+    if (survivingDenial) {
+      // Only claim "suppressed perfection" when there was a positive perfection
+      // signal to suppress (an applying soft/square significator aspect, or the
+      // Moon applying to the quesited). When the sole applying aspect was an
+      // opposition (a negative testimony, never suppressed), say plainly it is
+      // denied without overstating a perfection that never existed.
+      const hadPositivePerfection =
+        (!!a?.applying && (SOFT_ASPECTS.has(a.type) || a.type === "square")) ||
+        !!args.moonApplyingToQuesited;
+      summary += hadPositivePerfection
+        ? " The matter is categorically denied — it does not perfect, so the perfection testimony is suppressed and earns nothing."
+        : " The matter is denied — a surviving prohibition or refranation cuts it off before it could complete.";
+    }
   } else if (indirectPath) {
     summary = `No direct perfection, but the light is carried indirectly through ${indirectPath}.`;
   } else if (directlyApplies) {
@@ -511,11 +586,22 @@ function carrierSoundness(
   return { impeded: false, reason: null };
 }
 
-export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment {
+export function judgeHorary(
+  chart: Chart,
+  quesitedHouse: number,
+  querentHouse = 1,
+): HoraryJudgment {
   if (quesitedHouse < 2 || quesitedHouse > 12) {
     throw new Error(`quesitedHouse must be 2..12, got ${quesitedHouse}`);
   }
-  const querentSig = rulerOfCusp(chart.houses.cusps[0]);
+  if (querentHouse < 1 || querentHouse > 12) {
+    throw new Error(`querentHouse must be 1..12, got ${querentHouse}`);
+  }
+  // Significators flow from the chosen houses: by default the querent is the 1st
+  // (the asker), but a turned chart reads the querent from another radix house
+  // (the third party the matter is about). Everything downstream — reception,
+  // almuten, perfection, dignity — derives from these two significators.
+  const querentSig = rulerOfCusp(chart.houses.cusps[querentHouse - 1]);
   const quesitedSig = rulerOfCusp(chart.houses.cusps[quesitedHouse - 1]);
 
   const sigA = chart.planets.find((p) => p.name === querentSig);
@@ -612,7 +698,7 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
   // Almuten of the Ascendant (querent) and of the quesited-house cusp: the planet
   // with the most essential dignity over that degree — sometimes more dignified
   // than the simple domicile ruler, in which case it has the strongest say.
-  const querentAlmutenFull = almutenOfDegree(chart.houses.cusps[0], chart.sect);
+  const querentAlmutenFull = almutenOfDegree(chart.houses.cusps[querentHouse - 1], chart.sect);
   const quesitedAlmutenFull = almutenOfDegree(chart.houses.cusps[quesitedHouse - 1], chart.sect);
   const querentAlmuten = { planet: querentAlmutenFull.planet, score: querentAlmutenFull.score };
   const quesitedAlmuten = { planet: quesitedAlmutenFull.planet, score: quesitedAlmutenFull.score };
@@ -667,7 +753,7 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
   // Neutral — does not flip the verdict (0 points).
   if (querentAlmutenDiffersFromRuler) {
     testimonies.push(
-      `Almuten of the 1st (querent) is ${querentAlmuten.planet} ` +
+      `Almuten of the ${ordinal(querentHouse)} (querent) is ${querentAlmuten.planet} ` +
         `(more dignified than ruler ${querentSig}) ` +
         `— ${querentAlmuten.planet} has the strongest say over the querent (0)`,
     );
@@ -681,6 +767,8 @@ export function judgeHorary(chart: Chart, quesitedHouse: number): HoraryJudgment
   }
 
   return {
+    querentHouse,
+    quesitedHouse,
     querentSignificator: querentSig,
     quesitedSignificator: quesitedSig,
     querentSignificatorHouse,

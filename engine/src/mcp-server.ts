@@ -240,6 +240,15 @@ const computeRequestShape = {
     .max(12)
     .optional()
     .describe("House of the matter (2..12). Required for horary; reused by electional."),
+  querentHouse: z
+    .number()
+    .int()
+    .min(1)
+    .max(12)
+    .optional()
+    .describe(
+      "Horary only. Radix house (1..12) the QUERENT's significator is read from (default 1, the asker). Set to TURN THE CHART for a third-party question: the querent house becomes the radix house of the person the matter is about (e.g. 7 for a partner), and quesitedHouse becomes their concern's DERIVED radix house.",
+    ),
   window: z
     .object({ startLocal: z.string(), endLocal: z.string() })
     .optional()
@@ -334,6 +343,15 @@ export function buildServer(): McpServer {
           .min(2)
           .max(12)
           .describe("House of the matter asked about (2..12)."),
+        querentHouse: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .optional()
+          .describe(
+            "Radix house (1..12) the querent's significator is read from (default 1). Set to turn the chart for a third-party question.",
+          ),
         relocation: placeShape.optional(),
         journal: z
           .object({ question: z.string(), verdictText: z.string().optional() })

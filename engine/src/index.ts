@@ -24,6 +24,7 @@ export {
   starContacts,
 } from "./fixedstars.js";
 export { judgeHorary, moonVoidStatus } from "./horary.js";
+export { computeHouses, derivedHouse, houseOf } from "./houses.js";
 export type { LotInputs } from "./lots.js";
 export { computeLots } from "./lots.js";
 export type {

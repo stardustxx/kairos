@@ -105,6 +105,31 @@ Classify first; ask for birth data only if you land on transit/natal.
 | Travel, study, publishing, legal | 9 |
 | Friends, hopes, groups | 11 |
 
+**1c-bis. Turning the chart — third-party / derived-house questions (horary).**
+When the question is about **someone else's** concern ("will *my partner* win
+*their* lawsuit", "will *my friend* get *the* job"), the 1st house is no longer the
+querent of the matter. **Turn the chart**: the person becomes their own radix house,
+and *their* concern is counted **from that house**.
+
+- **Derived house** = count the concern's house number *from* the person's house,
+  both 1-based and inclusive of the starting house, wrapping at 12:
+  `radixHouse = ((personHouse − 1) + (concernHouse − 1)) mod 12 + 1`.
+- **Worked map:**
+  - my partner's **money** = 2nd-from-7th = radix **8th**
+  - my partner's **lawsuit / long journey** = 9th-from-7th = radix **3rd**
+  - my friend's **job/career** = 10th-from-11th = radix **8th**
+  - my child's **exam/study** = 9th-from-5th = radix **1st**
+- **Set the request:** pass `querentHouse` = the person's radix house (e.g. 7 for a
+  partner), and `quesitedHouse` = the **derived** radix house you just computed (the
+  engine does NOT auto-derive — you compute it from the formula). Omit `querentHouse`
+  (default 1) for an ordinary first-person question.
+- When the question is **fully third-party** (the asker is only relaying it), the
+  querent house turns to the **person the matter is about**; when the asker has a
+  personal stake, keep `querentHouse` = 1 and read the matter's plain radix house.
+
+The judgment echoes back `querentHouse` and `quesitedHouse` so you can name which
+houses were read (e.g. "read from your partner's 7th and their 8th for the money").
+
 **1d. Gather only the inputs the classified kind needs** (recall from Step 0 first;
 ask only for what's still missing):
 
