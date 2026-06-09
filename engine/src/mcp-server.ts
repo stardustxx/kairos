@@ -21,6 +21,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import {
+  renderCalibrationCardMarkdown,
+  renderCalibrationCardSvg,
+} from "./calibration-card.js";
 import { runCompute } from "./cli.js";
 import { type GeoCity, searchCities } from "./geocode.js";
 import { gazetteerPath } from "./install-geocode.js";
@@ -157,6 +161,29 @@ export function handleMemoryOutcome(input: {
 /** memory_calibration — hit-rate by confidence band over resolved readings. */
 export function handleMemoryCalibration(input: { profile?: string }): CallToolResult {
   return guard(() => computeCalibration(input.profile));
+}
+
+/**
+ * memory_calibration_card — the same calibration data rendered as a clean,
+ * shareable card. `format: "markdown"` (default) returns the Markdown card;
+ * `format: "svg"` returns a self-contained SVG badge. Both surface the sample
+ * size + caveat and handle the empty (no-outcomes-yet) case honestly. Returns
+ * the rendered card as plain text content (not JSON) so it's ready to paste.
+ */
+export function handleMemoryCalibrationCard(input: {
+  profile?: string;
+  format?: "markdown" | "svg";
+}): CallToolResult {
+  try {
+    const report = computeCalibration(input.profile);
+    const card =
+      input.format === "svg"
+        ? renderCalibrationCardSvg(report)
+        : renderCalibrationCardMarkdown(report);
+    return { content: [{ type: "text", text: card }] };
+  } catch (err) {
+    return toolError((err as Error).message);
+  }
 }
 
 /** profile_get — the remembered birth/home profile (active by default). */
@@ -440,6 +467,24 @@ export function buildServer(): McpServer {
       },
     },
     async (args) => handleMemoryCalibration(args as { profile?: string }),
+  );
+
+  server.registerTool(
+    "memory_calibration_card",
+    {
+      title: "Shareable calibration track-record card",
+      description:
+        "Render Kairos's calibration as a clean, HONEST, shareable card — Markdown (default) or a self-contained SVG badge. Always surfaces the sample size (n resolved) and the small-sample caveat so a tiny streak is never presented as proof; when nothing has resolved yet it renders an explicit 'no outcomes yet' state instead of a misleading 100%/0%. Returns the rendered card as plain text.",
+      inputSchema: {
+        format: z
+          .enum(["markdown", "svg"])
+          .optional()
+          .describe('Card format: "markdown" (default) or "svg".'),
+        profile: z.string().optional().describe("Profile slug (default: the active one)."),
+      },
+    },
+    async (args) =>
+      handleMemoryCalibrationCard(args as { profile?: string; format?: "markdown" | "svg" }),
   );
 
   server.registerTool(

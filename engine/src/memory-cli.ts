@@ -14,6 +14,10 @@
  *   pnpm -s memory calibration
  */
 
+import {
+  renderCalibrationCardMarkdown,
+  renderCalibrationCardSvg,
+} from "./calibration-card.js";
 import type { JournalEntry, Outcome, Profile } from "./memory.js";
 import {
   appendJournal,
@@ -44,7 +48,7 @@ const USAGE = [
   "  journal | journal list",
   "  due | pending",
   "  outcome <id> <happened|did-not-happen|partial|unknown> [note words...]",
-  "  calibration",
+  "  calibration [--card | --card svg]",
   "",
   "  --profile <slug>  run this one command against <slug> without switching the",
   "                    active profile (works with get/set/clear/log/journal/due/calibration)",
@@ -143,7 +147,20 @@ export function main(args: string[]): void {
       return;
     }
     case "calibration": {
-      emit(withSlug(computeCalibration));
+      const report = withSlug(computeCalibration);
+      // `--card` prints a rendered, shareable card (markdown by default, or SVG
+      // with `--card svg`) as a RAW string instead of the usual JSON payload.
+      const cardIdx = rest.indexOf("--card");
+      if (cardIdx !== -1) {
+        const format = rest[cardIdx + 1] === "svg" ? "svg" : "markdown";
+        const card =
+          format === "svg"
+            ? renderCalibrationCardSvg(report)
+            : renderCalibrationCardMarkdown(report);
+        process.stdout.write(card);
+        return;
+      }
+      emit(report);
       return;
     }
     default: {
