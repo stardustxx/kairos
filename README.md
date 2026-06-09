@@ -1,6 +1,36 @@
 # Kairos
 
-Astrology-based decision support. Ask a real-life question ("will I get this job?", "is now the right time to switch?") and Kairos computes an astronomically accurate chart (Swiss Ephemeris) and returns a calibrated verdict — a clear lean, a confidence level, the specific signals behind it, and honest caveats.
+**An astrology decision-support tool that gives you an honest answer, not a horoscope.**
+
+Ask a real decision or timing question — *"Will I get the job?"*, *"Is now the
+right time to switch?"*, *"Will this come to fruition?"* — and Kairos computes an
+astronomically accurate chart with the Swiss Ephemeris, then returns a
+**calibrated verdict**:
+
+- a clear **lean** (favorable / unfavorable / uncertain),
+- a **confidence level** (low / medium / high) that's tied to the actual weight of evidence,
+- the specific **classical signals** behind it (the real testimonies, scored), and
+- **falsifiable caveats** — including, up front, the outcome that would prove the read wrong.
+
+Astrology is treated as **one honest input, not destiny.** No vague flattery, no
+unfalsifiable retrofits, no fake metrics — a lean you can act on and check against
+what actually happens.
+
+**For:** anyone weighing a real choice who wants a structured, classical second
+opinion they can interrogate — and Claude Code users who want that opinion as a skill.
+
+**Install (Claude Code plugin):**
+
+```bash
+/plugin marketplace add stardustxx/kairos
+/plugin install kairos@stardustxx
+```
+
+See a real round-trip — question in, two-layer verdict out — in
+**[the worked example](docs/example.md)** (a "Will I get the job?" horary that the
+engine scores `favorable`, `medium` confidence, `+33`).
+
+---
 
 Kairos is available as:
 - A Claude Code **plugin** (includes both the skill and the MCP server)
@@ -13,6 +43,50 @@ Kairos is available as:
 - **`engine/`** — a TypeScript CLI that computes planetary positions, houses, aspects, and horary significators. Pure math, fully tested.
 - **`.claude-plugin/`** — a Claude Code plugin that bundles the MCP server and the skill. Install via Claude Code's plugin marketplace.
 - **`skills/kairos/SKILL.md`** — the Claude Skill (bundled in the plugin): classifies the question, calls the MCP tools, and interprets the result. Pure judgment, no math.
+
+## A 30-second example
+
+Ask **"Will I get the job?"** in London on 8 June 2026 at 11:15. The 10th house
+signifies the job, so:
+
+```bash
+pnpm -s compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T11:15:00","latitude":51.5074,"longitude":-0.1278,"timezone":"Europe/London"}}'
+```
+
+The engine returns the chart plus a scored verdict — the decisive part:
+
+```json
+{
+  "lean": "favorable",
+  "confidence": "medium",
+  "score": 33,
+  "testimonies": [
+    "No direct aspect between the significators (0)",
+    "Moon (co-significator of querent) applies by trine to the quesited (+20)",
+    "Translation of light by Moon (Mercury → Venus) (+18)",
+    "Quesited significator Venus debilitated (dignity -5) (-5)"
+  ]
+}
+```
+
+The skill turns that into a two-layer answer — Layer 1 is the plain read; Layer 2
+is the optional mechanics:
+
+> **Leans yes — moderate confidence.** The job is reachable, but it comes to you
+> sideways rather than landing cleanly in your lap. **Most likely:** it comes
+> through with help from a third party — a referral, a recruiter, an introduction.
+> **What would prove this wrong:** a flat, early "no" with no intermediary
+> involved.
+>
+> *The chart detail, if you want it —* you (the querent) are Mercury in Cancer
+> 10.6° (dignity +1); the job is Venus in Cancer 24.1° (peregrine, −5). No direct
+> aspect, but the Moon translates light Mercury → Venus by trine (+18) and applies
+> to Venus by trine (+20) — the third party carrying it through. No prohibition,
+> Moon not void → an outright "no" is least likely. Engine score **+33**.
+
+Every number above comes from a real run. The **[full worked example](docs/example.md)**
+walks through the complete two-layer reading; the same chart is also viewable in the
+web UI (`web/index.html` → **Load Example**).
 
 ## Install
 
