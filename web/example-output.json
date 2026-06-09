@@ -16,6 +16,7 @@
           "domicile": false,
           "exaltation": false,
           "triplicity": false,
+          "triplicityParticipating": false,
           "term": false,
           "face": false,
           "detriment": false,
@@ -39,14 +40,15 @@
           "domicile": false,
           "exaltation": false,
           "triplicity": false,
+          "triplicityParticipating": true,
           "term": false,
           "face": false,
           "detriment": false,
           "fall": false,
-          "peregrine": true,
-          "score": -5,
+          "peregrine": false,
+          "score": 1,
           "labels": [
-            "peregrine — no essential dignity (-5)"
+            "participating triplicity ruler (+1)"
           ]
         },
         "sunProximity": {
@@ -66,6 +68,7 @@
           "domicile": false,
           "exaltation": false,
           "triplicity": false,
+          "triplicityParticipating": false,
           "term": false,
           "face": true,
           "detriment": false,
@@ -92,15 +95,16 @@
         "dignities": {
           "domicile": false,
           "exaltation": false,
-          "triplicity": false,
+          "triplicity": true,
+          "triplicityParticipating": false,
           "term": false,
           "face": false,
           "detriment": false,
           "fall": false,
-          "peregrine": true,
-          "score": -5,
+          "peregrine": false,
+          "score": 3,
           "labels": [
-            "peregrine — no essential dignity (-5)"
+            "day triplicity ruler (+3)"
           ]
         },
         "sunProximity": {
@@ -120,13 +124,15 @@
           "domicile": false,
           "exaltation": false,
           "triplicity": false,
+          "triplicityParticipating": true,
           "term": false,
           "face": false,
           "detriment": true,
           "fall": false,
           "peregrine": false,
-          "score": -5,
+          "score": -4,
           "labels": [
+            "participating triplicity ruler (+1)",
             "detriment in Taurus (-5)"
           ]
         },
@@ -147,6 +153,7 @@
           "domicile": false,
           "exaltation": true,
           "triplicity": false,
+          "triplicityParticipating": false,
           "term": true,
           "face": false,
           "detriment": false,
@@ -175,13 +182,15 @@
           "domicile": false,
           "exaltation": false,
           "triplicity": false,
+          "triplicityParticipating": true,
           "term": false,
           "face": false,
           "detriment": false,
           "fall": true,
           "peregrine": false,
-          "score": -4,
+          "score": -3,
           "labels": [
+            "participating triplicity ruler (+1)",
             "fall in Aries (-4)"
           ]
         },
@@ -529,7 +538,7 @@
     "collectionOfLight": null,
     "significatorReception": null,
     "querentSignificatorDignity": 1,
-    "quesitedSignificatorDignity": -5,
+    "quesitedSignificatorDignity": 3,
     "querentAlmuten": {
       "planet": "Mercury",
       "score": 11
@@ -543,8 +552,9 @@
     "prohibition": null,
     "refranation": null,
     "besieging": [],
+    "enclosures": [],
     "timing": null,
-    "score": 33,
+    "score": 38,
     "confidence": "medium",
     "lean": "favorable",
     "perfection": {
@@ -556,8 +566,7 @@
     "testimonies": [
       "No direct aspect between the significators (0)",
       "Moon (co-significator of querent) applies by trine to the quesited (+20)",
-      "Translation of light by Moon (Mercury → Venus) (+18)",
-      "Quesited significator Venus debilitated (dignity -5) (-5)"
+      "Translation of light by Moon (Mercury → Venus) (+18)"
     ]
   }
 }

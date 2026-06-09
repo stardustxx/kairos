@@ -36,10 +36,10 @@ part of that block, verbatim:
   "moonApplyingToQuesited": { "a": "Moon", "b": "Venus", "type": "trine", "orb": 6.36, "applying": true },
   "translationOfLight": { "translator": "Moon", "from": "Mercury", "to": "Venus", "aspect": "trine" },
   "querentSignificatorDignity": 1,
-  "quesitedSignificatorDignity": -5,
+  "quesitedSignificatorDignity": 3,
   "prohibition": null,
   "refranation": null,
-  "score": 33,
+  "score": 38,
   "confidence": "medium",
   "lean": "favorable",
   "perfection": {
@@ -51,13 +51,12 @@ part of that block, verbatim:
   "testimonies": [
     "No direct aspect between the significators (0)",
     "Moon (co-significator of querent) applies by trine to the quesited (+20)",
-    "Translation of light by Moon (Mercury → Venus) (+18)",
-    "Quesited significator Venus debilitated (dignity -5) (-5)"
+    "Translation of light by Moon (Mercury → Venus) (+18)"
   ]
 }
 ```
 
-The headline numbers: **lean `favorable`, confidence `medium`, score `+33`.**
+The headline numbers: **lean `favorable`, confidence `medium`, score `+38`.**
 
 > The full result (chart wheel, all planet positions, dignities, houses, and this
 > horary block) is saved in [`web/example-output.json`](../web/example-output.json).
@@ -84,10 +83,12 @@ you to it: a recruiter, a referral, a mutual contact, an introduction. The
 strongest single signal in the chart is exactly this kind of relayed connection,
 and it points to yes. *(moderate)*
 
-**Also in play — your own footing is the stronger side.**
-You're the better-placed party here; the job/role itself is the weaker, less
-settled side of the picture. Practically: the gap is on their end — an unfilled
-seat, an undecided panel, shifting requirements — more than on yours. *(moderate)*
+**Also in play — both sides are decently placed, the role slightly more so.**
+Neither significator is debilitated; both carry a little essential dignity, with
+the job's side (Venus, +3) marginally better-placed than your own (Mercury, +1).
+Practically: this is a real, solid opportunity, not a hollow one — the question is
+whether the connection completes, not whether the role is worth having.
+*(moderate)*
 
 **Least likely — it falls through.**
 There's no blocking pattern in the chart (nothing cutting the connection off
@@ -100,8 +101,8 @@ completed. Don't read a fixed deadline into it.
 
 **The honest boundary.** This is one input, not destiny. Horary measures the
 *shape and momentum* of the situation at the moment you asked — it leans yes here
-because the connecting testimony (a third party carrying the light) outweighs the
-one weak spot (the role itself being poorly placed). It is **not** a substitute for
+because the connecting testimony (a third party carrying the light) is the
+dominant signal and nothing breaks it. It is **not** a substitute for
 following up, preparing, or negotiating. **What would prove this read wrong:** a
 flat, early "no" with no intermediary involved and no further contact — if the
 process simply dies on their side with no go-between, this read missed.
@@ -118,11 +119,10 @@ Regiomontanus houses. Ascendant Virgo 2.2°, so the querent is ruled by Mercury;
 the 10th-house cusp (the job) gives the quesited to Venus.
 
 - **You (the querent) → Mercury**, in Cancer 10.6°, in the 11th house, dignity
-  **+1** (face ruler). The better-dignified of the two significators — this is
-  the "your own footing is the stronger side" scenario.
+  **+1** (face ruler).
 - **The job (the quesited) → Venus**, in Cancer 24.1°, in the 11th house, dignity
-  **−5** (peregrine — no essential dignity). The weaker side — "the gap is on
-  their end."
+  **+3** (triplicity). Both significators carry a little essential dignity — the
+  job's side marginally the better-placed of the two.
 - **No direct aspect** between Mercury and Venus (testimony `0`) — hence "you
   aren't connected directly."
 - **Translation of light by the Moon** (Moon in Pisces 17.8°, 7th house) carrying
@@ -134,9 +134,9 @@ the 10th-house cusp (the job) gives the quesited to Venus.
   through" is the least-likely outcome.
 - **Perfection:** `direct: false`, `indirectPath: "Moon"` — *"No direct
   perfection, but the light is carried indirectly through Moon."*
-- **Engine score +33 → lean `favorable`, confidence `medium`.** The +20 and +18
-  connecting testimonies outweigh the lone −5 for Venus's debility, but the
-  indirect (rather than direct) route is why confidence is `medium`, not `high`.
+- **Engine score +38 → lean `favorable`, confidence `medium`.** The +20 and +18
+  connecting testimonies are the whole positive case; the indirect (rather than
+  direct) route is why confidence is `medium`, not `high`.
 
 Falsifiability, restated next to the mechanic it tests: the favorable lean rests
 on the Moon's translation of light to Venus. If the job never materializes and no
@@ -155,6 +155,6 @@ pnpm install
 pnpm -s compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T11:15:00","latitude":51.5074,"longitude":-0.1278,"timezone":"Europe/London"}}'
 ```
 
-You'll get the same chart and the same `lean: "favorable"`, `score: 33`,
+You'll get the same chart and the same `lean: "favorable"`, `score: 38`,
 `confidence: "medium"`. (Swiss Ephemeris is deterministic — the same moment and
 place always produce the same chart.)

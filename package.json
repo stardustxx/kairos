@@ -25,6 +25,8 @@
     "web/style.css",
     "web/example-output.json",
     "web/README.md",
+    "docs/examples",
+    "docs/example.md",
     "README.md",
     "LICENSE",
     "NOTICE"

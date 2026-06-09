@@ -28,7 +28,7 @@ opinion they can interrogate — and Claude Code users who want that opinion as 
 
 See a real round-trip — question in, two-layer verdict out — in
 **[the worked example](docs/example.md)** (a "Will I get the job?" horary that the
-engine scores `favorable`, `medium` confidence, `+33`).
+engine scores `favorable`, `medium` confidence, `+38`).
 
 ---
 
@@ -59,12 +59,11 @@ The engine returns the chart plus a scored verdict — the decisive part:
 {
   "lean": "favorable",
   "confidence": "medium",
-  "score": 33,
+  "score": 38,
   "testimonies": [
     "No direct aspect between the significators (0)",
     "Moon (co-significator of querent) applies by trine to the quesited (+20)",
-    "Translation of light by Moon (Mercury → Venus) (+18)",
-    "Quesited significator Venus debilitated (dignity -5) (-5)"
+    "Translation of light by Moon (Mercury → Venus) (+18)"
   ]
 }
 ```
@@ -79,14 +78,79 @@ is the optional mechanics:
 > involved.
 >
 > *The chart detail, if you want it —* you (the querent) are Mercury in Cancer
-> 10.6° (dignity +1); the job is Venus in Cancer 24.1° (peregrine, −5). No direct
+> 10.6° (dignity +1); the job is Venus in Cancer 24.1° (dignity +3). No direct
 > aspect, but the Moon translates light Mercury → Venus by trine (+18) and applies
 > to Venus by trine (+20) — the third party carrying it through. No prohibition,
-> Moon not void → an outright "no" is least likely. Engine score **+33**.
+> Moon not void → an outright "no" is least likely. Engine score **+38**.
 
 Every number above comes from a real run. The **[full worked example](docs/example.md)**
 walks through the complete two-layer reading; the same chart is also viewable in the
 web UI (`web/index.html` → **Load Example**).
+
+## More worked examples
+
+The **[example gallery](docs/examples/README.md)** has five complete,
+reproducible round-trips — each with the question, the exact command, the
+verbatim JSON verdict, and a two-layer reading built only from the real numbers:
+
+| Example | Kind | Real verdict |
+|---------|------|--------------|
+| [Career horary](docs/examples/01-career-horary.md) — "Will I get the job?" | `horary` (10th) | `favorable` / `medium` / **+38** |
+| [Relationship horary](docs/examples/02-relationship-horary.md) — "Will we get back together?" | `horary` (7th) | `unfavorable` / `medium` / **−35** |
+| [Relocation transit](docs/examples/03-relocation-transit.md) — born Seoul, living NYC | `transit` + `relocation` | 11 placements change house; lord of year Mars |
+| [Electional window](docs/examples/04-electional-window.md) — "When should I launch?" | `electional` (10th) | 117 moments, best **+155** |
+| [Money horary](docs/examples/05-money-horary.md) — "Will the money come through?" | `horary` (2nd) | `favorable` / `medium` / **+35** |
+
+These were not cherry-picked to all say yes — example 2 is an honest **no**. Every
+file ends with a copy-paste command; Swiss Ephemeris is deterministic, so you get
+the same chart and the same verdict.
+
+## Calibration contract — Kairos keeps score
+
+Here is the thing **no generic astrology tool will do: keep score against
+itself.**
+
+Every directional verdict Kairos produces is **falsifiable**, and the tool is
+built to log it, remember it, and grade itself later:
+
+1. **Log on compute.** Pass a `journal` field (or use the skill) and the engine
+   records the question alongside the verdict it *actually returned* — kind,
+   `lean`, `confidence`, `score` — captured from the engine itself so the track
+   record can't drift from a hand-copied number. When the chart has a perfection
+   date, it's stored as the **expected-resolution date** ("ask me later").
+2. **Resolve when ripe.** `kairos memory due` surfaces the logged readings whose
+   expected-resolution date has arrived. You tell it what happened:
+   `kairos memory outcome <id> happened` (or `did-not-happen` / `partial` /
+   `unknown`).
+3. **Read the scorecard.** `kairos memory calibration` reports your **hit-rate by
+   confidence band** — does "high confidence" actually win more often than "low"?
+
+The honest part: **today that scorecard is empty.** With no outcomes recorded yet,
+the real report is exactly this (verbatim):
+
+```jsonc
+// kairos memory calibration  — on a fresh install
+{
+  "bands": [
+    { "confidence": "low",    "resolved": 0, "correct": 0, "hitRate": null },
+    { "confidence": "medium", "resolved": 0, "correct": 0, "hitRate": null },
+    { "confidence": "high",   "resolved": 0, "correct": 0, "hitRate": null }
+  ],
+  "overall": { "resolved": 0, "correct": 0, "hitRate": null },
+  "note": "Small samples are noisy — this is a personal pattern, not proof."
+}
+```
+
+The `--card` view prints it plainly: *"No resolved outcomes yet — here is how the
+track record grows."* Kairos does **not** ship a fake hit-rate, and it does **not**
+claim its astrology is proven. It claims something narrower and more useful: it is
+the astrology tool that **states a falsifiable verdict, remembers it, and will
+show you its own batting average** as your outcomes accumulate — by confidence
+band, with the sample size always in view, and the standing caveat that a small
+personal sample is a pattern, not proof.
+
+That reframes Kairos from "another ephemeris wrapper" to **the one that keeps
+score.**
 
 ## Install
 
@@ -133,16 +197,38 @@ npx -y kairos-astrology memory due
 npx -y kairos-astrology memory profile set '{"birth":{"datetimeLocal":"1990-03-12T07:45:00","latitude":37.57,"longitude":126.98,"timezone":"Asia/Seoul","place":"Seoul"}}'
 ```
 
-### Docker (Intel Mac, musl, Fallback)
+### Cold install & the Intel-Mac caveat (read before `npx`)
 
-If you cannot install the prebuilt sweph binary (Intel Mac, Alpine Linux, or other musl environments):
+Kairos's only native dependency is `sweph` (the Swiss Ephemeris bindings). It
+ships **prebuilt binaries** for:
+
+| Platform | Cold `npx` / install |
+|----------|----------------------|
+| **macOS Apple Silicon** (`darwin-arm64`) | prebuilt — installs with no compiler |
+| **Linux x64 / arm64** (glibc) | prebuilt — installs with no compiler |
+| **Windows x64** (`win32-x64`) | prebuilt — installs with no compiler |
+| **Intel macOS** (`darwin-x64`) | **no prebuild — compiles from source on first install** |
+| **Alpine / musl Linux** | **no prebuild — compiles from source** |
+
+On **Intel macOS** (and musl Linux), the **first** `npx -y kairos-astrology …`
+or `npm install` will **compile `sweph` from source**, which requires the
+**Xcode Command Line Tools** (`xcode-select --install`) on Mac, or `build-base`
++ `python3` on Alpine. This is a one-time cost — once built, subsequent runs are
+fast.
+
+You do **not** need any ephemeris data files for this: Kairos defaults to Swiss
+Ephemeris **Moshier mode**, which computes positions analytically (sub-arcsecond
+for the modern era) with no `.se1` downloads. The compile is only for the native
+addon, not for data.
+
+If you can't (or don't want to) compile, the **Docker image is the zero-build
+fallback** — it bundles a working `sweph` for every platform:
 
 ```bash
 docker build -t kairos:latest .
-docker run --rm -i kairos:latest mcp
+docker run --rm -i kairos:latest mcp     # stdio MCP server, forward to Claude Code
+docker run --rm -i kairos:latest compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T11:15:00","latitude":51.5074,"longitude":-0.1278,"timezone":"Europe/London"}}'
 ```
-
-This provides the MCP server via stdio, suitable for forwarding to Claude Code or other MCP clients.
 
 ## Development: Build from Source
 
@@ -203,22 +289,50 @@ All memory is stored **locally** under `~/.kairos` (one `profiles/<slug>/` direc
 
 ## Distribution & Publishing
 
-Kairos is published to npm as `kairos-astrology`:
+Kairos publishes to npm as `kairos-astrology`. The package ships:
+- The compiled engine (`dist/`)
+- The Claude skill and the plugin manifests (`skills/`, `.claude-plugin/`)
+- The web UI (`web/`, minus the local `last-result.json` artifact)
+- `LICENSE`, `NOTICE`, `README.md`, and the docs they link
+
+> **Note:** this package sets `devEngines.packageManager: pnpm`, so **`npm
+> publish` / `npm pack` are blocked** with `EBADDEVENGINES` — publish with
+> **`pnpm`** (which the repo uses anyway). `pnpm pack --dry` prints the exact
+> tarball contents.
+
+### Maintainer publish checklist
+
+The repo is already **public** at `github.com/stardustxx/kairos`; the npm
+registry publish is the maintainer's remaining step (it needs their npm
+credentials). Everything up to it is done.
 
 ```bash
-pnpm publish                # publish the current version to npm
+# 1. Verify green
+pnpm install
+pnpm lint && pnpm typecheck && pnpm test         # all tests must pass (237 today)
+
+# 2. Build the publishable artifacts
+pnpm build                                        # tsc -> dist/ (also runs as prepublishOnly)
+
+# 3. Inspect what will ship (no last-result.json; dist + skills + .claude-plugin + web)
+pnpm pack --dry
+
+# 4. Confirm version is 1.1.0 everywhere it must match
+grep -R '"version": "1.1.0"' package.json .claude-plugin/*.json
+
+# 5. Publish (pnpm, not npm — see devEngines note above)
+pnpm publish --access public                      # first publish of a public scoped/unscoped pkg
+
+# 6. Prove the registry cold path from a scratch dir
+cd "$(mktemp -d)"
+npx -y kairos-astrology@1.1.0 compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T11:15:00","latitude":51.5074,"longitude":-0.1278,"timezone":"Europe/London"}}'
+# expect: lean "favorable", score 38, confidence "medium"
+# on Intel macOS this first run compiles sweph from source (needs Xcode CLT) — see "Cold install" above
 ```
 
-The package includes:
-- The compiled engine (`dist/`)
-- The Claude skill and plugin manifests (`.claude-plugin/`)
-- The web UI (`web/`)
-- License and documentation
-
-The maintainer will:
-1. Make the GitHub repo public (`github.com/stardustxx/kairos`)
-2. Push tags to trigger releases
-3. Register the MCP server in the official MCP registry (optional)
+Optional follow-ups: push a `v1.1.0` tag to cut a GitHub release, and register
+the MCP server in the official MCP registry (`server.json` / `mcpName` are
+already in place).
 
 ## License
 
@@ -239,7 +353,7 @@ pnpm typecheck                  # check TypeScript types
 pnpm lint                       # lint the engine code
 ```
 
-All 216 tests pass on the current build.
+All 237 tests pass on the current build.
 
 ## Technical Details
 
