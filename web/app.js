@@ -176,6 +176,11 @@
   /** Populate the dedicated verdict block for horary / electional; hide otherwise. */
   function renderVerdict(result) {
     const v = els.verdict;
+    // The scope note addresses transit/natal users (wheel, no verdict panel) —
+    // show it only for results that have a chart but no verdict to render.
+    els.verdictScopeNote.hidden = !!(result.horary ||
+      (result.electional && result.electional.topMoments && result.electional.topMoments[0]) ||
+      !result.chart);
     if (result.horary) {
       const h = result.horary;
       const lean = h.lean || "uncertain";
@@ -781,21 +786,28 @@
   }
 
   function loadExample() {
-    // Fetch works when served over http; under file:// it is often blocked, so
-    // we fall back to instructing the user.
+    // Read the example from the inline <script id="example-data"> block — no
+    // fetch needed, so this works under file:// on first click.
+    var el = document.getElementById("example-data");
+    var txt = el ? el.textContent.trim() : "";
+    if (txt) {
+      els.json.value = txt;
+      handleRender();
+      return;
+    }
+    // Fallback: try fetch (http server path) then tell the user what to do.
     fetch("example-output.json")
       .then(function (r) {
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.text();
       })
-      .then(function (txt) {
-        els.json.value = txt;
+      .then(function (fetched) {
+        els.json.value = fetched;
         handleRender();
       })
       .catch(function () {
         showError(
-          "Could not auto-load example-output.json (file:// blocks fetch). " +
-          "Open example-output.json, copy its contents into the box, and click Render."
+          "Example data not found. Open example-output.json, copy its contents into the box, and click Render."
         );
       });
   }
@@ -826,6 +838,7 @@
     els.viewSwitch = $("view-switch");
     els.chartView = $("chart-view");
     els.verdict = $("verdict");
+    els.verdictScopeNote = $("verdict-scope-note");
     els.verdictLean = $("verdict-lean");
     els.verdictSub = $("verdict-sub");
     els.verdictConfidence = $("verdict-confidence");
@@ -884,6 +897,7 @@
       els.details.hidden = true;
       els.viewSwitch.hidden = true;
       els.verdict.hidden = true;
+      els.verdictScopeNote.hidden = true;
       els.verdictQuestion.hidden = true;
       els.shareRow.hidden = true;
       els.copyStatus.textContent = "";

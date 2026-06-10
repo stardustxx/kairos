@@ -141,6 +141,8 @@ code {
 /* In-browser compute form */
 .compute-title { margin: 0; font-size: var(--step-1); letter-spacing: -0.01em; }
 .compute-hint { margin: 0.25rem 0 0.85rem; color: var(--muted); font-size: 0.85rem; }
+.json-hint { margin: 0 0 0.5rem; color: var(--muted); font-size: 0.85rem; }
+.verdict-scope-note { margin: 0.75rem 0 0; color: var(--muted); font-size: 0.8rem; }
 .compute-grid {
   display: flex;
   flex-direction: column;

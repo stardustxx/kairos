@@ -58,4 +58,49 @@ if (typeof mod.initBrowserEngine !== "function") {
   fail("web/engine.js does not export initBrowserEngine()");
 }
 
-console.log("check-web-bundle: OK — bundle present, browser-safe, exports initBrowserEngine");
+// 4. Anti-drift: the inline example in index.html must match example-output.json.
+//    The <script id="example-data" type="application/json"> block is the canonical
+//    source for "Load Example"; example-output.json is kept for docs. The compare
+//    normalizes whitespace/formatting only — key order must match too (the inline
+//    block is produced by copying the file, so an order mismatch IS drift).
+const indexHtml = readFileSync(resolve(root, "web/index.html"), "utf8");
+const exampleJsonRaw = readFileSync(resolve(root, "web/example-output.json"), "utf8");
+const inlineMatch = indexHtml.match(
+  /<script\s+id="example-data"[^>]*>([\s\S]*?)<\/script>/
+);
+if (!inlineMatch) {
+  fail(
+    'web/index.html is missing <script id="example-data" type="application/json"> block — ' +
+    "re-embed example-output.json"
+  );
+}
+const inlineText = inlineMatch[1].trim();
+if (!inlineText) {
+  fail(
+    '<script id="example-data"> block in web/index.html is empty — ' +
+    "embed the contents of web/example-output.json"
+  );
+}
+let inlineParsed, fileParsed;
+try {
+  inlineParsed = JSON.parse(inlineText);
+} catch (e) {
+  fail(`Inline example in web/index.html is not valid JSON: ${e.message}`);
+}
+try {
+  fileParsed = JSON.parse(exampleJsonRaw);
+} catch (e) {
+  fail(`web/example-output.json is not valid JSON: ${e.message}`);
+}
+// Re-serialize each parse and compare: whitespace-insensitive, key-order-sensitive
+// (deliberately fail-closed — a reordering can only come from regenerating one copy).
+const inlineCanon = JSON.stringify(inlineParsed);
+const fileCanon = JSON.stringify(fileParsed);
+if (inlineCanon !== fileCanon) {
+  fail(
+    "Inline example in web/index.html differs from web/example-output.json — " +
+    "update the <script id=\"example-data\"> block to match the file (or vice-versa)"
+  );
+}
+
+console.log("check-web-bundle: OK — bundle present, browser-safe, exports initBrowserEngine, inline example matches file");

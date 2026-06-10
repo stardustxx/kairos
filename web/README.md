@@ -12,8 +12,8 @@ compute mode adds one built artifact (`engine.js`, plus the wasm assets).
 
 ## Setup
 
-Just open `index.html` in any modern browser. Paste/upload rendering works over
-the `file://` protocol (double-click the file) or from any static web server.
+Just open `index.html` in any modern browser. Everything works over the `file://`
+protocol (double-click the file) or from any static web server.
 
 ```
 open web/index.html          # macOS
@@ -21,11 +21,10 @@ open web/index.html          # macOS
 python3 -m http.server -d web 8000   # then visit http://localhost:8000
 ```
 
-> File upload (via the file picker) and JSON paste work under `file://`.
-> The **Load Example** button uses `fetch()`, which most browsers block under
-> `file://`. If it fails, open `example-output.json`, copy its contents into the
-> text box, and click **Render Chart**. Serving over `http://` makes the button
-> work.
+**Load Example** reads an example `ComputeResult` embedded directly in
+`index.html` — no network request — so it works on the first click even when
+opened as a local file. `example-output.json` is kept on disk for documentation;
+`scripts/check-web-bundle.mjs` enforces that the two copies stay in sync.
 
 ## Compute in your browser
 
@@ -59,11 +58,11 @@ of the browser build.
 1. Produce a `ComputeResult` from the Kairos engine CLI, e.g.
 
    ```sh
-   pnpm --filter @kairos/engine compute > chart.json
+   npx -y kairos-astrology compute '<request>' > chart.json
    ```
 
-   (Consult the engine's own README for exact CLI flags; the web UI only needs
-   the JSON it prints.)
+   See [`docs/example.md`](../docs/example.md) for a complete worked example
+   including the full request JSON shape.
 
 2. Either **paste** the JSON into the text box, or **upload** the `.json` file
    with the file picker.
