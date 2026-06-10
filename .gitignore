@@ -13,6 +13,12 @@ ephe/
 web/last-result.json
 *.local
 
+# Browser engine bundle + wasm assets (built by `pnpm build:web`; shipped in
+# the npm tarball via package.json "files", but not committed)
+web/engine.js
+web/swisseph.wasm
+web/swisseph.data
+
 # Editor / tooling
 .claude/
 .vscode/

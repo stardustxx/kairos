@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import sweph from "sweph";
+import type { EphemerisProvider } from "./ephemeris-provider.js";
 
 /**
  * Ephemeris flag resolution.
@@ -72,3 +73,20 @@ export function resolveCalcFlags(env: Env = process.env): number {
 export function resolveHouseFlags(env: Env = process.env): number {
   return resolveBaseFlag(env);
 }
+
+/**
+ * The NATIVE ephemeris backend: a passthrough to the `sweph` addon with the
+ * env-resolved flags attached. This is the default provider under Node (see
+ * ephemeris-provider.ts) — registered at module load, exactly as the old
+ * constants.ts module-load flag resolution behaved, so Node behavior is
+ * unchanged. Typed nullable because the browser bundle swaps this module for a
+ * stub exporting null (scripts/build-web.mjs).
+ */
+export const nativeEphemeris: EphemerisProvider | null = {
+  calcFlags: resolveCalcFlags(),
+  houseFlags: resolveHouseFlags(),
+  julday: sweph.julday,
+  revjul: sweph.revjul,
+  calc_ut: sweph.calc_ut,
+  houses_ex2: sweph.houses_ex2,
+};

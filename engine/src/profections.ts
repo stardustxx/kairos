@@ -11,13 +11,8 @@
  * completed years; no ephemeris is consulted here. The activation cycles every
  * 12 years (age 0, 12, 24… all return to the natal 1st house / Ascendant sign).
  */
-import { DEGREES_PER_SIGN, SIGN_COUNT, SIGN_RULER, SIGNS } from "./constants.js";
+import { SIGN_COUNT, SIGN_RULER, SIGNS, signIndexOf } from "./constants.js";
 import type { Profection } from "./types.js";
-
-/** Sign index 0..11 (Aries..Pisces) for an ecliptic longitude. */
-function signIndexOf(longitude: number): number {
-  return Math.floor((((longitude % 360) + 360) % 360) / DEGREES_PER_SIGN) % SIGN_COUNT;
-}
 
 /**
  * Compute the annual profection for a given completed age.

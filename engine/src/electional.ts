@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 import { computeAspects, operativeOrb } from "./aspects.js";
 import { buildChart } from "./chart.js";
-import { DEGREES_PER_SIGN, SIGN_COUNT, SIGN_RULER } from "./constants.js";
+import { rulerOfLongitude } from "./constants.js";
 import { moonVoidStatus } from "./horary.js";
 import { houseOf } from "./houses.js";
 import type {
@@ -26,11 +26,6 @@ const MOON_WEAK_SIGNS = new Set(["Capricorn", "Scorpio"]);
 const MAX_RESULTS = 10;
 const MAX_CANDIDATES = 10_000; // safety cap; large window + tiny step is gated here.
 
-function rulerOfCusp(cuspLongitude: number): string {
-  const signIndex = Math.floor(cuspLongitude / DEGREES_PER_SIGN) % SIGN_COUNT;
-  return SIGN_RULER[signIndex];
-}
-
 /**
  * Identify the querent (1st-house ruler) and quesited (`quesitedHouse` ruler)
  * significators by classical sign rulership, mirroring horary. A caller hint can
@@ -41,9 +36,9 @@ export function findSignificators(
   quesitedHouse: number,
   hints?: SignificatorHints,
 ): { querent: string; quesited: string } {
-  const querent = rulerOfCusp(chart.houses.cusps[0]);
+  const querent = rulerOfLongitude(chart.houses.cusps[0]);
   const quesited =
-    hints?.planet ?? rulerOfCusp(chart.houses.cusps[quesitedHouse - 1]);
+    hints?.planet ?? rulerOfLongitude(chart.houses.cusps[quesitedHouse - 1]);
   return { querent, quesited };
 }
 

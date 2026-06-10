@@ -15,6 +15,7 @@
  * Worked example: 10° Gemini = 70° -> antiscion 110° = 20° Cancer;
  *                                       contra-antiscion 290° = 20° Capricorn.
  */
+import { separation } from "./constants.js";
 import type { PlanetPosition } from "./types.js";
 
 function norm360(x: number): number {
@@ -29,12 +30,6 @@ export function antiscion(longitude: number): number {
 /** Contra-antiscion of a longitude: mirror across the 0°Aries/0°Libra axis. */
 export function contraAntiscion(longitude: number): number {
   return norm360(360 - longitude);
-}
-
-/** Smallest angular distance (0..180) between two ecliptic longitudes. */
-function separation(a: number, b: number): number {
-  const d = Math.abs(a - b) % 360;
-  return d > 180 ? 360 - d : d;
 }
 
 export interface AntisciaContact {

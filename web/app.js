@@ -575,9 +575,152 @@
     copyText(JSON.stringify(lastResult, null, 2), "JSON copied");
   }
 
+  // ---- In-browser compute (wasm engine, loaded lazily on first compute) -----
+
+  // Resolves to { runCompute } once web/engine.js + its wasm assets are loaded.
+  // Kept so later computes are instant; reset to null on failure for a retry.
+  let enginePromise = null;
+
+  function loadEngine() {
+    if (window.location.protocol === "file:") {
+      return Promise.reject(new Error(
+        "In-browser compute needs the page served over http(s) — browsers " +
+        "block module/wasm loading from file://. Run e.g. " +
+        "`python3 -m http.server` in web/ and reload. " +
+        "(Pasting ComputeResult JSON still works here.)"
+      ));
+    }
+    if (!enginePromise) {
+      enginePromise = import("./engine.js")
+        .catch(function (e) {
+          enginePromise = null;
+          throw new Error(
+            "Could not load the engine bundle (web/engine.js). If you are " +
+            "running from a clone, build it first with `pnpm build:web`. (" +
+            e.message + ")"
+          );
+        })
+        .then(function (mod) { return mod.initBrowserEngine(); })
+        .catch(function (e) {
+          enginePromise = null;
+          throw e;
+        });
+    }
+    return enginePromise;
+  }
+
+  function showComputeError(msg) {
+    els.computeError.textContent = msg;
+    els.computeError.hidden = !msg;
+  }
+
+  function setComputeStatus(msg) {
+    els.computeStatus.textContent = msg;
+  }
+
+  /** Default the datetime-local input to "now" in this device's local time. */
+  function defaultComputeDatetime() {
+    function pad(n) { return String(n).padStart(2, "0"); }
+    const d = new Date();
+    els.computeDatetime.value =
+      d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  /** Build a ComputeRequest from the form. Throws with a friendly message. */
+  function computeRequestFromForm() {
+    const kind = els.computeKind.value === "natal" ? "natal" : "horary";
+    const datetimeLocal = els.computeDatetime.value;
+    if (!datetimeLocal) throw new Error("Pick a date and time.");
+    const latitude = parseFloat(els.computeLat.value);
+    const longitude = parseFloat(els.computeLon.value);
+    if (!isFinite(latitude) || latitude < -90 || latitude > 90) {
+      throw new Error("Latitude must be a number between -90 and 90.");
+    }
+    if (!isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new Error("Longitude must be a number between -180 and 180.");
+    }
+    const req = {
+      kind: kind,
+      moment: { datetimeLocal: datetimeLocal, latitude: latitude, longitude: longitude },
+    };
+    if (kind === "horary") req.quesitedHouse = parseInt(els.computeHouse.value, 10);
+    return req;
+  }
+
+  function handleCompute(event) {
+    if (event) event.preventDefault();
+    showComputeError("");
+    let req;
+    try {
+      req = computeRequestFromForm();
+    } catch (e) {
+      showComputeError(e.message);
+      return;
+    }
+    const question = els.computeQuestion.value.trim();
+    els.computeBtn.disabled = true;
+    setComputeStatus(enginePromise
+      ? "Computing…"
+      : "Loading the ephemeris engine (first run downloads ~13 MB, then it's cached)…");
+    loadEngine()
+      .then(function (engine) {
+        setComputeStatus("Computing…");
+        const result = engine.runCompute(req);
+        // Feed the result through the SAME path as pasted JSON, so the
+        // verdict panel, wheel, details, share, and recent list all behave
+        // identically for computed and pasted charts.
+        els.json.value = JSON.stringify(result, null, 2);
+        handleRender();
+        if (question) {
+          els.verdictQuestion.textContent = "“" + question + "”";
+          els.verdictQuestion.hidden = false;
+        }
+        setComputeStatus("");
+      })
+      .catch(function (e) {
+        setComputeStatus("");
+        showComputeError(e && e.message ? e.message : String(e));
+      })
+      .then(function () {
+        els.computeBtn.disabled = false;
+      });
+  }
+
+  function handleGeolocate() {
+    showComputeError("");
+    if (!navigator.geolocation) {
+      showComputeError("Geolocation is not available in this browser — enter latitude/longitude manually.");
+      return;
+    }
+    setComputeStatus("Locating…");
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        els.computeLat.value = pos.coords.latitude.toFixed(4);
+        els.computeLon.value = pos.coords.longitude.toFixed(4);
+        setComputeStatus("");
+      },
+      function (err) {
+        setComputeStatus("");
+        showComputeError("Could not get your location (" + err.message + ") — enter latitude/longitude manually.");
+      },
+      { timeout: 10000 }
+    );
+  }
+
+  /** Horary needs a question + quesited house; natal needs neither. */
+  function syncComputeKind() {
+    const horary = els.computeKind.value !== "natal";
+    els.computeQuestionField.hidden = !horary;
+    els.computeHouseField.hidden = !horary;
+  }
+
   function handleRender() {
     showError("");
     showShareNotice("");
+    // A pasted/decoded result has no form question attached; computed charts
+    // re-show it right after this call.
+    els.verdictQuestion.hidden = true;
     let data;
     try {
       data = parseInput();
@@ -695,6 +838,26 @@
     els.recent = $("recent");
     els.recentList = $("recent-list");
     els.recentClear = $("recent-clear-btn");
+    els.computeForm = $("compute-form");
+    els.computeKind = $("compute-kind");
+    els.computeQuestion = $("compute-question");
+    els.computeQuestionField = $("compute-question-field");
+    els.computeHouse = $("compute-house");
+    els.computeHouseField = $("compute-house-field");
+    els.computeDatetime = $("compute-datetime");
+    els.computeLat = $("compute-lat");
+    els.computeLon = $("compute-lon");
+    els.computeGeo = $("compute-geo");
+    els.computeBtn = $("compute-btn");
+    els.computeStatus = $("compute-status");
+    els.computeError = $("compute-error");
+    els.verdictQuestion = $("verdict-question");
+
+    els.computeForm.addEventListener("submit", handleCompute);
+    els.computeGeo.addEventListener("click", handleGeolocate);
+    els.computeKind.addEventListener("change", syncComputeKind);
+    defaultComputeDatetime();
+    syncComputeKind();
 
     els.render.addEventListener("click", handleRender);
     els.copyLink.addEventListener("click", copyLink);
@@ -721,6 +884,7 @@
       els.details.hidden = true;
       els.viewSwitch.hidden = true;
       els.verdict.hidden = true;
+      els.verdictQuestion.hidden = true;
       els.shareRow.hidden = true;
       els.copyStatus.textContent = "";
       viewMode = "natal";

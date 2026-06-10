@@ -1,6 +1,6 @@
 import { almutenOfDegree } from "./almuten.js";
 import { computeAspects } from "./aspects.js";
-import { DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGN_RULER } from "./constants.js";
+import { DEGREES_PER_SIGN, PLANETS, rulerOfLongitude } from "./constants.js";
 import { receptionBetween } from "./dignities.js";
 import { houseOf } from "./houses.js";
 import {
@@ -30,11 +30,6 @@ import type {
 } from "./types.js";
 
 const SOFT_ASPECTS = new Set(["conjunction", "sextile", "trine"]);
-
-function rulerOfCusp(cuspLongitude: number): string {
-  const signIndex = Math.floor(cuspLongitude / DEGREES_PER_SIGN) % SIGN_COUNT;
-  return SIGN_RULER[signIndex];
-}
 
 /** English ordinal for a house number, e.g. 1 -> "1st", 10 -> "10th". */
 function ordinal(n: number): string {
@@ -601,8 +596,8 @@ export function judgeHorary(
   // (the asker), but a turned chart reads the querent from another radix house
   // (the third party the matter is about). Everything downstream — reception,
   // almuten, perfection, dignity — derives from these two significators.
-  const querentSig = rulerOfCusp(chart.houses.cusps[querentHouse - 1]);
-  const quesitedSig = rulerOfCusp(chart.houses.cusps[quesitedHouse - 1]);
+  const querentSig = rulerOfLongitude(chart.houses.cusps[querentHouse - 1]);
+  const quesitedSig = rulerOfLongitude(chart.houses.cusps[quesitedHouse - 1]);
 
   const sigA = chart.planets.find((p) => p.name === querentSig);
   const sigB = chart.planets.find((p) => p.name === quesitedSig);

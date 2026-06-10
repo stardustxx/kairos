@@ -260,6 +260,31 @@ pnpm wheel '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-
 
 The UI also runs standalone: open `web/index.html` and paste any `pnpm compute` JSON (or click **Load Example**). See `web/README.md`.
 
+### Compute in the browser (no server)
+
+The web app can also **compute charts entirely in your browser**: the same
+engine code runs against a WebAssembly build of the Swiss Ephemeris
+([`swisseph-wasm`](https://github.com/prolaxu/swisseph-wasm), GPL-3.0-or-later),
+in the same Moshier mode as the Node default — a parity test pins the two
+backends to within 1e-6° and to identical horary verdicts. Everything stays
+in-page: **no server, no telemetry, no data leaves the machine** (the
+"use my location" button uses the browser's own geolocation API, locally).
+
+From a clone, build the browser bundle once, then serve `web/`:
+
+```bash
+pnpm build:web                   # esbuild → web/engine.js + swisseph.{wasm,data}
+python3 -m http.server -d web    # any static server; file:// can't load wasm modules
+```
+
+Fill in the compute form (kind, optional question, date/time, lat/lon, the
+matter's house) and the verdict panel + wheel render through the same path as
+pasted JSON. The npm tarball ships `web/engine.js`, `web/swisseph.wasm`, and
+`web/swisseph.data` prebuilt; in a git clone they are gitignored, so run
+`pnpm build:web` yourself. The in-browser mode covers horary and natal charts;
+journal/memory and the offline geocoder remain Node-only (enter lat/lon
+manually, or look them up with `pnpm geocode`).
+
 ### Start the MCP server locally
 
 ```bash
@@ -309,7 +334,7 @@ credentials). Everything up to it is done.
 ```bash
 # 1. Verify green
 pnpm install
-pnpm lint && pnpm typecheck && pnpm test         # all tests must pass (237 today)
+pnpm lint && pnpm typecheck && pnpm test         # all tests must pass (278 today)
 
 # 2. Build the publishable artifacts
 pnpm build                                        # tsc -> dist/ (also runs as prepublishOnly)
@@ -353,7 +378,7 @@ pnpm typecheck                  # check TypeScript types
 pnpm lint                       # lint the engine code
 ```
 
-All 237 tests pass on the current build.
+All 278 tests pass on the current build.
 
 ## Technical Details
 

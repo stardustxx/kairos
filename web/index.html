@@ -10,12 +10,14 @@
   <header class="app-header">
     <h1>Kairos Chart Wheel</h1>
     <p class="subtitle">
-      Paste a <code>ComputeResult</code> JSON from the Kairos engine and render
-      its chart wheel.
+      Compute a chart right here in your browser (nothing leaves your machine),
+      or paste a <code>ComputeResult</code> JSON from the Kairos engine and
+      render its chart wheel.
     </p>
   </header>
 
   <section id="verdict" class="verdict" aria-label="Verdict" hidden>
+    <p id="verdict-question" class="verdict-question" hidden></p>
     <div class="verdict-lead">
       <div id="verdict-lean" class="verdict-lean">—</div>
       <div id="verdict-sub" class="verdict-sub"></div>
@@ -27,6 +29,72 @@
   <main class="layout">
     <!-- Left / top: input controls -->
     <section class="panel controls" aria-label="Input controls">
+      <form id="compute-form" class="compute-form" aria-label="Compute a chart in your browser">
+        <h2 class="compute-title">Compute in your browser</h2>
+        <p class="compute-hint">
+          Runs the Kairos engine locally via WebAssembly — no server, nothing
+          leaves this page.
+        </p>
+
+        <div class="compute-grid">
+          <label class="compute-field">
+            <span class="field-label">Kind</span>
+            <select id="compute-kind">
+              <option value="horary" selected>Horary (yes/no question, asked now)</option>
+              <option value="natal">Natal (a birth chart)</option>
+            </select>
+          </label>
+
+          <label class="compute-field" id="compute-question-field">
+            <span class="field-label">Question <span class="optional">(optional)</span></span>
+            <input id="compute-question" type="text" placeholder="Will I get the job?" />
+          </label>
+
+          <label class="compute-field" id="compute-house-field">
+            <span class="field-label">Matter (quesited house)</span>
+            <select id="compute-house">
+              <option value="2">2 — Money, income, possessions</option>
+              <option value="3">3 — Siblings, short trips, messages</option>
+              <option value="4">4 — Property, home, real estate, family</option>
+              <option value="5">5 — Children, creativity, speculation</option>
+              <option value="6">6 — Health, work routine, employees</option>
+              <option value="7">7 — A specific person, partner, contract</option>
+              <option value="8">8 — Debts, shared money, the other's resources</option>
+              <option value="9">9 — Travel, study, publishing, legal</option>
+              <option value="10" selected>10 — Career, job, promotion, reputation</option>
+              <option value="11">11 — Friends, hopes, groups</option>
+              <option value="12">12 — Hidden matters, confinement, self-undoing</option>
+            </select>
+          </label>
+
+          <label class="compute-field">
+            <span class="field-label">Local date &amp; time (at the location)</span>
+            <input id="compute-datetime" type="datetime-local" step="60" />
+          </label>
+
+          <div class="compute-field compute-latlon">
+            <span class="field-label">Location</span>
+            <div class="latlon-row">
+              <input id="compute-lat" type="number" inputmode="decimal" step="any"
+                     min="-90" max="90" placeholder="Latitude" aria-label="Latitude" />
+              <input id="compute-lon" type="number" inputmode="decimal" step="any"
+                     min="-180" max="180" placeholder="Longitude" aria-label="Longitude" />
+              <button id="compute-geo" type="button" title="Fill from this device's location (stays on this page)">
+                Use my location
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row button-row">
+          <button id="compute-btn" type="submit" class="primary">Compute Chart</button>
+          <span id="compute-status" class="compute-status" role="status" aria-live="polite"></span>
+        </div>
+        <p id="compute-error" class="error" role="alert" hidden></p>
+      </form>
+
+      <hr class="controls-divider" />
+
       <label for="json-input" class="field-label">ComputeResult JSON</label>
       <textarea
         id="json-input"

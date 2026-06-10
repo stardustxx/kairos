@@ -19,6 +19,15 @@ Swiss Ephemeris (sweph)
   commercial Swiss Ephemeris license from Astrodienst AG first.
   See https://www.astro.com/swisseph/ for details.
 
+swisseph-wasm
+  The web app's in-browser compute mode (web/engine.js, built by
+  `pnpm build:web`) computes positions with the `swisseph-wasm` npm package by
+  prolaxu — a WebAssembly build of the same Swiss Ephemeris C library
+  (v2.10.03) — licensed under GPL-3.0-or-later (AGPL-3.0 compatible). The
+  bundled web/swisseph.wasm and web/swisseph.data artifacts are produced from
+  that package, and the Swiss Ephemeris dual-licensing terms described above
+  apply to them as well. See https://github.com/prolaxu/swisseph-wasm .
+
 GeoNames gazetteer
   The optional offline geocoder (`pnpm geocode:install`) downloads data derived
   from the GeoNames geographical database, licensed under Creative Commons

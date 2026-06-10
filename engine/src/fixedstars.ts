@@ -14,7 +14,7 @@
  * J2000; cross-checked against common ephemeris star catalogues). Values are
  * given to ~0.1° and are review-verified.
  */
-import { DEGREES_PER_SIGN, SIGN_COUNT, SIGNS } from "./constants.js";
+import { DEGREES_PER_SIGN, SIGN_COUNT, SIGNS, separation } from "./constants.js";
 import type { PlanetPosition } from "./types.js";
 
 /** Classical benefic/malefic tone of a fixed star. */
@@ -70,12 +70,6 @@ function norm360(x: number): number {
 export function precessedLongitude(lonJ2000: number, year: number): number {
   const driftDeg = (PRECESSION_ARCSEC_PER_YEAR * (year - 2000)) / 3600;
   return norm360(lonJ2000 + driftDeg);
-}
-
-/** Smallest angular distance (0..180) between two ecliptic longitudes. */
-function separation(a: number, b: number): number {
-  const d = Math.abs(a - b) % 360;
-  return d > 180 ? 360 - d : d;
 }
 
 export interface StarContact {

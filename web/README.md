@@ -1,16 +1,19 @@
 # Kairos Chart Wheel (web)
 
-A self-contained, client-side chart-wheel viewer for the Kairos astrology
-engine. It renders a 12-house wheel — zodiac ring, house cusps, planet glyphs at
-their ecliptic longitudes, degree labels, retrograde markers, and colour-coded
-aspect lines — directly from the engine's `ComputeResult` JSON.
+A self-contained, client-side chart viewer **and calculator** for the Kairos
+astrology engine. It renders a 12-house wheel — zodiac ring, house cusps,
+planet glyphs at their ecliptic longitudes, degree labels, retrograde markers,
+and colour-coded aspect lines — from the engine's `ComputeResult` JSON, and it
+can **compute that JSON itself, in the browser**, via a WebAssembly build of
+the Swiss Ephemeris.
 
-No build step, no frameworks, no npm dependencies. Plain HTML/CSS/JS.
+The viewer is plain HTML/CSS/JS with no build step. The optional in-browser
+compute mode adds one built artifact (`engine.js`, plus the wasm assets).
 
 ## Setup
 
-Just open `index.html` in any modern browser. It works over the `file://`
-protocol (double-click the file) or from any static web server.
+Just open `index.html` in any modern browser. Paste/upload rendering works over
+the `file://` protocol (double-click the file) or from any static web server.
 
 ```
 open web/index.html          # macOS
@@ -23,6 +26,33 @@ python3 -m http.server -d web 8000   # then visit http://localhost:8000
 > `file://`. If it fails, open `example-output.json`, copy its contents into the
 > text box, and click **Render Chart**. Serving over `http://` makes the button
 > work.
+
+## Compute in your browser
+
+The **Compute in your browser** form at the top casts a chart locally — no
+server, no telemetry; nothing leaves the page. Pick the kind (horary by
+default, or natal), optionally type the question, set the local date/time at
+the location (defaults to now), enter latitude/longitude (or click **Use my
+location**, which uses the browser's own geolocation API), choose the matter's
+house for horary, and hit **Compute Chart**. The result renders through the
+exact same verdict/wheel path as pasted JSON.
+
+Requirements:
+
+- **The built engine bundle.** The npm tarball ships it; in a git clone run
+  `pnpm build:web` at the repo root, which produces three gitignored files
+  next to this page: `engine.js` (the bundled engine, ESM), `swisseph.wasm`
+  (Swiss Ephemeris compiled to WebAssembly), and `swisseph.data` (the wasm
+  module's preloaded data bundle, fetched once and cached by the browser).
+- **An http(s) server** (e.g. the `python3 -m http.server -d web` line above) —
+  browsers refuse to load ES modules and wasm over `file://`. Pasting JSON
+  still works over `file://`.
+
+The wasm engine runs the same Moshier-mode computation as the Node engine —
+an automated parity test (`engine/src/ephemeris-parity.test.ts`) pins the two
+backends to within 1e-6° per planet and to identical horary verdicts. The
+journal/memory layer and the offline geocoder are Node-only and are not part
+of the browser build.
 
 ## Usage
 
@@ -123,8 +153,14 @@ A full working sample lives in [`example-output.json`](./example-output.json).
 | `index.html`          | Page layout, form, and SVG viewport              |
 | `style.css`           | All styling, incl. SVG element classes and theme |
 | `chart.js`            | SVG rendering (`window.KairosChart`)             |
-| `app.js`              | Parsing, validation, events, metadata            |
+| `app.js`              | Parsing, validation, events, metadata, compute   |
 | `example-output.json` | Sample `ComputeResult` for testing               |
+| `engine.js`*          | Bundled engine + wasm loader (`pnpm build:web`)  |
+| `swisseph.wasm`*      | Swiss Ephemeris compiled to WebAssembly          |
+| `swisseph.data`*      | Preloaded data bundle the wasm module requires   |
+
+\* Built artifacts — gitignored, shipped prebuilt in the npm tarball,
+regenerated with `pnpm build:web`.
 
 ## Limitations
 

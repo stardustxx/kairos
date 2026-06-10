@@ -1,12 +1,12 @@
-import sweph from "sweph";
-import { resolveCalcFlags, resolveHouseFlags } from "./ephemeris.js";
+// NOTE: this module is part of the BROWSER bundle closure, so it must not
+// import `sweph` or any node:* builtin. Computation flags live on the active
+// EphemerisProvider (see ephemeris-provider.ts); the body/calendar identifiers
+// below are stable Swiss Ephemeris ABI values, identical across the native
+// `sweph` addon and the `swisseph-wasm` build (SE_SUN=0 .. SE_MEAN_NODE=10,
+// SE_GREG_CAL=1), so they are spelled as literals here.
 
-// Computation flags, resolved once at module load from the environment.
-// Defaults to Moshier analytical ephemeris (no data files), with speed.
-// Set KAIROS_SWIEPH=1 + KAIROS_EPHE_PATH=<dir> to opt into full SWIEPH
-// precision; see engine/src/ephemeris.ts.
-export const CALC_FLAGS = resolveCalcFlags();
-export const HOUSE_FLAGS = resolveHouseFlags();
+/** Swiss Ephemeris Gregorian-calendar flag (SE_GREG_CAL). */
+export const SE_GREG_CAL = 1;
 
 export const DEGREES_PER_SIGN = 30;
 export const SIGN_COUNT = 12;
@@ -17,24 +17,65 @@ export const SIGNS = [
 ] as const;
 export type Sign = (typeof SIGNS)[number];
 
+/** Normalize an ecliptic longitude into [0, 360). Values already in range are
+ *  returned UNCHANGED (bit-exact): the `(x % 360 + 360) % 360` arithmetic
+ *  rounds in the last ulp, and sweph output (always in range) must pass
+ *  through without any floating-point wobble. */
+function normalizedLongitude(longitude: number): number {
+  if (longitude >= 0 && longitude < 360) return longitude;
+  return ((longitude % 360) + 360) % 360;
+}
+
+/** Sign index 0..11 (Aries..Pisces) for an ecliptic longitude. Accepts any
+ *  input (negative or >= 360 is normalized into [0, 360) first). */
+export function signIndexOf(longitude: number): number {
+  return Math.floor(normalizedLongitude(longitude) / DEGREES_PER_SIGN) % SIGN_COUNT;
+}
+
+/** Degrees into the sign (0..30) at an ecliptic longitude. */
+export function degInSignOf(longitude: number): number {
+  return normalizedLongitude(longitude) - signIndexOf(longitude) * DEGREES_PER_SIGN;
+}
+
+/** Smallest angular distance (0..180) between two ecliptic longitudes. */
+export function separation(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+/**
+ * Signed shortest angular path from lon1 to lon2, in (-180, 180].
+ * Positive means lon2 is "ahead of" lon1 in the direction of increasing
+ * longitude. Used so root-finding has a continuous function that changes sign
+ * as an aspect perfects, rather than the always-positive `separation`.
+ */
+export function signedSeparation(lon1: number, lon2: number): number {
+  let d = (lon2 - lon1) % 360;
+  if (d > 180) d -= 360;
+  if (d < -180) d += 360;
+  return d;
+}
+
 export interface PlanetDef {
   name: string;
   id: number;
   classical: boolean; // one of the 7 traditional planets (used for horary rulership)
 }
 
+// Body ids are the Swiss Ephemeris SE_* constants (SE_SUN..SE_PLUTO,
+// SE_MEAN_NODE) — part of the stable ABI shared by both ephemeris backends.
 export const PLANETS: PlanetDef[] = [
-  { name: "Sun", id: sweph.constants.SE_SUN, classical: true },
-  { name: "Moon", id: sweph.constants.SE_MOON, classical: true },
-  { name: "Mercury", id: sweph.constants.SE_MERCURY, classical: true },
-  { name: "Venus", id: sweph.constants.SE_VENUS, classical: true },
-  { name: "Mars", id: sweph.constants.SE_MARS, classical: true },
-  { name: "Jupiter", id: sweph.constants.SE_JUPITER, classical: true },
-  { name: "Saturn", id: sweph.constants.SE_SATURN, classical: true },
-  { name: "Uranus", id: sweph.constants.SE_URANUS, classical: false },
-  { name: "Neptune", id: sweph.constants.SE_NEPTUNE, classical: false },
-  { name: "Pluto", id: sweph.constants.SE_PLUTO, classical: false },
-  { name: "Node", id: sweph.constants.SE_MEAN_NODE, classical: false },
+  { name: "Sun", id: 0, classical: true },
+  { name: "Moon", id: 1, classical: true },
+  { name: "Mercury", id: 2, classical: true },
+  { name: "Venus", id: 3, classical: true },
+  { name: "Mars", id: 4, classical: true },
+  { name: "Jupiter", id: 5, classical: true },
+  { name: "Saturn", id: 6, classical: true },
+  { name: "Uranus", id: 7, classical: false },
+  { name: "Neptune", id: 8, classical: false },
+  { name: "Pluto", id: 9, classical: false },
+  { name: "Node", id: 10, classical: false },
 ];
 
 // Traditional (classical) sign rulerships, by sign index 0..11 (Aries..Pisces).
@@ -53,6 +94,12 @@ export const SIGN_RULER: string[] = [
   "Saturn",  // Aquarius
   "Jupiter", // Pisces
 ];
+
+/** Classical domicile ruler of the sign occupied at an ecliptic longitude
+ *  (e.g. a house cusp) — the planet that rules that degree by sign rulership. */
+export function rulerOfLongitude(longitude: number): string {
+  return SIGN_RULER[signIndexOf(longitude)];
+}
 
 export interface AspectDef {
   name: string;

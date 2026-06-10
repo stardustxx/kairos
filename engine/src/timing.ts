@@ -21,7 +21,7 @@
  * deterministic prediction; when the exact perfection time is known
  * (aspect.perfectsAtUtc) it is surfaced verbatim alongside the estimate.
  */
-import { DEGREES_PER_SIGN, SIGN_COUNT } from "./constants.js";
+import { signIndexOf } from "./constants.js";
 import type { Aspect, PlanetPosition, Timing } from "./types.js";
 
 /** Time units, ordered fast -> slow, so angularity can shift by one step.
@@ -51,11 +51,6 @@ function modalityOfSignIndex(signIndex: number): Modality {
     default:
       return "common";
   }
-}
-
-/** Sign index 0..11 from an ecliptic longitude. */
-function signIndexOfLongitude(longitude: number): number {
-  return Math.floor(longitude / DEGREES_PER_SIGN) % SIGN_COUNT;
 }
 
 /** Shift a unit one step along the fast->slow ladder, clamped at the ends. */
@@ -99,7 +94,7 @@ function formatPerfectionDate(iso: string): string | null {
  */
 export function estimateTiming(aspect: Aspect, movingPlanet: PlanetPosition): Timing {
   const degreesToPerfection = aspect.orb;
-  const signIndex = signIndexOfLongitude(movingPlanet.longitude);
+  const signIndex = signIndexOf(movingPlanet.longitude);
   const modality = modalityOfSignIndex(signIndex);
   const baseUnit = MODALITY_UNIT[modality];
   const unit = shiftUnit(baseUnit, angularityShift(movingPlanet.house));

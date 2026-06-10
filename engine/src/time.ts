@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
-import sweph from "sweph";
 import tzlookup from "tz-lookup";
+import { SE_GREG_CAL } from "./constants.js";
+import { ephemeris } from "./ephemeris-provider.js";
 import type { MomentInput } from "./types.js";
 
 export interface ResolvedTime {
@@ -15,7 +16,7 @@ export interface ResolvedTime {
  * sub-second jitter; revjul gives the clean UT calendar value we want.)
  */
 export function julianDayToUtcString(julianDayUt: number): string {
-  const r = sweph.revjul(julianDayUt, sweph.constants.SE_GREG_CAL);
+  const r = ephemeris().revjul(julianDayUt, SE_GREG_CAL);
   const whole = Math.floor(r.hour);
   const minFloat = (r.hour - whole) * 60;
   const minute = Math.floor(minFloat);
@@ -43,7 +44,7 @@ export function resolveJulianDay(m: MomentInput): ResolvedTime {
   }
   const utc = local.toUTC();
   const hour = utc.hour + utc.minute / 60 + utc.second / 3600;
-  const jd = sweph.julday(utc.year, utc.month, utc.day, hour, sweph.constants.SE_GREG_CAL);
+  const jd = ephemeris().julday(utc.year, utc.month, utc.day, hour, SE_GREG_CAL);
   return {
     utc: utc.toISO({ suppressMilliseconds: false })!,
     julianDayUt: jd,

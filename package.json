@@ -23,6 +23,9 @@
     "web/app.js",
     "web/chart.js",
     "web/style.css",
+    "web/engine.js",
+    "web/swisseph.wasm",
+    "web/swisseph.data",
     "web/example-output.json",
     "web/README.md",
     "docs/examples",
@@ -33,7 +36,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "prepublishOnly": "tsc -p tsconfig.build.json",
+    "build:web": "node scripts/build-web.mjs",
+    "prepublishOnly": "tsc -p tsconfig.build.json && node scripts/build-web.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "biome check engine",
@@ -68,6 +72,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "luxon": "^3.7.2",
     "sweph": "2.10.3-5",
+    "swisseph-wasm": "0.0.5",
     "tz-lookup": "^6.1.25",
     "zod": "^4.4.3"
   },
@@ -75,6 +80,7 @@
     "@biomejs/biome": "^2.2.0",
     "@types/luxon": "^3.7.1",
     "@types/node": "^25.9.1",
+    "esbuild": "^0.28.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"

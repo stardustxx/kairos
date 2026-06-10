@@ -11,7 +11,7 @@ export type { AntisciaContact } from "./antiscia.js";
 export { antisciaContacts, antiscion, contraAntiscion } from "./antiscia.js";
 export { computeAngleAspects, computeAspects, computeCrossAspects } from "./aspects.js";
 export { buildChart, relocateChart } from "./chart.js";
-export { runCompute } from "./cli.js";
+export { runCompute } from "./compute.js";
 export { sunProximity } from "./conditions.js";
 export type { DignityLords } from "./dignities.js";
 export { computeDignities, receptionBetween } from "./dignities.js";

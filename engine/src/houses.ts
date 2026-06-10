@@ -1,5 +1,4 @@
-import sweph from "sweph";
-import { HOUSE_FLAGS } from "./constants.js";
+import { ephemeris } from "./ephemeris-provider.js";
 import type { Houses } from "./types.js";
 
 export function computeHouses(
@@ -8,7 +7,8 @@ export function computeHouses(
   longitude: number,
   system = "P",
 ): Houses {
-  const res = sweph.houses_ex2(julianDayUt, HOUSE_FLAGS, latitude, longitude, system);
+  const ephe = ephemeris();
+  const res = ephe.houses_ex2(julianDayUt, ephe.houseFlags, latitude, longitude, system);
   if (res.error && res.error.length > 0) {
     throw new Error(`sweph.houses_ex2 failed: ${res.error}`);
   }

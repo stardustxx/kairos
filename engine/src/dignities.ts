@@ -9,7 +9,7 @@
  * triplicities (day / night / PARTICIPATING rulers), Egyptian terms (bounds),
  * and Chaldean faces (decans).
  */
-import { DEGREES_PER_SIGN, SIGN_COUNT, SIGN_RULER, SIGNS } from "./constants.js";
+import { degInSignOf, SIGN_RULER, SIGNS, signIndexOf } from "./constants.js";
 import type { PlanetDignities, Reception } from "./types.js";
 
 // Lilly point values. The in-sect triplicity ruler keeps the full +3; the
@@ -102,13 +102,6 @@ const FACES: string[][] = [
   ["Venus", "Mercury", "Moon"],     // Aquarius
   ["Saturn", "Jupiter", "Mars"],    // Pisces
 ];
-
-function signIndexOf(longitude: number): number {
-  return Math.floor((((longitude % 360) + 360) % 360) / DEGREES_PER_SIGN) % SIGN_COUNT;
-}
-function degInSignOf(longitude: number): number {
-  return (((longitude % 360) + 360) % 360) - signIndexOf(longitude) * DEGREES_PER_SIGN;
-}
 
 function termRuler(signIndex: number, deg: number): string {
   for (const [upper, ruler] of TERMS[signIndex]) if (deg < upper) return ruler;

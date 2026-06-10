@@ -32,7 +32,7 @@ function kairosHome(): string {
 }
 
 /** Where the extracted gazetteer lives: <home>/geonames/cities15000.txt. */
-export function geonamesDir(): string {
+function geonamesDir(): string {
   return join(kairosHome(), "geonames");
 }
 

@@ -18,7 +18,7 @@
  * ephemeris lookup.
  */
 import { computeAspects, operativeOrb } from "./aspects.js";
-import { ASPECTS } from "./constants.js";
+import { ASPECTS, signedSeparation } from "./constants.js";
 import { receivesByDomicileOrExaltation } from "./dignities.js";
 import type {
   Besieging,
@@ -27,15 +27,6 @@ import type {
   Prohibition,
   Refranation,
 } from "./types.js";
-
-/** Signed shortest angular path from lon1 to lon2, in (-180, 180]. Positive =
- *  lon2 is ahead of lon1 in the direction of increasing longitude. */
-function signedSeparation(lon1: number, lon2: number): number {
-  let d = (lon2 - lon1) % 360;
-  if (d > 180) d -= 360;
-  if (d < -180) d += 360;
-  return d;
-}
 
 /**
  * Days until an applying aspect between two bodies perfects, by relative angular
@@ -214,7 +205,7 @@ interface Touch {
  * operativeOrb(body, planet) of the aspect angle — the same per-pair orb the
  * aspect engine uses, so no new orb constant is introduced.
  */
-export function enclosingBodies(
+function enclosingBodies(
   planet: string,
   planets: PlanetPosition[],
 ): { behind: Touch | null; ahead: Touch | null } {

@@ -216,6 +216,9 @@ importers:
       sweph:
         specifier: 2.10.3-5
         version: 2.10.3-5
+      swisseph-wasm:
+        specifier: 0.0.5
+        version: 0.0.5
       tz-lookup:
         specifier: ^6.1.25
         version: 6.1.25
@@ -232,6 +235,9 @@ importers:
       '@types/node':
         specifier: ^25.9.1
         version: 25.9.1
+      esbuild:
+        specifier: ^0.28.0
+        version: 0.28.0
       tsx:
         specifier: ^4.22.4
         version: 4.22.4
@@ -1139,6 +1145,10 @@ packages:
 
   sweph@2.10.3-5:
     resolution: {integrity: sha512-sbdfm9rvcLbImBRPSsfts1NP6rpwx4UrdjtyN6XKr7GqQjmuTxllwSRTmH4vjWFjgo4aBmali38V/hf1IM6h9A==}
+
+  swisseph-wasm@0.0.5:
+    resolution: {integrity: sha512-v4n6gV79pWJEW0EbIo4P7B2of6Wnl3MLkrJdaEBf7Fj5zjyMYX1FWsqNnsJbydt4ztROF+UCa+I+UGdT4JVfTw==}
+    engines: {node: '>=14.0.0'}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -2080,6 +2090,8 @@ snapshots:
     dependencies:
       node-addon-api: 8.8.0
       node-gyp-build: 4.8.4
+
+  swisseph-wasm@0.0.5: {}
 
   tinybench@2.9.0: {}
 

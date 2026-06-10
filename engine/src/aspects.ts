@@ -1,13 +1,13 @@
-import { ASPECTS, DEFAULT_PLANET_ORB, PLANET_ORB } from "./constants.js";
-import { computePositionsAtJd } from "./positions.js";
+import {
+  ASPECTS,
+  DEFAULT_PLANET_ORB,
+  PLANET_ORB,
+  separation,
+  signedSeparation,
+} from "./constants.js";
+import { longitudeAtJd } from "./positions.js";
 import { julianDayToUtcString } from "./time.js";
 import type { Aspect, PlanetPosition } from "./types.js";
-
-/** Smallest angular distance (0..180) between two ecliptic longitudes. */
-function separation(a: number, b: number): number {
-  const d = Math.abs(a - b) % 360;
-  return d > 180 ? 360 - d : d;
-}
 
 /** Full orb of a single body (Lilly's moiety table), with a small default for
  *  non-classical points (modern planets, Node, Part of Fortune). */
@@ -25,19 +25,6 @@ function planetOrb(name: string): number {
  */
 export function operativeOrb(nameA: string, nameB: string): number {
   return (planetOrb(nameA) + planetOrb(nameB)) / 2;
-}
-
-/**
- * Signed shortest angular path from lon1 to lon2, in (-180, 180].
- * Positive means lon2 is "ahead of" lon1 in the direction of increasing
- * longitude. Used so root-finding has a continuous function that changes sign
- * as an aspect perfects, rather than the always-positive `separation`.
- */
-function signedSeparation(lon1: number, lon2: number): number {
-  let d = (lon2 - lon1) % 360;
-  if (d > 180) d -= 360;
-  if (d < -180) d += 360;
-  return d;
 }
 
 const CONVERGENCE_DEG = 0.001; // ~3.6 arcsec; far tighter than any orb
@@ -146,13 +133,12 @@ export function computeAspects(
 
         if (chartJd != null) {
           // Real-motion timing: look the two bodies up at trial times.
-          const lonAt = (jd: number) => {
-            const ps = computePositionsAtJd(jd);
-            return {
-              lon1: ps.find((p) => p.name === A.name)!.longitude,
-              lon2: ps.find((p) => p.name === B.name)!.longitude,
-            };
-          };
+          // Only the pair in contact is computed (not the full planet set) —
+          // the same per-body sweph lookup, so the longitudes are identical.
+          const lonAt = (jd: number) => ({
+            lon1: longitudeAtJd(A.name, jd),
+            lon2: longitudeAtJd(B.name, jd),
+          });
           const jd = findAspectPerfectionJd(lonAt, def.angle, chartJd, maxHourOffset);
           perfectsAtUtc = jd != null ? julianDayToUtcString(jd) : null;
           // Applying iff perfection lies in the future of the chart moment.
@@ -206,13 +192,10 @@ export function computeCrossAspects(
         if (chartJd != null) {
           // Natal longitude is fixed; only the transiting body is looked up.
           const natalLon = N.longitude;
-          const lonAt = (jd: number) => {
-            const ps = computePositionsAtJd(jd);
-            return {
-              lon1: ps.find((p) => p.name === T.name)!.longitude,
-              lon2: natalLon,
-            };
-          };
+          const lonAt = (jd: number) => ({
+            lon1: longitudeAtJd(T.name, jd),
+            lon2: natalLon,
+          });
           const jd = findAspectPerfectionJd(lonAt, def.angle, chartJd, maxHourOffset);
           perfectsAtUtc = jd != null ? julianDayToUtcString(jd) : null;
           if (jd != null) {

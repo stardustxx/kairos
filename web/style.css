@@ -138,6 +138,53 @@ code {
   margin-bottom: 0.35rem;
 }
 
+/* In-browser compute form */
+.compute-title { margin: 0; font-size: var(--step-1); letter-spacing: -0.01em; }
+.compute-hint { margin: 0.25rem 0 0.85rem; color: var(--muted); font-size: 0.85rem; }
+.compute-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.compute-field { display: block; }
+.compute-field[hidden] { display: none; }
+.compute-field .optional { font-weight: 400; color: var(--muted); }
+.compute-form input[type="text"],
+.compute-form input[type="number"],
+.compute-form input[type="datetime-local"],
+.compute-form select {
+  font: inherit;
+  font-size: 0.9rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+.compute-form input:focus-visible,
+.compute-form select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.latlon-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.latlon-row input { flex: 1 1 6rem; min-width: 0; }
+.latlon-row button { flex: 0 0 auto; font-size: 0.85rem; white-space: nowrap; }
+.compute-status {
+  align-self: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.controls-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.1rem 0;
+}
+
 .json-input {
   width: 100%;
   min-height: 160px;
@@ -408,6 +455,13 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   grid-template-columns: 1fr auto;
   gap: 0.5rem 1rem;
   align-items: start;
+}
+.verdict-question {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--step-0);
+  font-style: italic;
 }
 .verdict-lead { grid-column: 1; }
 .verdict-lean {

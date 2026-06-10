@@ -1,19 +1,30 @@
-import sweph from "sweph";
-import { CALC_FLAGS, DEGREES_PER_SIGN, PLANETS, SIGN_COUNT, SIGNS } from "./constants.js";
+import { degInSignOf, PLANETS, SIGNS, signIndexOf } from "./constants.js";
+import { ephemeris } from "./ephemeris-provider.js";
 import type { PlanetPosition } from "./types.js";
 
 /**
- * Compute all planet positions at an arbitrary Universal Time Julian Day.
- * Thin alias of computePositions, named for clarity in timing/root-finding code
- * that queries the ephemeris at trial times rather than the chart moment.
+ * Ecliptic longitude of a single named body at an arbitrary Universal Time
+ * Julian Day. Used by aspect-perfection root-finding, which samples the
+ * ephemeris at many trial times but only ever needs the one or two bodies in
+ * contact — computing just the body asked for keeps the search several times
+ * cheaper than a full all-planet pass while returning the identical longitude
+ * (each sweph calc_ut call is independent per body).
  */
-export function computePositionsAtJd(julianDayUt: number): PlanetPosition[] {
-  return computePositions(julianDayUt);
+export function longitudeAtJd(name: string, julianDayUt: number): number {
+  const def = PLANETS.find((p) => p.name === name);
+  if (!def) throw new Error(`unknown body for ephemeris lookup: ${name}`);
+  const ephe = ephemeris();
+  const res = ephe.calc_ut(julianDayUt, def.id, ephe.calcFlags);
+  if (res.error && res.error.length > 0 && res.flag < 0) {
+    throw new Error(`sweph.calc_ut failed for ${name}: ${res.error}`);
+  }
+  return res.data[0];
 }
 
 export function computePositions(julianDayUt: number): PlanetPosition[] {
+  const ephe = ephemeris();
   return PLANETS.map((def) => {
-    const res = sweph.calc_ut(julianDayUt, def.id, CALC_FLAGS);
+    const res = ephe.calc_ut(julianDayUt, def.id, ephe.calcFlags);
     // sweph sets `error` on non-fatal warnings too; only flag < 0 is a hard failure.
     if (res.error && res.error.length > 0 && res.flag < 0) {
       throw new Error(`sweph.calc_ut failed for ${def.name}: ${res.error}`);
@@ -26,13 +37,12 @@ export function computePositions(julianDayUt: number): PlanetPosition[] {
     // to ~5.1°), nowhere near the Sun's body. The Sun's own latitude is ~0.
     const eclipticLatitude = res.data[1];
     const speed = res.data[3];
-    const signIndex = Math.floor(longitude / DEGREES_PER_SIGN) % SIGN_COUNT;
     return {
       name: def.name,
       longitude,
       eclipticLatitude,
-      sign: SIGNS[signIndex],
-      degInSign: longitude - signIndex * DEGREES_PER_SIGN,
+      sign: SIGNS[signIndexOf(longitude)],
+      degInSign: degInSignOf(longitude),
       retrograde: speed < 0,
       speed,
     };
