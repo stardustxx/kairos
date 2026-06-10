@@ -176,12 +176,12 @@ npx -y kairos-astrology mcp
 # Or use the bundled MCP server via Claude Code's MCP configuration
 ```
 
-The server prints a one-line ready notice to stderr and then nothing more — stdout is reserved
-for the MCP protocol, so an otherwise quiet terminal is success. Point an MCP client at it and
-it is ready to accept tool calls.
+The server prints a one-line ready notice to stderr and then nothing more, because stdout is
+reserved for the MCP protocol. An otherwise quiet terminal is success: point an MCP client at
+it and it is ready to accept tool calls.
 
 Note: the raw MCP tools expose the ephemeris and verdict engine. The Claude Code plugin's skill
-layer adds the judgment discipline — question classification, the house-mapping table, two-layer
+layer adds the judgment discipline: question classification, the house-mapping table, two-layer
 output, falsifiability lines, and journal-by-default. If you are using the MCP server without
 the plugin, you are getting the engine without that calibration harness.
 
@@ -224,8 +224,8 @@ On Intel macOS (and musl Linux), the first `npx -y kairos-astrology …` or
 Command Line Tools (`xcode-select --install`) on Mac, or `build-base` +
 `python3` on Alpine. This is a one-time cost; once built, subsequent runs are
 fast. If the required toolchain is absent, the CLI and MCP server now fail with
-an actionable message — the exact install command (`xcode-select --install` on
-Mac, `apk add build-base python3` on Alpine, or the Docker fallback) — rather
+an actionable message naming the exact install command (`xcode-select --install`
+on Mac, `apk add build-base python3` on Alpine, or the Docker fallback) rather
 than emitting an opaque node-gyp stack trace.
 
 You do not need any ephemeris data files for this. Kairos defaults to Swiss
@@ -265,7 +265,7 @@ pnpm -s geocode 'Tokyo'         # → [{ name, country, latitude, longitude, tim
 ```
 
 When using the MCP server, the `geocode_install` MCP tool handles the one-time city-database
-download interactively with user consent — no shell command required.
+download interactively with user consent, no shell command required.
 
 ### Render a chart wheel
 
