@@ -93,6 +93,9 @@ export function scoreElectionalMoment(
   const moon = planets.find((p) => p.name === "Moon")!;
 
   // --- Moon: the primary timer ---
+  // Pass chartJd=undefined so moonVoidStatus uses the cheap 1-hour look-ahead
+  // (not full root-finding). The 1-hour step is correct for orbs > 0.54° and
+  // eliminates the 1-day overshoot that can mask a true void for the Moon.
   const moonStatus = moonVoidStatus(planets);
   if (moonStatus.void) {
     add(-40, "Moon void-of-course");
@@ -136,7 +139,11 @@ export function scoreElectionalMoment(
   const sigA = planets.find((p) => p.name === querent);
   const sigB = planets.find((p) => p.name === quesited);
   if (sigA && sigB && sigA.name !== sigB.name) {
-    const between = computeAspects([sigA, sigB]);
+    // Use the 1-hour look-ahead (1/24 day) to correctly determine applying vs
+    // separating for fast-moving bodies (especially the Moon as a significator)
+    // without root-finding cost. The legacy 1-day step overshoots the Moon by
+    // ~12° and can flip applying/separating for any in-orb contact.
+    const between = computeAspects([sigA, sigB], undefined, 30, 1 / 24);
     const applying = between.filter((a) => a.applying);
     const chosen =
       (applying.length ? applying : between).sort((x, y) => x.orb - y.orb)[0] ??

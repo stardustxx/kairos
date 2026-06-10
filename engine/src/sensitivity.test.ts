@@ -50,6 +50,10 @@ const NEAR = 5;
 interface ChartRef {
   id: string;
   quesitedHouse: number;
+  /** Radix house of the querent for TURNED charts (default 1). Must be carried
+   *  through, or a turned corpus case is silently analyzed as a different,
+   *  unturned chart than the conformance suite pins. */
+  querentHouse?: number;
   moment: { datetimeLocal: string; latitude: number; longitude: number; timezone: string };
 }
 
@@ -81,6 +85,7 @@ interface ConformanceCase {
   longitude: number;
   timezone: string;
   quesitedHouse: number;
+  querentHouse?: number;
 }
 
 const CORPUS_CASES = (
@@ -91,6 +96,7 @@ const CORPUS_CASES = (
   (c): ChartRef => ({
     id: c.id,
     quesitedHouse: c.quesitedHouse,
+    ...(c.querentHouse != null ? { querentHouse: c.querentHouse } : {}),
     moment: {
       datetimeLocal: c.datetimeLocal,
       latitude: c.latitude,
@@ -113,6 +119,7 @@ type WeightKey =
   | "softPerfection" // +40 applying conjunction/sextile/trine
   | "squareApply" // +8 applying square (friction)
   | "oppositionApply" // -8 applying opposition (regret)
+  | "separatingDenial" // -12 separating significators with no surviving perfection path
   | "moonSoft" // +20 Moon applies soft to quesited
   | "moonHard" // +5 Moon applies hard to quesited
   | "translation" // +18 translation of light
@@ -143,6 +150,11 @@ function classify(line: string): WeightKey | null {
   if (line.startsWith("Significators perfect by applying")) return "softPerfection";
   if (line.startsWith("Significators apply by square")) return "squareApply";
   if (line.startsWith("Significators apply by opposition")) return "oppositionApply";
+  // The DENIAL form ("Significators separating … no way of perfection remains")
+  // must be tested BEFORE the 0-weight "Significators only separating" narrative
+  // fallback (which classifies to null below) — distinct prose, distinct key.
+  if (line.startsWith("Significators separating") && line.includes("no way of perfection remains"))
+    return "separatingDenial";
   if (line.startsWith("Moon (co-significator of querent) applies")) return "moonSoft";
   if (line.startsWith("Moon applies by") && line.includes("testimony with difficulty"))
     return "moonHard";
@@ -203,8 +215,12 @@ interface ChartScore {
 const WEIGHT_RE = /\(([+-]\d+)\)\s*$/;
 
 function judgeLive(ref: ChartRef): HoraryJudgment {
-  return runCompute({ kind: "horary", quesitedHouse: ref.quesitedHouse, moment: ref.moment })
-    .horary!;
+  return runCompute({
+    kind: "horary",
+    quesitedHouse: ref.quesitedHouse,
+    ...(ref.querentHouse != null ? { querentHouse: ref.querentHouse } : {}),
+    moment: ref.moment,
+  }).horary!;
 }
 
 /** Parse the live judgment into a reconstructable ChartScore. */
@@ -286,6 +302,7 @@ const ALL_KEYS: WeightKey[] = [
   "softPerfection",
   "squareApply",
   "oppositionApply",
+  "separatingDenial",
   "moonSoft",
   "moonHard",
   "translation",

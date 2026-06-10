@@ -7,6 +7,7 @@ import {
   scoreElectionalMoment,
   searchElectionalMoments,
 } from "../src/electional.js";
+import { moonVoidStatus } from "../src/horary.js";
 import type { Aspect, MomentInput } from "../src/types.js";
 
 // Location without a datetime; the search/chart helpers supply datetimeLocal.
@@ -190,5 +191,54 @@ describe("runCompute electional integration", () => {
         location: NYC,
       }),
     ).toThrow(/window/);
+  });
+});
+
+describe("electional void-of-course plumbing — 1-day overshoot fix", () => {
+  // 2024-01-01 16:00 UTC: Moon at ~166.3° Virgo (speed ~11.8°/day) is 5.86°
+  // short of a square to retrograde Mercury at ~262.2° Sagittarius.
+  // The legacy 1-day finite-difference step overshoots the perfection by
+  // ~11.8° and reports the aspect as separating (orb increases from 5.86° to
+  // ~5.98° after 1 full day), giving 0 applying Moon contacts → Moon appears
+  // void-of-course.  The 1-hour look-ahead correctly identifies the Moon as
+  // applying (orb shrinks from 5.86° to ~5.36° in 1 hour) → Moon NOT void.
+  // Root-finding (the gold-standard used in horary) agrees with the 1-hour step.
+  const MOMENT: MomentInput = {
+    latitude: 40.7128,
+    longitude: -74.006,
+    timezone: "America/New_York",
+    datetimeLocal: "2024-01-01T16:00:00",
+  };
+
+  it("moonVoidStatus (no chartJd) reports the Moon NOT void via the 1-hour step", () => {
+    const chart = buildChart("electional", MOMENT, { aspectTiming: false });
+    // No chartJd → uses 1/24-day look-ahead inside moonVoidStatus.
+    const status = moonVoidStatus(chart.planets);
+    expect(status.void).toBe(false);
+    // The next aspect should be the Moon-Mercury square.
+    expect(status.next).not.toBeNull();
+    expect(
+      (status.next!.a === "Moon" || status.next!.b === "Moon") &&
+        (status.next!.a === "Mercury" || status.next!.b === "Mercury"),
+    ).toBe(true);
+    expect(status.next!.type).toBe("square");
+  });
+
+  it("moonVoidStatus with chartJd (root-found) agrees: Moon NOT void", () => {
+    const chart = buildChart("electional", MOMENT, { aspectTiming: false });
+    const status = moonVoidStatus(chart.planets, chart.julianDayUt);
+    expect(status.void).toBe(false);
+    expect(status.next?.type).toBe("square");
+  });
+
+  it("scoreElectionalMoment uses the corrected void status (+20 not -40)", () => {
+    const chart = buildChart("electional", MOMENT, { aspectTiming: false });
+    const { score, reasons } = scoreElectionalMoment(chart, 7);
+    const moonReason = reasons.find((r) => r.startsWith("Moon "));
+    // Correctly NOT void → should earn +20, not -40.
+    expect(moonReason).toMatch(/not void-of-course \+20/);
+    // Score should reflect the +20 Moon bonus (not the -40 void penalty).
+    // Exact score varies with other rules, but the Moon line must be +20.
+    expect(score).toBeGreaterThan(50); // above neutral baseline from Moon alone
   });
 });

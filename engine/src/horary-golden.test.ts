@@ -200,29 +200,32 @@ describe("horary golden charts (verdict regression baseline)", () => {
     });
   });
 
-  // 6. INDIRECT perfection via COLLECTION: no perfecting direct aspect, but
-  //    Mercury collects both significators' light (+15). The former headline —
-  //    "Jupiter carries Mars to Saturn" — was never a classically valid
-  //    translation: Jupiter is HEAVIER than quesited Mars, and Lilly's
-  //    lighter-planet condition (CA p. 111) bars a slow body from carrying light
-  //    between faster ones, so the lighter-translator gate removed that +18
-  //    (score 48 -> 30, lean unchanged favorable, confidence high -> medium).
-  //    KNOWN FOLLOW-UP: findCollection has no mirror "heavier-collector"
-  //    condition yet, so light Mercury "collecting" here is itself doctrinally
-  //    loose — left for a corpus-adjudicated round.
-  it("indirect perfection: Mercury collects Mars and Saturn (London, 10th)", () => {
+  // 6. DEAD-BAND DEMONSTRATION (heavier-collector gate): no perfecting direct
+  //    aspect and no valid collection. Mercury (|speed| ~1.0–1.5 deg/day) is
+  //    FASTER than both querent Saturn (|speed| ~0.06) and quesited Mars
+  //    (|speed| ~0.6); Lilly (CA pp. 110-111) requires the collector to be a MORE
+  //    PONDEROUS (slower) planet than both significators. Mercury fails that gate —
+  //    a swift body cannot gather the light of slower ones. With the heavier-
+  //    collector gate applied, collection dies, score drops 30 → 15, and the lean
+  //    falls from favorable into the ±15 dead band (uncertain). This chart now
+  //    demonstrates the dead-band behaviour: real signals present (Moon applies
+  //    hard to quesited +5, reception +5, Mars dignity +5) but not enough for a
+  //    directional verdict.
+  it("dead-band: heavier-collector gate kills Mercury collection, score in dead band (London, 10th)", () => {
     expect(judge(LONDON, "2024-01-16T08:00:00", 10)).toEqual({
-      lean: "favorable",
-      confidence: "medium",
-      score: 30,
-      perfection: { direct: false, broken: [], indirectPath: "Mercury" },
+      lean: "uncertain",
+      confidence: "low",
+      score: 15,
+      perfection: { direct: false, broken: [], indirectPath: null },
       timing: null,
       testimonies: [
         // Saturn (querent) 334.72° and Mars (quesited) 278.76° are 55.96° apart:
         // 4.04° off a sextile; in orb under moiety orbs but separating, 0 weight.
         "Significators only separating (sextile) — the matter is past, not forming (0)",
         "Moon applies by square to the quesited — testimony with difficulty (+5)",
-        "Collection of light by Mercury (+15)",
+        // Mercury (|speed| ~1.2) is faster than Saturn (|speed| ~0.06) and Mars
+        // (|speed| ~0.6), so it fails Lilly's heavier-collector condition and
+        // cannot gather their light — collection silently removed by the gate.
         "One-way reception (Saturn receives the other by domicile) (+5)",
         "Quesited significator Mars well-dignified (dignity +5) (+5)",
         "Almuten of the 1st (querent) is Mars (more dignified than ruler Saturn) — Mars has the strongest say over the querent (0)",
@@ -259,33 +262,33 @@ describe("horary golden charts (verdict regression baseline)", () => {
     });
   });
 
-  // 8. PROHIBITION with an INDIRECT RESCUE: the direct square is broken by both
-  //    prohibition and refranation, but a sound Mars collection survives, so the
-  //    -25/-22 breakers carry a +12 indirect-recovery credit and indirectPath is
-  //    set. This is exactly the kind of chart the upcoming
-  //    prohibition-with-reception work will revisit — pin it now.
-  it("prohibition broken but rescued indirectly through Mars (London, 10th)", () => {
-    // Participating-ruler re-baseline: quesited Jupiter is in Gemini (Air), whose
-    // PARTICIPATING triplicity ruler is Jupiter (+1). Jupiter's dignity rises from
-    // peregrine -5 to detriment -5 + participating +1 = -4, which no longer clears
-    // the "debilitated" (≤ -5) threshold — so the "Quesited significator Jupiter
-    // debilitated (-5)" testimony drops, the score rises -21 → -16, and that
-    // crosses the |score| ≥ 20 confidence band so confidence falls medium → low.
+  // 8. STRONG UNFAVORABLE: double-broken (prohibition + refranation) with no
+  //    surviving indirect rescue. The former "Mars collection" is removed by the
+  //    heavier-collector gate: Mars (|speed| ~0.66 deg/day) is faster than the
+  //    quesited significator Jupiter (|speed| ~0.16 deg/day) — Lilly's more-
+  //    ponderous condition (CA pp. 110-111) requires the collector to be SLOWER
+  //    than BOTH significators. Mars fails that test, so no collection fires. With
+  //    the rescue path gone, the matter is categorically denied: the applying
+  //    square is suppressed to (0), the -25/-22 breakers dominate, and the score
+  //    falls to -51 (high-confidence unfavorable). The heavier-collector gate
+  //    correctly removes an impossible Mars-collects-Jupiter scenario.
+  it("strong unfavorable: double-broken, Mars collection removed by heavier gate (London, 10th)", () => {
     expect(judge(LONDON, "2024-08-11T20:00:00", 10)).toEqual({
       lean: "unfavorable",
-      confidence: "low",
-      score: -16,
-      perfection: { direct: false, broken: ["prohibition", "refranation"], indirectPath: "Mars" },
+      confidence: "high",
+      score: -51,
+      perfection: { direct: false, broken: ["prohibition", "refranation"], indirectPath: null },
       timing: { unit: "days", amount: 2 },
       testimonies: [
-        "Significators apply by square — perfection with friction (+8)",
-        "Collection of light by Mars (+15)",
+        // The applying square is SUPPRESSED (surviving denial, no rescue path):
+        // Mars (|speed| ~0.66) > Jupiter (|speed| ~0.16) → Mars fails the heavier-
+        // collector gate and cannot rescue the prohibited matter.
+        "Significators apply by square, but suppressed: the matter is prohibited before it completes — it earns nothing (0)",
         "One-way reception (Jupiter receives the other by domicile) (+5)",
         "Querent significator Saturn debilitated (dignity -5) (-5)",
         "Querent significator Saturn retrograde — hesitation or reversal (-4)",
         "Prohibition: Moon perfects by trine with Saturn before the significators — the matter is cut off (-25)",
         "Refranation: Saturn turns back (retrograde/stationing) before the significators perfect — the matter withdraws (-22)",
-        "Indirect recovery: though prohibited directly, Mars carries the light between the significators — the matter can still come together that way (+12)",
       ],
     });
   });

@@ -103,9 +103,25 @@ function findTranslation(
 }
 
 /**
- * Collection of light: a third (typically heavier) planet that BOTH
- * significators apply to, gathering their light so the matter perfects through
- * an intermediary. Returns the first such collector found, or null.
+ * Collection of light: a HEAVIER (slower) third planet that BOTH significators
+ * apply to, gathering their light so the matter perfects through an
+ * intermediary. Returns the first such collector found, or null.
+ *
+ * The heavier-planet condition mirrors Lilly's lighter-planet condition for
+ * translation (CA p. 110-111: "collection is by a more ponderous planet"). Only
+ * a body SLOWER than BOTH significators can gather their light — a faster body
+ * that both significators apply to is not a collector but merely a swift
+ * bystander. Without this gate a light, swift planet (e.g. Mercury between
+ * slower Mars and Saturn) is mislabeled a collector.
+ *
+ * CONSIDERED AND DEFERRED (corpus-adjudicated, like every doctrine here):
+ * (a) Lilly's full condition also requires BOTH significators to RECEIVE the
+ *     collector "in some of their essentiall dignities" — not yet implemented;
+ *     no corpus case turns on it. Adding it would make collection rarer.
+ * (b) "More ponderous" is proxied by instantaneous |speed|; a stationing swift
+ *     planet momentarily reads "slower" than its nature. Sphere order
+ *     (Saturn>Jupiter>Mars>Sun>Venus>Mercury>Moon) is the alternative — if ever
+ *     adopted, apply it to the translation gate too for consistency.
  */
 function findCollection(
   aspects: Aspect[],
@@ -113,8 +129,13 @@ function findCollection(
   quesitedSig: string,
   bodies: PlanetPosition[],
 ): CollectionOfLight | null {
+  const sigA = bodies.find((p) => p.name === querentSig);
+  const sigB = bodies.find((p) => p.name === quesitedSig);
   for (const T of bodies) {
     if (T.name === querentSig || T.name === quesitedSig) continue;
+    // Heavier (slower) than both significators, or it cannot collect their light.
+    if (sigA && Math.abs(T.speed) >= Math.abs(sigA.speed)) continue;
+    if (sigB && Math.abs(T.speed) >= Math.abs(sigB.speed)) continue;
     const fromQuerent = aspectBetween(aspects, T.name, querentSig);
     const fromQuesited = aspectBetween(aspects, T.name, quesitedSig);
     if (fromQuerent?.applying && fromQuesited?.applying) {
@@ -220,6 +241,35 @@ function aggregateTestimony(args: {
   const denyingProhibition = !!args.prohibition && !prohibitionReceived;
   const survivingDenial = (denyingProhibition || !!args.refranation) && !rescued;
 
+  // PERFECTION-BY-LOCATION predicates, hoisted above the aspect block: they are
+  // pure over args, and the separating-as-denial rule below must know whether a
+  // location testimony will fire. The SCORING for these stays in its original
+  // position further down (see the "dwelling in houses" block).
+  const wellDisposed = (dignity: number, retro: boolean, solar: SolarPhase): boolean =>
+    dignity >= 0 && !retro && solar !== "combust";
+  const locationStrong =
+    args.querentSig !== args.quesitedSig &&
+    args.quesitedSigHouse === args.querentHouse &&
+    wellDisposed(args.quesitedDignity, args.quesitedRetro, args.quesitedSolar);
+  const locationWeak =
+    args.querentSig !== args.quesitedSig &&
+    args.querentSigHouse === args.quesitedHouse &&
+    wellDisposed(args.querentDignity, args.querentRetro, args.querentSolar);
+
+  // SEPARATING-AS-DENIAL gate: does ANY perfection avenue survive? A sound
+  // indirect carrier (translation/collection), the Moon applying to the
+  // quesited, mutual reception (Lilly CA p. 112: "yet if mutuall Reception
+  // happen betwixt the principall significators, the thing is brought to
+  // passe"), or a perfection-by-location testimony. When any of these
+  // survives, separation alone must never override the live carry — the
+  // separating aspect stays a 0-weight narrative line.
+  const perfectionPathSurvives =
+    !!soundCarrierPreview ||
+    !!args.moonApplyingToQuesited ||
+    args.reception?.kind === "mutual" ||
+    locationStrong ||
+    locationWeak;
+
   const a = args.significatorAspect;
   if (a?.applying) {
     if (SOFT_ASPECTS.has(a.type)) {
@@ -248,6 +298,26 @@ function aggregateTestimony(args: {
       score -= 8;
       t.push(`Significators apply by opposition — perfection but regret (-8)`);
     }
+  } else if (a && !perfectionPathSurvives) {
+    // SEPARATING-AS-DENIAL (Lilly, CA p. 110, "Of Separation": significators
+    // "lately seperated" mean the matter "hung in suspence, and there seemed
+    // some dislike or rupture in it; and as the significators doe seperate, so
+    // will the matter and affection of the parties more alienate and vary").
+    // judgeHorary prefers an applying significator aspect, so a separating one
+    // here means none applies; when on top of that NO perfection avenue
+    // survives (see perfectionPathSurvives above), the separation is an active
+    // dissolution, not a neutral narrative. -12: an affliction-class debit at
+    // parity with besieging — Lilly's language is dissolution-in-progress,
+    // weaker than the categorical cut-offs (prohibition -25, refranation -22)
+    // and the void Moon (-30). Practitioner application: Warnock's 2002
+    // grad-school horary reads "separating rather than applying aspect between
+    // her significator and the significator of higher education" as part of a
+    // "decidedly negative" judgment.
+    score -= 12;
+    t.push(
+      `Significators separating (${a.type}) and no way of perfection remains — ` +
+        `the matter dissolves as they part (-12)`,
+    );
   } else if (a) {
     t.push(`Significators only separating (${a.type}) — the matter is past, not forming (0)`);
   } else {
@@ -342,37 +412,25 @@ function aggregateTestimony(args: {
   // podesta example: location accomplishes the matter only "if Jupiter himself
   // were to be in a good state and well disposed") the LOCATED significator must
   // be well disposed: non-negative essential dignity, direct, not combust.
-  const wellDisposed = (dignity: number, retro: boolean, solar: SolarPhase): boolean =>
-    dignity >= 0 && !retro && solar !== "combust";
-  let locationStrong = false;
-  let locationWeak = false;
-  if (args.querentSig !== args.quesitedSig) {
-    if (
-      args.quesitedSigHouse === args.querentHouse &&
-      wellDisposed(args.quesitedDignity, args.quesitedRetro, args.quesitedSolar)
-    ) {
-      locationStrong = true;
-      // +12: below collection (+15) — Lilly calls dwelling-in-houses the weakest
-      // mode of perfection, so it must rank under the aspect-based modes.
-      score += 12;
-      t.push(
-        `Quesited significator ${args.quesitedSig} in the querent's ` +
-          `${ordinal(args.querentHouse)} house — the matter comes to the querent ` +
-          `(perfection by location) (+12)`,
-      );
-    }
-    if (
-      args.querentSigHouse === args.quesitedHouse &&
-      wellDisposed(args.querentDignity, args.querentRetro, args.querentSolar)
-    ) {
-      locationWeak = true;
-      score += 10;
-      t.push(
-        `Querent significator ${args.querentSig} in the quesited's ` +
-          `${ordinal(args.quesitedHouse)} house — the querent goes to the matter ` +
-          `(perfection by location) (+10)`,
-      );
-    }
+  // (The locationStrong/locationWeak predicates are computed above the aspect
+  // block — the separating-as-denial rule needs them — but SCORED here.)
+  if (locationStrong) {
+    // +12: below collection (+15) — Lilly calls dwelling-in-houses the weakest
+    // mode of perfection, so it must rank under the aspect-based modes.
+    score += 12;
+    t.push(
+      `Quesited significator ${args.quesitedSig} in the querent's ` +
+        `${ordinal(args.querentHouse)} house — the matter comes to the querent ` +
+        `(perfection by location) (+12)`,
+    );
+  }
+  if (locationWeak) {
+    score += 10;
+    t.push(
+      `Querent significator ${args.querentSig} in the quesited's ` +
+        `${ordinal(args.quesitedHouse)} house — the querent goes to the matter ` +
+        `(perfection by location) (+10)`,
+    );
   }
 
   // Significator essential strength: a well-dignified significator helps, a
@@ -516,6 +574,19 @@ function aggregateTestimony(args: {
   // significators be very strong") is deliberately NOT implemented: he gives no
   // operational threshold for "very strong", no corpus case turns on it, and an
   // undecidable clause would be a tuning knob rather than doctrine.
+  // CONSIDERED AND DEFERRED — void-vs-carry override: a rule that a sound
+  // translation/collection in progress overrides the void-Moon debit was
+  // investigated and rejected. Its only evidential basis was Lilly's 1646
+  // marriage chart, and modern recalculation (Anthony Louis, 2024-05-02) shows
+  // the supposed translation never existed at accurate positions (the Moon
+  // separates from BOTH significators; Lilly's revised yes leaned on a
+  // non-Ptolemaic semi-sextile and period table errors). No classical TEXT
+  // states such an override — Lilly's only void mitigations (CA p. 122) are the
+  // sign exception below and the unimplemented "very strong" clause. If ever
+  // revisited, it must be ordered strictly AFTER a heavier-collector gate on
+  // findCollection, or a doctrinally impossible light-planet "collection" would
+  // flip Warnock's 1999 job-in-90-days chart anti-correlated with the
+  // practitioner's no.
   if (args.moonVoid) {
     if (VOID_MITIGATING_SIGNS.has(args.moonSign)) {
       score -= 15;
@@ -657,7 +728,16 @@ export function moonVoidStatus(
   const classical = planets.filter((p) => classicalNames.has(p.name));
   const speedOf = (name: string): number => classical.find((p) => p.name === name)?.speed ?? 0;
 
-  const aspectsWithMoon = computeAspects(classical, chartJd).filter(
+  // When chartJd is supplied (horary, transit): full root-finding for exact
+  // applying flags and perfectsAtUtc — one-time cost per chart, acceptable.
+  // When chartJd is absent (electional bulk scan): use a 1-hour look-ahead
+  // (1/24 day) instead of the legacy 1-day step. The 1-day step overshoots
+  // the fast-moving Moon (13°/day) — it can report an aspect in the next sign
+  // as applying, masking a true void. The 1-hour step is free (no ephemeris
+  // calls) and accurate for orbs > 0.54° (~all practical cases; an aspect
+  // within 0.54° is essentially at perfection, never void).
+  const lookAheadDays = chartJd != null ? 1.0 : 1 / 24;
+  const aspectsWithMoon = computeAspects(classical, chartJd, 30, lookAheadDays).filter(
     (a) => (a.a === "Moon" || a.b === "Moon") && a.applying,
   );
   if (aspectsWithMoon.length === 0) {
@@ -723,7 +803,12 @@ export function judgeHorary(
   const sigB = chart.planets.find((p) => p.name === quesitedSig);
   let significatorAspect: Aspect | null = null;
   if (sigA && sigB && sigA.name !== sigB.name) {
-    const between = computeAspects([sigA, sigB]);
+    // chartJd-correct applying flag: the significator aspect is the spine of the
+    // verdict, and with the Moon as a significator the legacy one-day step can
+    // misflag an aspect perfecting within hours as separating — which would now
+    // wrongly arm the separating-as-denial testimony. One extra root-find per
+    // chart; negligible for single-chart horary.
+    const between = computeAspects([sigA, sigB], chart.julianDayUt);
     const applying = between.filter((a) => a.applying);
     significatorAspect =
       (applying.length ? applying : between).sort((x, y) => x.orb - y.orb)[0] ?? null;

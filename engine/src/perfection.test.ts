@@ -733,3 +733,85 @@ describe("judgeHorary applies perfection-breaker debits", () => {
     expect(sumTestimonyWeights(j.testimonies)).toBe(j.score);
   });
 });
+
+describe("heavier-collector gate (Lilly CA pp. 110-111)", () => {
+  // Collection of light is by a MORE PONDEROUS (heavier/slower) planet that BOTH
+  // significators apply to. Only a body slower than both significators qualifies as
+  // a collector — a swift body between slower ones is NOT a collector.
+  // Ascendant Leo (135°): querent = Sun, equal 7th in Aquarius: quesited = Saturn.
+  const ascLeoGate = 135;
+
+  function sumWeights(testimonies: string[]): number {
+    let total = 0;
+    for (const s of testimonies) {
+      const m = s.match(/\(([+-]?\d+)\)\s*$/);
+      if (m) total += Number(m[1]);
+    }
+    return total;
+  }
+
+  it("a slow Jupiter that both significators apply to still collects", () => {
+    // Sun (querent, 1.0 deg/day) and Saturn (quesited, 0.03 deg/day) both apply to
+    // Jupiter (0.0 deg/day, stationary) just ahead of them. Jupiter (|0.0|) is
+    // slower than both significators → passes the heavier gate → collection fires.
+    // Geometry: Sun 248°, Saturn 253°, Jupiter 258° (stationary, 0.0).
+    // Sun–Jupiter: 10° gap, Sun (1.0) faster → applies conjunction ✓
+    // Saturn–Jupiter: 5° gap, Jupiter stationary, Saturn (0.03) closes → applies ✓
+    const planets = [
+      planet("Sun", 248, 1.0),
+      planet("Saturn", 253, 0.03),
+      planet("Jupiter", 258, 0.0), // stationary — slower than both → valid collector
+      planet("Moon", 50, 13.0),
+      planet("Mercury", 150, 1.2),
+      planet("Venus", 160, 1.1),
+      planet("Mars", 170, 0.5),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeoGate)), 7);
+    expect(j.collectionOfLight).not.toBeNull();
+    expect(j.collectionOfLight?.collector).toBe("Jupiter");
+    expect(j.testimonies.some((s) => s.includes("Collection of light by Jupiter"))).toBe(true);
+    expect(sumWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("a fast Mercury between slower significators does NOT collect", () => {
+    // Sun (querent, 1.0 deg/day) and Saturn (quesited, 0.03 deg/day) — Mercury
+    // (1.5 deg/day) is faster than both. Geometrically both significators might
+    // apply to Mercury, but Mercury fails the heavier-collector gate because it is
+    // swifter than the significators → collection does NOT fire.
+    const planets = [
+      planet("Sun", 100, 1.0),
+      planet("Saturn", 200, 0.03),
+      planet("Mercury", 260, 1.5), // faster than Sun (1.0) → fails heavier gate
+      planet("Moon", 50, 13.0),
+      planet("Venus", 150, 1.1),
+      planet("Mars", 170, 0.45),
+      planet("Jupiter", 300, 0.08),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeoGate)), 7);
+    // Mercury is faster than Sun → it cannot be a collector.
+    expect(j.collectionOfLight?.collector).not.toBe("Mercury");
+    expect(j.testimonies.some((s) => s.includes("Collection of light by Mercury"))).toBe(false);
+    expect(sumWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("Jupiter at speed 0.0 (stationary) collects — the perfection-refine rescue fixture", () => {
+    // Sun (querent) and Saturn (quesited) apply to a conjunction; Moon prohibits.
+    // Jupiter at 259° with speed 0.0 is the slowest possible body (|0.0| < |1.0|
+    // and |0.0| < |0.03|) — the rescue fixture must still detect collection through
+    // it after the heavier gate is applied.
+    const planets = [
+      planet("Sun", 250, 1.0),
+      planet("Saturn", 256, 0.03),
+      planet("Moon", 243, 13.0),
+      planet("Jupiter", 259, 0.0), // stationary — slower than both sigs → valid collector
+      planet("Mercury", 200, 1.2),
+      planet("Venus", 202, 1.1),
+      planet("Mars", 204, 0.5),
+    ];
+    const j = judgeHorary(chartOf(planets, equalCusps(ascLeoGate)), 7);
+    expect(j.collectionOfLight).not.toBeNull();
+    expect(j.collectionOfLight?.collector).toBe("Jupiter");
+    expect(j.perfection.indirectPath).toBe("Jupiter");
+    expect(sumWeights(j.testimonies)).toBe(j.score);
+  });
+});

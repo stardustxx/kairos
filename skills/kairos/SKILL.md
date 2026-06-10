@@ -312,8 +312,14 @@ checkout can open `web/index.html` and paste the `compute` JSON into the input b
   as the verdict; present the signals.
 - The contributing signals, each in the output:
   - `significatorAspect` — applying conjunction/trine/sextile is the core "yes, it
-    comes together"; square/opposition = perfection but with friction/regret;
-    separating or none = not forming.
+    comes together"; square/opposition = perfection but with friction/regret.
+    SEPARATING is worse than "not forming": when the significators are separating
+    and NO way of perfection remains (no sound translation/collection, no Moon
+    applying to the quesited, no mutual reception, no perfection by location),
+    the engine emits "the matter dissolves as they part" (-12) — present it as a
+    recent falling-apart, per Lilly: "as the significators doe seperate, so will
+    the matter and affection of the parties more alienate and vary". When any
+    perfection path survives, separation stays a neutral narrative line.
   - `moonApplyingToQuesited` — the Moon (always co-significator of the querent)
     applying to the quesited significator is a real perfecting testimony.
   - `translationOfLight` / `collectionOfLight` — perfection via a third planet
@@ -333,7 +339,7 @@ checkout can open `web/index.html` and paste the `compute` JSON into the input b
     (-15) and the testimony line says so; present it as a softened denial, not a
     clean negative.
   - **Perfection by location** — when the quesited's ruler sits in the querent's
-    house, the matter comes to the querent (+15, the stronger direction); when
+    house, the matter comes to the querent (+12, the stronger direction); when
     the querent's ruler sits in the quesited's house, the querent goes after the
     matter (+10). Both fire only for two distinct significators and only when the
     located planet is well disposed (non-negative dignity, direct, not combust).
