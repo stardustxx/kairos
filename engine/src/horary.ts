@@ -1,6 +1,6 @@
 import { almutenOfDegree } from "./almuten.js";
 import { computeAspects } from "./aspects.js";
-import { DEGREES_PER_SIGN, PLANETS, rulerOfLongitude } from "./constants.js";
+import { DEGREES_PER_SIGN, PLANETS, rulerOfLongitude, type Sign } from "./constants.js";
 import { receptionBetween } from "./dignities.js";
 import { houseOf } from "./houses.js";
 import {
@@ -32,6 +32,12 @@ import type {
 
 const SOFT_ASPECTS = new Set(["conjunction", "sextile", "trine"]);
 
+/** Lilly's void-of-course exception signs (CA p. 122): "yet somewhat she
+ *  performs if void of course and be either in Taurus, Cancer, Sagittarius or
+ *  Pisces" — the Moon's domicile (Cancer) and exaltation (Taurus) and the
+ *  domiciles of the benefics (Sagittarius/Pisces = Jupiter, Taurus = Venus). */
+const VOID_MITIGATING_SIGNS = new Set<Sign>(["Taurus", "Cancer", "Sagittarius", "Pisces"]);
+
 /** English ordinal for a house number, e.g. 1 -> "1st", 10 -> "10th". */
 function ordinal(n: number): string {
   const v = n % 100;
@@ -58,9 +64,16 @@ function aspectBetween(aspects: Aspect[], n1: string, n2: string): Aspect | null
 }
 
 /**
- * Translation of light: a third planet separating from one significator and
- * applying to the other, carrying the light between them so the matter perfects
- * indirectly. Returns the first such translator found, or null.
+ * Translation of light: a LIGHTER (swifter) third planet separating from one
+ * significator and applying to the other, carrying the light between them so the
+ * matter perfects indirectly. Returns the first such translator found, or null.
+ *
+ * The lighter-planet condition is Lilly's own (CA p. 111: "a lighter planet
+ * separates from one and joins to the other"): only a body swifter than BOTH
+ * significators can carry light between them. A heavier body that both
+ * significators approach is COLLECTION, not translation — without this gate the
+ * detector mislabels collection-shaped pictures (e.g. slow Mars "translating"
+ * between Venus and the Moon) as translations.
  */
 function findTranslation(
   aspects: Aspect[],
@@ -68,8 +81,13 @@ function findTranslation(
   quesitedSig: string,
   bodies: PlanetPosition[],
 ): TranslationOfLight | null {
+  const sigA = bodies.find((p) => p.name === querentSig);
+  const sigB = bodies.find((p) => p.name === quesitedSig);
   for (const T of bodies) {
     if (T.name === querentSig || T.name === quesitedSig) continue;
+    // Lighter than both significators, or it cannot carry their light.
+    if (sigA && Math.abs(T.speed) <= Math.abs(sigA.speed)) continue;
+    if (sigB && Math.abs(T.speed) <= Math.abs(sigB.speed)) continue;
     const toQuerent = aspectBetween(aspects, T.name, querentSig);
     const toQuesited = aspectBetween(aspects, T.name, quesitedSig);
     if (!toQuerent || !toQuesited) continue;
@@ -143,6 +161,14 @@ function aggregateTestimony(args: {
   querentRetro: boolean;
   quesitedRetro: boolean;
   moonVoid: boolean;
+  /** Zodiac sign the Moon occupies — gates Lilly's void-of-course exception. */
+  moonSign: Sign;
+  /** The querent's house (1 unless the chart is turned) and the quesited house. */
+  querentHouse: number;
+  quesitedHouse: number;
+  /** House placements of the two significators (0 when a body is missing). */
+  querentSigHouse: number;
+  quesitedSigHouse: number;
   prohibition: Prohibition | null;
   refranation: Refranation | null;
   besieging: Array<{ significator: string; planet: string }>;
@@ -295,6 +321,60 @@ function aggregateTestimony(args: {
     t.push(`One-way reception (${who} receives the other by ${by}) (+5)`);
   }
 
+  // PERFECTION BY LOCATION ("dwelling in houses") — the weakest classical mode of
+  // perfection, scored as additive TESTIMONY here, never as perfection.direct.
+  // Lilly, CA pp. 125-127: "Things are sometimes perfected by the dwelling of
+  // Planets in houses, viz. when the Significator of the thing demanded is
+  // casually posited in the Ascendant"; CA pp. 444-445 grants the office outright
+  // when the Lord of the 10th is in the 1st, "though no aspect be betwixt them".
+  // (Lilly there conditions the no-aspect form on the 10th lord being the LIGHTER
+  // planet; Warnock's 2001 worked example applies the rule without that condition
+  // and we follow the broader Bonatti/Sahl statement.) Bonatti, Liber Astronomiae
+  // IV / On Horary I (tr. Hand/Zoller, p. 33, after Sahl) gives BOTH directions:
+  // the quesited's significator in the querent's house = "the matter sought for
+  // may come toward the querent" (the STRONGER direction, +15 — at collection's
+  // +15 and below translation's +18, per Lilly's caution that bare emplacement
+  // rarely perfects alone), and the querent's significator in the quesited's
+  // house = "the querent is going toward the matter sought for" (pursuit —
+  // attested but weaker, +10). GUARDS: the significators must be DISTINCT planets
+  // (the doctrine presupposes two parties — a shared ruler earns no
+  // self-placement credit), and per Bonatti's well-disposed condition (his
+  // podesta example: location accomplishes the matter only "if Jupiter himself
+  // were to be in a good state and well disposed") the LOCATED significator must
+  // be well disposed: non-negative essential dignity, direct, not combust.
+  const wellDisposed = (dignity: number, retro: boolean, solar: SolarPhase): boolean =>
+    dignity >= 0 && !retro && solar !== "combust";
+  let locationStrong = false;
+  let locationWeak = false;
+  if (args.querentSig !== args.quesitedSig) {
+    if (
+      args.quesitedSigHouse === args.querentHouse &&
+      wellDisposed(args.quesitedDignity, args.quesitedRetro, args.quesitedSolar)
+    ) {
+      locationStrong = true;
+      // +12: below collection (+15) — Lilly calls dwelling-in-houses the weakest
+      // mode of perfection, so it must rank under the aspect-based modes.
+      score += 12;
+      t.push(
+        `Quesited significator ${args.quesitedSig} in the querent's ` +
+          `${ordinal(args.querentHouse)} house — the matter comes to the querent ` +
+          `(perfection by location) (+12)`,
+      );
+    }
+    if (
+      args.querentSigHouse === args.quesitedHouse &&
+      wellDisposed(args.querentDignity, args.querentRetro, args.querentSolar)
+    ) {
+      locationWeak = true;
+      score += 10;
+      t.push(
+        `Querent significator ${args.querentSig} in the quesited's ` +
+          `${ordinal(args.quesitedHouse)} house — the querent goes to the matter ` +
+          `(perfection by location) (+10)`,
+      );
+    }
+  }
+
   // Significator essential strength: a well-dignified significator helps, a
   // debilitated one (detriment/fall/peregrine) undermines its promise.
   for (const [label, dignity] of [
@@ -426,9 +506,27 @@ function aggregateTestimony(args: {
     );
   }
 
+  // VOID-OF-COURSE MOON. Lilly, CA p. 112: "you shall seldom see a businesse goe
+  // handsomely forward when she is so" — the dominant negative testimony (-30).
+  // EXCEPTION (Lilly, CA p. 122, the considerations before judgment): "yet
+  // somewhat she performs if void of course and be either in Taurus, Cancer,
+  // Sagittarius or Pisces". "Somewhat she performs" is read as a HALVED debit
+  // (-15): the denial is mitigated, not lifted — she performs somewhat, not
+  // fully. Lilly's OTHER mitigation in the same sentence ("except the principal
+  // significators be very strong") is deliberately NOT implemented: he gives no
+  // operational threshold for "very strong", no corpus case turns on it, and an
+  // undecidable clause would be a tuning knob rather than doctrine.
   if (args.moonVoid) {
-    score -= 30;
-    t.push("Moon void of course — little is likely to come of the matter (-30)");
+    if (VOID_MITIGATING_SIGNS.has(args.moonSign)) {
+      score -= 15;
+      t.push(
+        `Moon void of course, but in ${args.moonSign} — somewhat she performs ` +
+          `(Lilly's exception) (-15)`,
+      );
+    } else {
+      score -= 30;
+      t.push("Moon void of course — little is likely to come of the matter (-30)");
+    }
   }
 
   // SYNTHESIS: a coherent perfection picture. There is a DIRECT perfection when
@@ -493,6 +591,12 @@ function aggregateTestimony(args: {
   } else if (directlyApplies) {
     // Applying but the synthesis treats opposition-only as not a clean perfection.
     summary = "The significators apply, but only by a difficult aspect.";
+  } else if (locationStrong || locationWeak) {
+    // Perfection by location is a TESTIMONY, not perfection.direct — but when
+    // nothing else perfects, the emplacement is the surviving story: name it.
+    summary = locationStrong
+      ? "No aspectual perfection, but the matter is carried by position: the quesited's ruler sits in the querent's house."
+      : "No aspectual perfection, but the querent pursues the matter by position: the querent's ruler sits in the quesited's house.";
   } else {
     summary = "No perfection: the significators neither perfect directly nor through a sound carrier.";
   }
@@ -526,8 +630,23 @@ function aggregateTestimony(args: {
  *  Uses relative motion: time-to-perfection = orb / |moonSpeed - otherSpeed|,
  *  compared against time-to-sign-change = remaining arc / moonSpeed. This is the
  *  standard practical method and far tighter than the old orb-vs-arc heuristic.
- *  `next` is the soonest-perfecting applying aspect (by time, not just orb). */
-export function moonVoidStatus(planets: PlanetPosition[]): { void: boolean; next: Aspect | null } {
+ *  `next` is the soonest-perfecting applying aspect (by time, not just orb).
+ *
+ *  Pass `chartJd` whenever the chart moment is known: the `applying` flags are
+ *  then derived from real ephemeris motion (root-found perfection times) instead
+ *  of the legacy one-day finite-difference step. The Moon moves ~12-14 deg/day,
+ *  so under the legacy step any Moon aspect perfecting within ~a day overshoots
+ *  its orb and is misflagged "separating" — a FALSE void. Without `chartJd` the
+ *  legacy behaviour is preserved (synthetic-position callers, electional scan).
+ *
+ *  Scope note: only aspects already IN ORB at the chart moment are considered
+ *  (no forward in-sign scan for aspects that would come into orb later). That is
+ *  Lilly's own practical usage — he calls the Moon void while it applies to
+ *  nothing within orbs (e.g. his 1646 marriage chart, Moon mid-Libra). */
+export function moonVoidStatus(
+  planets: PlanetPosition[],
+  chartJd?: number,
+): { void: boolean; next: Aspect | null } {
   const moon = planets.find((p) => p.name === "Moon")!;
   const moonSpeed = Math.abs(moon.speed) || 13.2; // deg/day; guard against 0
   const degreesToSignEnd = DEGREES_PER_SIGN - moon.degInSign;
@@ -538,7 +657,7 @@ export function moonVoidStatus(planets: PlanetPosition[]): { void: boolean; next
   const classical = planets.filter((p) => classicalNames.has(p.name));
   const speedOf = (name: string): number => classical.find((p) => p.name === name)?.speed ?? 0;
 
-  const aspectsWithMoon = computeAspects(classical).filter(
+  const aspectsWithMoon = computeAspects(classical, chartJd).filter(
     (a) => (a.a === "Moon" || a.b === "Moon") && a.applying,
   );
   if (aspectsWithMoon.length === 0) {
@@ -613,13 +732,18 @@ export function judgeHorary(
   const querentSignificatorHouse = sigA ? houseOf(sigA.longitude, chart.houses.cusps) : 0;
   const quesitedSignificatorHouse = sigB ? houseOf(sigB.longitude, chart.houses.cusps) : 0;
 
-  const moon = moonVoidStatus(chart.planets);
+  // chartJd-correct void detection: the Moon perfects in-orb aspects within
+  // hours, so the legacy one-day applying step misflags them separating and
+  // manufactures FALSE voids (verified against the conformance corpus).
+  const moon = moonVoidStatus(chart.planets, chart.julianDayUt);
 
   // Aspects among the classical bodies, for co-significator / translation /
-  // collection testimonies.
+  // collection testimonies. chartJd makes the `applying` flags ephemeris-true
+  // here too — the same false-separating bug otherwise suppresses the Moon's
+  // applying testimony to the quesited.
   const classicalNames = new Set(PLANETS.filter((d) => d.classical).map((d) => d.name));
   const classical = chart.planets.filter((p) => classicalNames.has(p.name));
-  const classicalAspects = computeAspects(classical);
+  const classicalAspects = computeAspects(classical, chart.julianDayUt);
 
   // Moon as co-significator of the querent: its applying aspect to the quesited
   // significator. Skip when the Moon is itself one of the significators (already
@@ -749,6 +873,11 @@ export function judgeHorary(
     querentRetro: sigA?.retrograde ?? false,
     quesitedRetro: sigB?.retrograde ?? false,
     moonVoid: moon.void,
+    moonSign: chart.planets.find((p) => p.name === "Moon")!.sign,
+    querentHouse,
+    quesitedHouse,
+    querentSigHouse: querentSignificatorHouse,
+    quesitedSigHouse: quesitedSignificatorHouse,
     prohibition,
     refranation,
     besieging,

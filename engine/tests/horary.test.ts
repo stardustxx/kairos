@@ -109,3 +109,115 @@ describe("moonVoidStatus", () => {
     expect(status.next).not.toBeNull();
   });
 });
+
+/** Sum the signed `(±N)` suffixes of a judgment's testimony lines — the
+ *  sensitivity-diagnostic invariant: the score IS the sum of displayed weights. */
+function sumOfDisplayedWeights(testimonies: string[]): number {
+  let sum = 0;
+  for (const line of testimonies) {
+    const m = line.match(/\(([+-]?\d+)\)\s*$/);
+    if (m) sum += Number.parseInt(m[1], 10);
+  }
+  return sum;
+}
+
+function judgeAt(
+  datetimeLocal: string,
+  latitude: number,
+  longitude: number,
+  timezone: string,
+  quesitedHouse: number,
+) {
+  const chart = buildChart("horary", { datetimeLocal, latitude, longitude, timezone });
+  return judgeHorary(chart, quesitedHouse);
+}
+
+describe("void-of-course exception signs (Lilly, CA p. 122)", () => {
+  it("mitigates a void Moon in Cancer — 'somewhat she performs' halves the debit to -15", () => {
+    // London, Moon 27.8 Cancer, genuinely void (chartJd-verified: no in-orb
+    // aspect perfects before the Moon leaves Cancer).
+    const j = judgeAt("2024-08-03T08:00:00", 51.5074, -0.1278, "Europe/London", 2);
+    expect(j.moonVoidOfCourse).toBe(true);
+    expect(j.testimonies).toContain(
+      "Moon void of course, but in Cancer — somewhat she performs (Lilly's exception) (-15)",
+    );
+    expect(j.testimonies.some((t) => t.includes("little is likely to come"))).toBe(false);
+    expect(sumOfDisplayedWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("does not mitigate a void Moon in Aries — the full -30 stands", () => {
+    // London, Moon 27.0 Aries, genuinely void; Aries is not among Lilly's
+    // exception signs (Taurus/Cancer/Sagittarius/Pisces).
+    const j = judgeAt("2024-08-23T20:00:00", 51.5074, -0.1278, "Europe/London", 2);
+    expect(j.moonVoidOfCourse).toBe(true);
+    expect(j.testimonies).toContain(
+      "Moon void of course — little is likely to come of the matter (-30)",
+    );
+    expect(j.testimonies.some((t) => t.includes("somewhat she performs"))).toBe(false);
+    expect(sumOfDisplayedWeights(j.testimonies)).toBe(j.score);
+  });
+});
+
+describe("perfection by location (Lilly CA pp. 125-127, 444-445; Bonatti p. 33)", () => {
+  it("credits the quesited's ruler in the querent's house (+12, the stronger direction)", () => {
+    // Warnock's 2001 'He Got the Job!' chart: Saturn (10th ruler, dignity +3,
+    // direct, clear of the Sun) sits in the querent's 1st house.
+    const j = judgeAt("2001-02-18T10:20:00", 38.9167, -77.05, "America/New_York", 10);
+    expect(j.quesitedSignificator).toBe("Saturn");
+    expect(j.quesitedSignificatorHouse).toBe(1);
+    expect(j.testimonies).toContain(
+      "Quesited significator Saturn in the querent's 1st house — the matter comes to the querent (perfection by location) (+12)",
+    );
+    expect(sumOfDisplayedWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("credits the querent's ruler in the quesited's house (+10) and surfaces it in the synthesis when nothing else perfects", () => {
+    // Bevan's 1995 physiotherapy-exam chart (Oslo): Mars (querent, dignity +1,
+    // direct, clear) sits in the quesited 10th. The significators only separate
+    // and the Mercury translation fails (carrier combust), so the location
+    // testimony is the surviving perfection story named by the synthesis.
+    const j = judgeAt("1995-06-08T17:30:00", 59.9167, 10.7167, "Europe/Oslo", 10);
+    expect(j.querentSignificator).toBe("Mars");
+    expect(j.querentSignificatorHouse).toBe(10);
+    expect(j.testimonies).toContain(
+      "Querent significator Mars in the quesited's 10th house — the querent goes to the matter (perfection by location) (+10)",
+    );
+    expect(j.perfection.summary).toContain(
+      "the querent pursues the matter by position: the querent's ruler sits in the quesited's house",
+    );
+    expect(sumOfDisplayedWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("does not fire when neither significator occupies the other party's house", () => {
+    // NYC chart with distinct significators (Mars querent in 5, Venus quesited
+    // in 6, quesited house 7) and no cross-placement.
+    const j = judgeAt("2024-05-06T20:00:00", 40.7128, -74.006, "America/New_York", 7);
+    expect(j.querentSignificator).not.toBe(j.quesitedSignificator);
+    expect(j.testimonies.some((t) => t.includes("perfection by location"))).toBe(false);
+    expect(sumOfDisplayedWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("does not fire when querent and quesited share the same significator (no self-placement credit)", () => {
+    // London chart where Saturn rules BOTH the 1st and the quesited 2nd and sits
+    // in the 2nd, well disposed — the cross-placement doctrine presupposes two
+    // parties, so the shared ruler earns nothing.
+    const j = judgeAt("2024-01-01T08:00:00", 51.5074, -0.1278, "Europe/London", 2);
+    expect(j.querentSignificator).toBe("Saturn");
+    expect(j.quesitedSignificator).toBe("Saturn");
+    expect(j.quesitedSignificatorHouse).toBe(2);
+    expect(j.testimonies.some((t) => t.includes("perfection by location"))).toBe(false);
+    expect(sumOfDisplayedWeights(j.testimonies)).toBe(j.score);
+  });
+
+  it("gates an ill-disposed located significator (Bonatti's well-disposed condition)", () => {
+    // Louis's 2008 Athens pregnancy chart: Mars (5th ruler) IS in the querent's
+    // 1st house but in Cancer, its fall (dignity -4) — location only carries a
+    // matter the located planet is fit to carry, so no credit.
+    const j = judgeAt("2008-05-02T10:25:00", 37.9838, 23.7275, "Europe/Athens", 5);
+    expect(j.quesitedSignificator).toBe("Mars");
+    expect(j.quesitedSignificatorHouse).toBe(1);
+    expect(j.quesitedSignificatorDignity).toBeLessThan(0);
+    expect(j.testimonies.some((t) => t.includes("perfection by location"))).toBe(false);
+    expect(sumOfDisplayedWeights(j.testimonies)).toBe(j.score);
+  });
+});

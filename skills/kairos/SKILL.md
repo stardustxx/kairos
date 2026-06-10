@@ -327,7 +327,19 @@ checkout can open `web/index.html` and paste the `compute` JSON into the input b
     well-dignified significator (high +) acts strongly and reliably; a debilitated
     one (detriment/fall/peregrine, negative) is weak or compromised — temper the
     promise accordingly and say so.
-  - `moonVoidOfCourse === true` — strong "nothing comes of it / no change" signal.
+  - `moonVoidOfCourse === true` — strong "nothing comes of it / no change" signal
+    (-30). **Exception (Lilly):** when the void Moon sits in Taurus, Cancer,
+    Sagittarius or Pisces, "somewhat she performs" — the engine halves the debit
+    (-15) and the testimony line says so; present it as a softened denial, not a
+    clean negative.
+  - **Perfection by location** — when the quesited's ruler sits in the querent's
+    house, the matter comes to the querent (+15, the stronger direction); when
+    the querent's ruler sits in the quesited's house, the querent goes after the
+    matter (+10). Both fire only for two distinct significators and only when the
+    located planet is well disposed (non-negative dignity, direct, not combust).
+    A weaker mode than translation/collection, but it is real classical
+    testimony (Lilly's "dwelling in houses"; the Lord-of-the-10th-in-the-1st
+    career rule) — when nothing else perfects, the `perfection.summary` names it.
 - **Almuten of each side** — the engine also returns the almuten (most
   essentially dignified planet) over each side's cusp degree:
   `querentAlmuten` (`{ planet, score }`, almuten of the Ascendant) and

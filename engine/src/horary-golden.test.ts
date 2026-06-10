@@ -85,6 +85,11 @@ describe("horary golden charts (verdict regression baseline)", () => {
   // 1. Clearly FAVORABLE by DIRECT soft perfection: the significators apply to a
   //    trine and nothing breaks it — the +40 path with high confidence.
   it("clearly favorable: direct perfection by applying trine (NYC, 10th)", () => {
+    // Back to the ORIGINAL baseline (40, no indirect path). The chartJd-correct
+    // applying flags briefly surfaced a "translation by Mars" here, but Mars is
+    // HEAVIER than both significators — Lilly's lighter-planet condition
+    // (CA p. 111) means a slow body cannot carry light between two faster ones,
+    // so the lighter-translator gate correctly removes it.
     expect(judge(NEW_YORK, "2024-02-26T20:00:00", 10)).toEqual({
       lean: "favorable",
       confidence: "high",
@@ -169,55 +174,56 @@ describe("horary golden charts (verdict regression baseline)", () => {
     });
   });
 
-  // 5. VOID-OF-COURSE Moon: the dominant -30 testimony, now offset by a benefic
-  //    enclosure (+10). The shared significator Saturn (333.27°) is tightly hemmed
-  //    between Venus (243.02°, a partile square, gap 0.25°) behind and Jupiter
-  //    (35.58°, a sextile, gap 2.31°) ahead — nothing intervening on either side —
-  //    so Saturn is enclosed between the two benefics ("aided"): a real protection
-  //    the engine now credits, lifting the score -30 → -20 (still unfavorable, but
-  //    the void Moon is partly softened). Enclosure verified: both flanking rays
-  //    are within the 6° enclosure cap and are the tightest contacts on their side.
-  it("void-of-course Moon, softened by benefic enclosure of Saturn (London, 2nd)", () => {
-    expect(judge(LONDON, "2024-01-01T08:00:00", 2)).toEqual({
+  // 5. VOID-OF-COURSE Moon: the dominant -30 testimony, isolated. CHART REPLACED
+  //    (was London 2024-01-01T08:00, 2nd): that chart's "void" was a FALSE
+  //    POSITIVE of the legacy one-day applying step — its Moon (9.94 Virgo)
+  //    trines the Sun ~11 minutes after the chart, well inside Virgo — so under
+  //    chartJd-correct void detection it no longer demonstrates void at all
+  //    (it re-scores to +10/uncertain on the surviving benefic enclosure, which
+  //    chart 7 below still pins). This replacement Moon (20.7 Scorpio) applies
+  //    to NOTHING within orb before leaving Scorpio (chartJd-verified), and the
+  //    chart is otherwise silent — the cleanest possible pin of the -30 debit
+  //    and its medium-confidence unfavorable lean. The Moon is NOT in
+  //    Taurus/Cancer/Sagittarius/Pisces, so Lilly's "somewhat she performs"
+  //    exception (CA p. 122) correctly does NOT fire here.
+  it("void-of-course Moon: genuinely void in Scorpio, nothing else testifies (London, 2nd)", () => {
+    expect(judge(LONDON, "2024-03-01T20:00:00", 2)).toEqual({
       lean: "unfavorable",
       confidence: "medium",
-      score: -20,
+      score: -30,
       perfection: { direct: false, broken: [], indirectPath: null },
       timing: null,
       testimonies: [
         "No direct aspect between the significators (0)",
-        "querent significator Saturn enclosed between Venus and Jupiter — shielded by both benefics (+10)",
         "Moon void of course — little is likely to come of the matter (-30)",
       ],
     });
   });
 
-  // 6. TRANSLATION of light: no direct aspect, but a sound Jupiter carries the
-  //    light Mars -> Saturn (+18) and Mercury also collects (+15) — the indirect
-  //    perfection path. Pins both indirect-carrier weights at once.
-  it("translation of light: Jupiter carries Mars to Saturn (London, 10th)", () => {
+  // 6. INDIRECT perfection via COLLECTION: no perfecting direct aspect, but
+  //    Mercury collects both significators' light (+15). The former headline —
+  //    "Jupiter carries Mars to Saturn" — was never a classically valid
+  //    translation: Jupiter is HEAVIER than quesited Mars, and Lilly's
+  //    lighter-planet condition (CA p. 111) bars a slow body from carrying light
+  //    between faster ones, so the lighter-translator gate removed that +18
+  //    (score 48 -> 30, lean unchanged favorable, confidence high -> medium).
+  //    KNOWN FOLLOW-UP: findCollection has no mirror "heavier-collector"
+  //    condition yet, so light Mercury "collecting" here is itself doctrinally
+  //    loose — left for a corpus-adjudicated round.
+  it("indirect perfection: Mercury collects Mars and Saturn (London, 10th)", () => {
     expect(judge(LONDON, "2024-01-16T08:00:00", 10)).toEqual({
       lean: "favorable",
-      confidence: "high",
-      score: 48,
-      perfection: { direct: false, broken: [], indirectPath: "Jupiter" },
+      confidence: "medium",
+      score: 30,
+      perfection: { direct: false, broken: [], indirectPath: "Mercury" },
       timing: null,
       testimonies: [
         // Saturn (querent) 334.72° and Mars (quesited) 278.76° are 55.96° apart:
-        // 4.04° off a sextile. Under moiety orbs the Mars-Saturn pair allows
-        // (9 + 7.5)/2 = 8.25°, so this sextile is now IN orb (the old flat 4°
-        // sextile orb excluded it -> "No direct aspect"). Saturn is the slower
-        // body and separating, so the contact carries 0 weight — score is
-        // unchanged at 48 and the verdict is identical.
+        // 4.04° off a sextile; in orb under moiety orbs but separating, 0 weight.
         "Significators only separating (sextile) — the matter is past, not forming (0)",
         "Moon applies by square to the quesited — testimony with difficulty (+5)",
-        "Translation of light by Jupiter (Mars → Saturn) (+18)",
         "Collection of light by Mercury (+15)",
         "One-way reception (Saturn receives the other by domicile) (+5)",
-        // Quesited Mars is in Capricorn (Earth); Earth's PARTICIPATING triplicity
-        // ruler is Mars, so Mars now scores exaltation +4 + participating +1 = 5
-        // (was 4). Still "well-dignified" (≥ 4, +5), so only the displayed dignity
-        // number moves and the score is unchanged.
         "Quesited significator Mars well-dignified (dignity +5) (+5)",
         "Almuten of the 1st (querent) is Mars (more dignified than ruler Saturn) — Mars has the strongest say over the querent (0)",
       ],
@@ -364,23 +370,20 @@ describe("horary golden charts (verdict regression baseline)", () => {
   });
 
   // 12. ORDINARY MIXED chart, 10th house (career/outcome): direct trine perfection
-  //     with reception (the slow-but-clean "yes"), now REINFORCED by a Mercury
-  //     translation. Under moiety orbs Mercury (81.51°) and the Moon (252.28°,
-  //     querent co-significator) are 170.77° apart — 9.23° off an opposition —
-  //     which fits their (7 + 12)/2 = 9.5° pair orb but exceeded the old flat 8°
-  //     opposition orb. That newly in-orb Mercury-Moon opposition lets Mercury
-  //     translate light (Jupiter -> Moon), adding +18 and an indirectPath, so the
-  //     score rises 45 -> 63 (still favorable/high; the direct trine is intact).
-  it("ordinary mixed, 10th house: direct trine with reception and Mercury translation (NYC, 10th)", () => {
+  //     with reception (the slow-but-clean "yes"). The brief "Mercury translation
+  //     (Jupiter -> Moon)" credit is gone under Lilly's lighter-planet condition:
+  //     the destination significator is the MOON, and nothing is lighter than the
+  //     Moon — she translates, she is not translated to. Score 63 -> 45,
+  //     lean/confidence unchanged (favorable/high; the direct trine is intact).
+  it("ordinary mixed, 10th house: direct trine with reception (NYC, 10th)", () => {
     expect(judge(NEW_YORK, "2027-05-21T08:00:00", 10)).toEqual({
       lean: "favorable",
       confidence: "high",
-      score: 63,
-      perfection: { direct: true, broken: [], indirectPath: "Mercury" },
+      score: 45,
+      perfection: { direct: true, broken: [], indirectPath: null },
       timing: { unit: "months", amount: 7 },
       testimonies: [
         "Significators perfect by applying trine (+40)",
-        "Translation of light by Mercury (Jupiter → Moon) (+18)",
         "One-way reception (Jupiter receives the other by domicile) (+5)",
       ],
     });

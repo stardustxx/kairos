@@ -678,16 +678,19 @@ describe("judgeHorary applies perfection-breaker debits", () => {
 
   it("a RESCUED prohibition (sound carrier survives) is NOT a surviving denial — no suppression", () => {
     // Sun (querent) & Saturn (quesited) apply to a conjunction at 250° & 256°; the
-    // Moon prohibits the Sun unreceived. BUT Jupiter (sound, ~253°) is applied to by
-    // BOTH significators, collecting their light — a sound indirect carrier that
-    // RESCUES the matter. A rescued matter is not a surviving denial: the +40 must
-    // NOT be suppressed, and the +12 indirect-recovery credit applies.
+    // Moon prohibits the Sun unreceived. BUT Jupiter (sound, ahead of both at
+    // 259°, stationary) is applied to by BOTH significators, collecting their
+    // light — a sound indirect carrier that RESCUES the matter. (A heavier body
+    // both sigs approach is COLLECTION — the lighter-planet gate means slow
+    // Jupiter can no longer be mislabeled a translator here.) A rescued matter is
+    // not a surviving denial: the +40 must NOT be suppressed, and the +12
+    // indirect-recovery credit applies.
     const planets = [
       planet("Sun", 250, 1.0),
       planet("Saturn", 256, 0.03),
       planet("Moon", 243, 13.0),
       // Jupiter ahead of both, slow — both Sun (applying +) and Saturn apply to it.
-      planet("Jupiter", 253, 0.0),
+      planet("Jupiter", 259, 0.0),
       planet("Mercury", 200, 1.2),
       planet("Venus", 202, 1.1),
       planet("Mars", 204, 0.5),

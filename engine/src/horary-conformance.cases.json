@@ -64,10 +64,10 @@
       "quesitedHouse": 10,
       "lillyVerdict": "yes",
       "expectedLean": "favorable",
-      "kairosLean": "uncertain",
+      "kairosLean": "favorable",
       "inScope": true,
       "gapReason": null,
-      "note": "Warnock judged YES from the dignified 10th ruler (Saturn) placed in the 1st -- a 'significator in the relevant house' testimony Kairos does not weight. Kairos finds a Mercury carrier but a void Moon and lands uncertain. Outcome was YES."
+      "note": "Warnock judged YES from the dignified 10th ruler (Saturn) placed in the 1st. RE-BASELINED (chartJd-correct void detection + perfection by location): the old 'void Moon' was a FALSE POSITIVE of the one-day applying heuristic — the Moon (9.1 Capricorn) perfects an applying square to Venus ~5.6h after the chart, well inside its sign — so the -30 debit drops; and Saturn (dignity +3, direct, clear) in the querent's 1st now earns the perfection-by-location testimony (+15, Lilly CA p. 444, Bonatti p. 33). Score -7 -> +38, uncertain -> favorable. NOW AGREES with Warnock's yes (his own stated testimony, the 10th ruler dignified in the 1st, is exactly the line that fires)."
     },
     {
       "id": "warnock-gradschool-2002",
@@ -81,10 +81,10 @@
       "quesitedHouse": 9,
       "lillyVerdict": "no",
       "expectedLean": "unfavorable",
-      "kairosLean": "unfavorable",
+      "kairosLean": "uncertain",
       "inScope": true,
       "gapReason": null,
-      "note": "Weak querent significator separating from the 9th; not admitted. Kairos also leans unfavorable. Agreement."
+      "note": "Weak querent significator separating from the 9th; not admitted. RE-BASELINED (chartJd-correct void detection): the old agreement rested on a FALSE void — the Moon (6.6 Aries) perfects an applying sextile to Saturn ~3h after the chart, inside Aries — so the -30 drops and the score rises -25 -> +5 (uncertain). Now a MISS: Warnock's actual negative testimony (the separating significators as an argument of denial, the weak Sun) is machinery Kairos does not yet weight; the prior 'agreement' was the right verdict for a wrong reason."
     },
     {
       "id": "warnock-housesale-2003",
@@ -132,10 +132,10 @@
       "quesitedHouse": 5,
       "lillyVerdict": "no",
       "expectedLean": "unfavorable",
-      "kairosLean": "unfavorable",
+      "kairosLean": "uncertain",
       "inScope": true,
       "gapReason": null,
-      "note": "Outcome: not pregnant. Kairos also leans unfavorable. Agreement. (Real, resolved outcome -- a candidate for the later calibration corpus once enough resolved cases exist.)"
+      "note": "Outcome: not pregnant. RE-BASELINED (chartJd-correct void detection): the old agreement rested on a FALSE void — the Moon (27.97 Pisces) perfects an applying sextile to Mercury ~2h after the chart, inside Pisces — so the -30 drops, and the corrected applying flags surface a Mercury translation Mars -> Moon (+18) with reception (+5): score -25 -> +23, favorable. Now a MISS: Louis's NO came from the 5th-ruler's affliction and the 8th-house surgery picture, which Kairos does not model. NOTE the perfection-by-location gate worked as doctrine requires: Mars (5th ruler) sits in the 1st but in Cancer, its fall (dignity -4), so Bonatti's well-disposed condition denies the +15 that would otherwise pile on. (Real, resolved outcome -- a candidate for the later calibration corpus once enough resolved cases exist.) RE-BASELINED (lighter-planet translation gate, Lilly CA p.111): the Mercury translation that briefly flipped this chart favorable fails the swifter-than-both-significators condition, so it no longer fires; favorable -> uncertain (+5). Moves toward Louis's no but remains a miss — the practitioner's separating-significator denial machinery is not yet modeled."
     },
     {
       "id": "louis-exam-2017",
@@ -166,10 +166,10 @@
       "quesitedHouse": 9,
       "lillyVerdict": "no",
       "expectedLean": "unfavorable",
-      "kairosLean": "favorable",
+      "kairosLean": "uncertain",
       "inScope": false,
       "gapReason": "Mundane decision judged on NATURAL SIGNIFICATORS and multi-house synthesis (Sun for the King, the King's prospects across the 10th/11th, the querent's estate), not a single quesited-house perfection. The 9th-house mapping here is a rough proxy; Kairos's single-significator perfection model cannot reproduce Lilly's reasoning.",
-      "note": "Lilly advised against following the King ('do not go to Oxford'); the querent ignored it and lost an estate, confirming Lilly. Logged as a known gap, not a bug."
+      "note": "Lilly advised against following the King ('do not go to Oxford'); the querent ignored it and lost an estate, confirming Lilly. Logged as a known gap, not a bug. RE-BASELINED (lighter-planet translation gate): the spurious translation died under Lilly's swifter-than-both condition; favorable -> uncertain (+2). Out-of-scope either way (known gap)."
     },
     {
       "id": "lilly-marry-elderly-1644",
@@ -183,10 +183,10 @@
       "quesitedHouse": 7,
       "lillyVerdict": "no",
       "expectedLean": "unfavorable",
-      "kairosLean": "unfavorable",
+      "kairosLean": "uncertain",
       "inScope": true,
       "gapReason": null,
-      "note": "Lilly found the man's estate encumbered (Mars ruling and placed in the 8th, the man's substance) and told her the match would founder; negotiations broke off exactly as judged. Kairos also leans unfavorable (void Moon, no perfection). Agreement."
+      "note": "Lilly found the man's estate encumbered (Mars ruling and placed in the 8th, the man's substance) and told her the match would founder; negotiations broke off exactly as judged. RE-BASELINED (chartJd-correct void detection): the old agreement rested on a FALSE void — the Moon (25.4 Aquarius) perfects an applying sextile to Mars ~6h after the chart, inside Aquarius — so the -30 drops and the score rises -30 -> 0 (uncertain). Now a MISS: Lilly's actual denial (the suitor's encumbered 8th-house substance) is turned-house affliction reasoning Kairos does not yet model."
     },
     {
       "id": "warnock-marryme-2004",
@@ -251,10 +251,10 @@
       "quesitedHouse": 10,
       "lillyVerdict": "yes",
       "expectedLean": "favorable",
-      "kairosLean": "unfavorable",
+      "kairosLean": "favorable",
       "inScope": true,
       "gapReason": null,
-      "note": "Bevan judged YES from Mars (querent) in the 10th before the 'censor' plus the Moon's applying trine to the Sun (10th ruler), and she passed 'with perfection'. Kairos reads the late Moon as void and finds no perfection, leaning unfavorable — company for the warnock-gotjob-2001 miss: 'significator in the relevant house' testimony plus a generously-orbed Moon application that Kairos's void rule cancels."
+      "note": "Bevan judged YES from Mars (querent) in the 10th before the 'censor' plus the Moon's applying trine to the Sun (10th ruler), and she passed 'with perfection'. RE-BASELINED (chartJd-correct void detection + perfection by location): the old 'void Moon' was a FALSE POSITIVE of the one-day applying heuristic — the Moon (14.95 Libra, NOT late in its sign) perfects an applying trine to the Sun ~4.5h after the chart, inside Libra (exactly Bevan's 'Moon applies a trine to the Sun, Lord of the 10th') — so the -30 drops AND the Moon's +20 trine to the quesited is restored; Mars (dignity +1, direct, clear) in the quesited's 10th adds the weaker location direction (+10, Bonatti: 'the querent is going toward the matter'). Score -35 -> +25, unfavorable -> favorable. NOW AGREES with Bevan's yes, on his own two stated testimonies."
     },
     {
       "id": "louis-brother-exam-karachi-2009",
@@ -269,10 +269,10 @@
       "querentHouse": 3,
       "lillyVerdict": "no",
       "expectedLean": "unfavorable",
-      "kairosLean": "unfavorable",
+      "kairosLean": "uncertain",
       "inScope": true,
       "gapReason": null,
-      "note": "FIRST TURNED-CHART CASE in the corpus: the matter is the brother's (radical 3rd), so querentHouse=3 and the exam outcome is the brother's 10th = radical 12th (quesitedHouse=12), matching Louis's own derivation ('the brother's 9th and 10th houses, which are the radical 11th and 12th'). Louis judged failure (Moon ruler of the turned 10th squaring a detrimented-sign Sun; Mercury ruler of the turned 9th peregrine and combust); the brother did not pass. Kairos, reading the turned significators, also leans unfavorable. Agreement — the turning machinery registers its first conforming case."
+      "note": "FIRST TURNED-CHART CASE in the corpus: the matter is the brother's (radical 3rd), so querentHouse=3 and the exam outcome is the brother's 10th = radical 12th (quesitedHouse=12), matching Louis's own derivation ('the brother's 9th and 10th houses, which are the radical 11th and 12th'). Louis judged failure (Moon ruler of the turned 10th squaring a detrimented-sign Sun; Mercury ruler of the turned 9th peregrine and combust); the brother did not pass. RE-BASELINED (chartJd-correct void detection): the old agreement rested on a FALSE void — the Moon (25.9 Aquarius) perfects an applying square to the Sun ~10 MINUTES after the chart, inside Aquarius — so the -30 drops and the score rises -17 -> +13 (uncertain). Now a MISS: Louis read that very Moon-square-Sun-in-detriment as his argument of FAILURE (a hard aspect to a debilitated ruler as denial), a negative reading Kairos does not yet model."
     }
   ]
 }

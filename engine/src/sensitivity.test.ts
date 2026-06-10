@@ -59,7 +59,7 @@ const GOLDEN: ChartRef[] = (
     ["golden-prohib-refran", NEW_YORK, "2024-08-01T20:00:00", 2],
     ["golden-deadband", LONDON, "2024-02-21T20:00:00", 2],
     ["golden-combust", NEW_YORK, "2024-05-06T20:00:00", 7],
-    ["golden-void-enclosed", LONDON, "2024-01-01T08:00:00", 2],
+    ["golden-void-scorpio", LONDON, "2024-03-01T20:00:00", 2],
     ["golden-translation", LONDON, "2024-01-16T08:00:00", 10],
     ["golden-collection", LONDON, "2024-02-21T20:00:00", 7],
     ["golden-prohib-rescue", LONDON, "2024-08-11T20:00:00", 10],
@@ -131,7 +131,10 @@ type WeightKey =
   | "besieging" // -12 body-besieged OR malefic ray-enclosure
   | "beneficEnclosure" // +10 enclosed between Jupiter & Venus
   | "indirectRecovery" // +12 prohibited directly but a sound carrier rescues
-  | "voidMoon"; // -30 Moon void of course
+  | "locationMatterComes" // +15 quesited's ruler in the querent's house (perfection by location)
+  | "locationQuerentGoes" // +10 querent's ruler in the quesited's house (perfection by location)
+  | "voidMoon" // -30 Moon void of course
+  | "voidMoonMitigated"; // -15 void Moon in Taurus/Cancer/Sagittarius/Pisces (Lilly's exception)
 
 /** Classify a single live testimony line to the weight key it represents, or
  *  null when it is a 0-weight narrative/almuten line. Matched on the stable
@@ -163,6 +166,15 @@ function classify(line: string): WeightKey | null {
   if (line.includes("hemmed by both malefics")) return "besieging";
   if (line.includes("shielded by both benefics")) return "beneficEnclosure";
   if (line.startsWith("Indirect recovery")) return "indirectRecovery";
+  if (line.includes("the matter comes to the querent (perfection by location)")) {
+    return "locationMatterComes";
+  }
+  if (line.includes("the querent goes to the matter (perfection by location)")) {
+    return "locationQuerentGoes";
+  }
+  // The mitigated form ("Moon void of course, but in …") must be tested BEFORE
+  // the plain void prefix — both start with the same words.
+  if (line.startsWith("Moon void of course, but in")) return "voidMoonMitigated";
   if (line.startsWith("Moon void of course")) return "voidMoon";
   // 0-weight narrative lines: "No direct aspect…", "Significators only
   // separating…", impeded-carrier "…FAILS…", and the almuten "(0)" notes.
@@ -292,7 +304,10 @@ const ALL_KEYS: WeightKey[] = [
   "besieging",
   "beneficEnclosure",
   "indirectRecovery",
+  "locationMatterComes",
+  "locationQuerentGoes",
   "voidMoon",
+  "voidMoonMitigated",
 ];
 
 const PERTURBATIONS = [-0.25, -0.1, 0.1, 0.25] as const;
