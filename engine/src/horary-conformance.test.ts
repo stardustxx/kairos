@@ -105,15 +105,15 @@ function freshLean(c: ConformanceCase): Lean {
  *  root-finding — recomputing the same 16 charts dozens of times across the
  *  pin/report/bucket tests blew vitest's 5s per-test budget on slow CI runners.
  *  One compute per case, reused everywhere else. */
-const judgmentCache = new Map<string, ReturnType<typeof runCompute>["horary"]>();
-function liveJudgment(c: ConformanceCase): NonNullable<ReturnType<typeof runCompute>["horary"]> {
+type LiveJudgment = NonNullable<ReturnType<typeof runCompute>["horary"]>;
+const judgmentCache = new Map<string, LiveJudgment>();
+function liveJudgment(c: ConformanceCase): LiveJudgment {
   let j = judgmentCache.get(c.id);
   if (!j) {
     j = runCompute(computeRequest(c)).horary!;
     judgmentCache.set(c.id, j);
   }
-  // biome-ignore lint/style/noNonNullAssertion: set above when absent
-  return j!;
+  return j;
 }
 
 /** A corpus chart's live lean (cached — see liveJudgment). */
