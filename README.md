@@ -176,6 +176,15 @@ npx -y kairos-astrology mcp
 # Or use the bundled MCP server via Claude Code's MCP configuration
 ```
 
+The server prints a one-line ready notice to stderr and then nothing more — stdout is reserved
+for the MCP protocol, so an otherwise quiet terminal is success. Point an MCP client at it and
+it is ready to accept tool calls.
+
+Note: the raw MCP tools expose the ephemeris and verdict engine. The Claude Code plugin's skill
+layer adds the judgment discipline — question classification, the house-mapping table, two-layer
+output, falsifiability lines, and journal-by-default. If you are using the MCP server without
+the plugin, you are getting the engine without that calibration harness.
+
 ### Alternative: CLI Tool
 
 For direct command-line access:
@@ -214,7 +223,10 @@ On Intel macOS (and musl Linux), the first `npx -y kairos-astrology …` or
 `npm install` will compile `sweph` from source, which requires the Xcode
 Command Line Tools (`xcode-select --install`) on Mac, or `build-base` +
 `python3` on Alpine. This is a one-time cost; once built, subsequent runs are
-fast.
+fast. If the required toolchain is absent, the CLI and MCP server now fail with
+an actionable message — the exact install command (`xcode-select --install` on
+Mac, `apk add build-base python3` on Alpine, or the Docker fallback) — rather
+than emitting an opaque node-gyp stack trace.
 
 You do not need any ephemeris data files for this. Kairos defaults to Swiss
 Ephemeris Moshier mode, which computes positions analytically (sub-arcsecond
@@ -251,6 +263,9 @@ pnpm compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"202
 pnpm geocode:install            # one-time: download the GeoNames cities15000 set
 pnpm -s geocode 'Tokyo'         # → [{ name, country, latitude, longitude, timezone, ... }]
 ```
+
+When using the MCP server, the `geocode_install` MCP tool handles the one-time city-database
+download interactively with user consent — no shell command required.
 
 ### Render a chart wheel
 
@@ -334,7 +349,7 @@ credentials). Everything up to it is done.
 ```bash
 # 1. Verify green
 pnpm install
-pnpm lint && pnpm typecheck && pnpm test         # all tests must pass (278 today)
+pnpm lint && pnpm typecheck && pnpm test         # all must pass (321 tests today)
 
 # 2. Build the publishable artifacts
 pnpm build                                        # tsc -> dist/ (also runs as prepublishOnly)
@@ -378,7 +393,7 @@ pnpm typecheck                  # check TypeScript types
 pnpm lint                       # lint the engine code
 ```
 
-All 278 tests pass on the current build.
+All 321 tests pass on the current build (37 files).
 
 ## Technical Details
 

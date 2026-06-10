@@ -5,9 +5,9 @@ score — falsifiable verdicts, a calibration contract, local-first and
 no-telemetry, AGPL.**
 
 Every claim in every draft below is true of the current build and was verified
-on 2026-06-09:
+on 2026-06-10:
 
-- **278 tests pass** (34 files; `pnpm test` on this commit).
+- **321 tests pass** (37 files; `pnpm test` on this commit).
 - **Conformance corpus: 7/15 in-scope cases agree with the documented
   practitioner verdict = 46.7%** — stated honestly as a *baseline under
   improvement*, never as accuracy. (16 cases total; 1 is a known-gap case
@@ -80,7 +80,7 @@ defensiveness.
 > https://github.com/stardustxx/kairos/blob/main/docs/examples/README.md
 >
 > Tech: TypeScript, Swiss Ephemeris via sweph (Moshier mode by default — no
-> data files), 278 tests, MCP server + Claude Code plugin + CLI + a
+> data files), 321 tests, MCP server + Claude Code plugin + CLI + a
 > web chart viewer that can also compute charts fully in-browser via a wasm Swiss Ephemeris (the viewer itself is dependency-free). Everything is local: profiles, journal,
 > and outcomes live in ~/.kairos and never leave the machine. No telemetry.
 > AGPL-3.0.
@@ -140,7 +140,7 @@ graded on — falsifiable leans, local outcome journal, empty scorecard by desig
 >     /plugin install kairos@stardustxx
 >
 > Then just ask it a decision question. Everything is local (~/.kairos), no
-> telemetry, AGPL-3.0. 278 tests.
+> telemetry, AGPL-3.0. 321 tests.
 >
 > Worked example (question in → two-layer verdict out):
 > https://github.com/stardustxx/kairos/blob/main/docs/example.md
@@ -213,7 +213,7 @@ with its weights
 > **6/** Privacy is structural: profiles, questions, and outcomes live in
 > ~/.kairos and never leave your machine. No telemetry, no account, no cloud.
 > AGPL-3.0. Works as a Claude Code plugin, an MCP server, or a plain CLI —
-> 278 tests behind it.
+> 321 tests behind it.
 >
 > **7/** Try the exact worked example (deterministic — you'll get the same
 > verdict):
@@ -230,7 +230,7 @@ with its weights
 > question, get a falsifiable verdict (lean + confidence + the outcome that
 > would prove it wrong), logged locally and graded when reality answers. The
 > calibration scorecard ships empty — honest zero over fake track record.
-> Swiss Ephemeris, local-first, no telemetry, AGPL. 278 tests.
+> Swiss Ephemeris, local-first, no telemetry, AGPL. 321 tests.
 >
 > https://github.com/stardustxx/kairos
 
@@ -248,7 +248,7 @@ with its weights
 
 | Claim in drafts | Source of truth |
 |---|---|
-| 278 tests pass | `pnpm test` on this commit (34 files / 278 tests) |
+| 321 tests pass | `pnpm test` on this commit (37 files / 321 tests) |
 | 7/15 = 46.7% in-scope conformance | `engine/src/horary-conformance.cases.json` (16 cases, 15 in-scope, 7 agree); report printed by `engine/src/horary-conformance.test.ts` |
 | Calibration scorecard empty | `kairos memory calibration` on a fresh install; verbatim JSON in README "Calibration contract" section |
 | +38 favorable / medium example | `docs/example.md`; deterministic via Swiss Ephemeris |

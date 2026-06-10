@@ -4,8 +4,8 @@
 a green repo to every channel it belongs on — and the channels it deliberately
 stays off.**
 
-Everything here was verified against the live repo state on 2026-06-09:
-278 tests pass (34 files), version is `1.1.0` in `package.json`,
+Everything here was verified against the live repo state on 2026-06-10:
+321 tests pass (37 files), version is `1.1.0` in `package.json`,
 `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
 `.claude-plugin/server.json`, and the conformance corpus reports 7/15 = 46.7%
 in-scope agreement. External channel processes were verified against live docs
