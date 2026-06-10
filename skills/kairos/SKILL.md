@@ -42,6 +42,30 @@ persist it with the `profile_set` MCP tool, passing the JSON shape it expects
 
 Horary needs no birth data, so a missing profile is fine — just proceed.
 
+### First run
+
+The **fresh-install signature**: `memory_due` returns an **empty list** AND
+`profile_get` returns **`null`**. When BOTH hold, this is a first session — add
+these touches, and otherwise behave exactly as normal:
+
+- **Suggest a first question** (one line, only if they haven't asked one): "First
+  time? Ask a real yes/no question you actually care about — like: will I get the
+  job I interviewed for?" Then proceed normally with whatever they ask.
+- **Front-load the gazetteer.** BEFORE the first `geocode` call, say the offline
+  city database is a **one-time download** (the GeoNames cities15000 set — a ~3 MB
+  fetch, ~8 MB on disk in `~/.kairos`) and ask consent to run it via the `geocode_install` MCP tool
+  (idempotent — safe to re-run). If they decline, keep the estimate-lat/lon
+  fallback from Step 1. **Never download without consent.**
+- **Make the loop visible.** After their FIRST real verdict, add one line: the
+  reading was journaled, and Kairos will ask how it turned out once it's ripe.
+- **Guided demo — only if they have no question of their own.** Offer the
+  deterministic worked example (`docs/example.md`): horary, "Will I get the
+  job?", asked in London 2026-06-08T11:15:00 (lat 51.5074, lon -0.1278,
+  `Europe/London`), `quesitedHouse` 10 → lean `favorable`, confidence `medium`,
+  score `+38`, every time. **HARD RULE: a demo compute OMITS the `journal` field
+  entirely** — demos never pollute the real track record; only the user's own
+  real questions are journaled.
+
 ### Multiple people
 
 Kairos can remember **several people** you cast for (yourself, a partner, a
