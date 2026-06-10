@@ -45,8 +45,9 @@ import type { Lean } from "./types.js";
  * data, printed in the report); it hard-fails only when a code change MOVES a
  * pinned Kairos lean -- which must then be re-baselined in the JSON, per chart,
  * on purpose. Determinism: every chart is a pure function of its
- * datetimeLocal+timezone+lat/lon+quesitedHouse via runCompute with the bundled
- * Moshier ephemeris; no `journal` field is passed, so nothing is logged.
+ * datetimeLocal+timezone+lat/lon+quesitedHouse (+ optional turned-chart
+ * querentHouse) via runCompute with the bundled Moshier ephemeris; no `journal`
+ * field is passed, so nothing is logged.
  */
 
 interface ConformanceCase {
@@ -59,6 +60,9 @@ interface ConformanceCase {
   longitude: number;
   timezone: string;
   quesitedHouse: number;
+  /** Optional TURNED-CHART querent house (third-party questions). Omitted = radix
+   *  1st-house querent, the engine default — exactly the pre-turning behavior. */
+  querentHouse?: number;
   lillyVerdict: "yes" | "no" | "qualified";
   expectedLean: Lean;
   kairosLean: Lean;
@@ -73,36 +77,33 @@ const CORPUS = JSON.parse(
 
 const CASES = CORPUS.cases;
 
-/** Run a corpus chart through Kairos and return its live lean. No journaling. */
-function liveLean(c: ConformanceCase): Lean {
-  const result = runCompute({
-    kind: "horary",
+/** Build the deterministic runCompute request for a corpus case. `querentHouse`
+ *  is forwarded only when the case declares a turned chart; otherwise the engine
+ *  default (1) applies, leaving non-turned cases byte-identical to before. */
+function computeRequest(c: ConformanceCase) {
+  return {
+    kind: "horary" as const,
     quesitedHouse: c.quesitedHouse,
+    ...(c.querentHouse != null ? { querentHouse: c.querentHouse } : {}),
     moment: {
       datetimeLocal: c.datetimeLocal,
       latitude: c.latitude,
       longitude: c.longitude,
       timezone: c.timezone,
     },
-  });
-  return result.horary!.lean;
+  };
+}
+
+/** Run a corpus chart through Kairos and return its live lean. No journaling. */
+function liveLean(c: ConformanceCase): Lean {
+  return runCompute(computeRequest(c)).horary!.lean;
 }
 
 /** A condition bucket label for the DIAGNOSTIC-ONLY breakdown. Mutually exclusive,
  *  picked in classical priority order. Descriptive only -- N is far too small per
  *  bucket to gate on. */
 function conditionBucket(c: ConformanceCase): string {
-  const r = runCompute({
-    kind: "horary",
-    quesitedHouse: c.quesitedHouse,
-    moment: {
-      datetimeLocal: c.datetimeLocal,
-      latitude: c.latitude,
-      longitude: c.longitude,
-      timezone: c.timezone,
-    },
-  });
-  const j = r.horary!;
+  const j = runCompute(computeRequest(c)).horary!;
   if (j.perfection.broken.includes("prohibition")) return "prohibition";
   if (j.perfection.direct) return "direct perfection";
   if (j.perfection.indirectPath) return "translation/collection";
