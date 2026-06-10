@@ -11,15 +11,17 @@
  *   kairos geocode:install [--force]
  *   kairos wheel '{...}'        (alias: wheel:render)
  *   kairos mcp                  (stdio MCP server over the engine)
+ *
+ * The sub-CLIs are imported DYNAMICALLY inside the dispatch so the native
+ * sweph load happens where we can catch it: on platforms with no prebuild and
+ * no toolchain the import fails, and loadCli prints a concise actionable
+ * message instead of a raw require/node-gyp stack (onboarding F1). Static
+ * imports would hoist the failure above any try/catch. Only the sweph
+ * native-load signature is intercepted; other errors rethrow untouched.
  */
 
-import { main as computeMain } from "./cli.js";
-import { main as geocodeMain } from "./geocode-cli.js";
-import { main as installGeocodeMain } from "./install-geocode.js";
-import { main as mcpMain } from "./mcp-server.js";
-import { main as memoryMain } from "./memory-cli.js";
+import { formatNativeLoadError, isNativeLoadError } from "./native-load-error.js";
 import { isMainModule } from "./run-guard.js";
-import { main as wheelMain } from "./wheel.js";
 
 const USAGE = [
   "Usage: kairos <command> [args...]",
@@ -33,6 +35,23 @@ const USAGE = [
   "  mcp                      start the stdio MCP server over the engine",
 ].join("\n");
 
+/** Import a sub-CLI module, translating a native sweph load failure into the
+ *  actionable message. Any OTHER import-time failure is a genuine bug, so it
+ *  keeps its full stack — the top-level catch only prints err.message, which
+ *  would strip the file/line a debugger needs. */
+async function loadCli<T>(importer: () => Promise<T>): Promise<T> {
+  try {
+    return await importer();
+  } catch (err) {
+    if (isNativeLoadError(err)) {
+      process.stderr.write(`${formatNativeLoadError(err as Error)}\n`);
+    } else {
+      process.stderr.write(`${(err instanceof Error && err.stack) || String(err)}\n`);
+    }
+    process.exit(1);
+  }
+}
+
 /**
  * Dispatch entrypoint. `argv` is the full process argv: argv[2] is the
  * subcommand and argv.slice(3) are that command's own args.
@@ -42,25 +61,37 @@ export async function main(argv: string[]): Promise<void> {
   const rest = argv.slice(3);
 
   switch (command) {
-    case "compute":
+    case "compute": {
+      const { main: computeMain } = await loadCli(() => import("./cli.js"));
       computeMain(rest);
       return;
-    case "memory":
+    }
+    case "memory": {
+      const { main: memoryMain } = await loadCli(() => import("./memory-cli.js"));
       memoryMain(rest);
       return;
-    case "geocode":
+    }
+    case "geocode": {
+      const { main: geocodeMain } = await loadCli(() => import("./geocode-cli.js"));
       geocodeMain(rest);
       return;
-    case "geocode:install":
+    }
+    case "geocode:install": {
+      const { main: installGeocodeMain } = await loadCli(() => import("./install-geocode.js"));
       await installGeocodeMain(rest);
       return;
+    }
     case "wheel":
-    case "wheel:render":
+    case "wheel:render": {
+      const { main: wheelMain } = await loadCli(() => import("./wheel.js"));
       await wheelMain(rest);
       return;
-    case "mcp":
+    }
+    case "mcp": {
+      const { main: mcpMain } = await loadCli(() => import("./mcp-server.js"));
       await mcpMain(rest);
       return;
+    }
     default:
       process.stderr.write(`${USAGE}\n`);
       process.exit(1);

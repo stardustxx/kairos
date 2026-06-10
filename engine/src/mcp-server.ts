@@ -27,7 +27,7 @@ import {
 } from "./calibration-card.js";
 import { runCompute } from "./cli.js";
 import { type GeoCity, searchCities } from "./geocode.js";
-import { gazetteerPath } from "./install-geocode.js";
+import { gazetteerPath, installGazetteer } from "./install-geocode.js";
 import {
   appendJournal,
   computeCalibration,
@@ -126,12 +126,28 @@ export function handleGeocode(input: { query: string; limit?: number }): CallToo
     const path = gazetteerPath();
     if (!existsSync(path)) {
       throw new Error(
-        "gazetteer not installed — run `kairos geocode:install` first to download the offline GeoNames data",
+        "gazetteer not installed — with the user's consent, call the `geocode_install` tool (or run `kairos geocode:install`) to download the offline GeoNames data, then retry",
       );
     }
     const tsv = readFileSync(path, "utf8");
     return searchCities(query, tsv, input.limit ?? 5) satisfies GeoCity[];
   });
+}
+
+/**
+ * geocode_install — the one-time gazetteer download behind the geocode tool.
+ * Shares the exact install path with `kairos geocode:install` (installGazetteer)
+ * and is idempotent: already-installed returns immediately with NO network
+ * access. The download is user-consented by contract — the tool description
+ * instructs the model to ask first. Async because the download is; the guard()
+ * helper is sync-only, so errors are converted inline.
+ */
+export async function handleGeocodeInstall(input: { force?: boolean }): Promise<CallToolResult> {
+  try {
+    return jsonContent(await installGazetteer({ force: input.force }));
+  } catch (err) {
+    return toolError((err as Error).message);
+  }
 }
 
 /** memory_log — append a reading to the journal; returns the stored entry. */
@@ -305,7 +321,13 @@ const profilePlaceShape = z.object({
 /** Build and configure the "kairos" MCP server with all tools registered.
  *  Pure construction — no transport is connected here, so this is testable. */
 export function buildServer(): McpServer {
-  const server = new McpServer({ name: "kairos", version: packageVersion() });
+  const server = new McpServer(
+    { name: "kairos", version: packageVersion() },
+    {
+      instructions:
+        "These tools are the raw computation engine; most of the product value is in the Claude Code plugin layer (the `kairos` skill), which adds the judgment + calibration discipline on top — question-to-house mapping, two-layer verdicts, and journal-by-default — so consider installing the plugin if you are using these tools directly.",
+    },
+  );
 
   server.registerTool(
     "compute",
@@ -423,13 +445,29 @@ export function buildServer(): McpServer {
     {
       title: "Resolve a city to coordinates",
       description:
-        "Look up a city name in the cached offline GeoNames gazetteer, returning authoritative lat/lon + IANA timezone (most populous first). Errors with an install hint if the gazetteer is absent (run `kairos geocode:install`).",
+        "Look up a city name in the cached offline GeoNames gazetteer, returning authoritative lat/lon + IANA timezone (most populous first). Errors with an install hint if the gazetteer is absent (use the geocode_install tool, with user consent).",
       inputSchema: {
         query: z.string().describe('City name, e.g. "Tokyo" or "San Francisco".'),
         limit: z.number().int().positive().optional().describe("Max matches to return (default 5)."),
       },
     },
     async (args) => handleGeocode(args as { query: string; limit?: number }),
+  );
+
+  server.registerTool(
+    "geocode_install",
+    {
+      title: "Install the offline geocoding gazetteer",
+      description:
+        "One-time setup for the geocode tool: downloads the GeoNames cities15000 gazetteer (a single ~3 MB network fetch from geonames.org, ~8 MB on disk once extracted) into local storage under KAIROS_HOME. This is the only network download Kairos ever performs and it must stay strictly user-initiated: ASK THE USER FOR EXPLICIT CONSENT before calling (\"download the offline city database — ~3 MB, one time?\") and only call on a clear yes. Idempotent and safe to call when unsure — if the gazetteer is already installed it performs no network access and returns { installed: true, alreadyInstalled: true, path, cities }; a fresh download returns the same shape with alreadyInstalled: false.",
+      inputSchema: {
+        force: z
+          .boolean()
+          .optional()
+          .describe("Re-download even when already installed (still requires user consent)."),
+      },
+    },
+    async (args) => handleGeocodeInstall(args as { force?: boolean }),
   );
 
   server.registerTool(

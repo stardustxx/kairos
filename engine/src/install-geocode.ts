@@ -13,10 +13,15 @@
  * geonames/ subdir. Idempotent: an existing cities15000.txt is reused unless
  * --force is passed.
  *
+ * The actual install lives in `installGazetteer` so the CLI (below) and the MCP
+ * `geocode_install` tool share one code path. The download is strictly
+ * user-initiated in both: the CLI is a command the user types, and the MCP tool
+ * description requires explicit consent before the model calls it.
+ *
  * Data: GeoNames (https://www.geonames.org/), Creative Commons Attribution 4.0.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -52,69 +57,113 @@ function hasUnzip(): boolean {
   return probe.status === 0 || probe.error == null;
 }
 
+/** One TSV row per city in the gazetteer; ignores a trailing blank line. */
+function countCities(txtPath: string): number {
+  let count = 0;
+  for (const line of readFileSync(txtPath, "utf8").split("\n")) {
+    if (line.trim() !== "") count += 1;
+  }
+  return count;
+}
+
+/** What an install (or an already-installed check) reports. */
+export interface GazetteerInstallResult {
+  installed: true;
+  alreadyInstalled: boolean;
+  path: string;
+  cities: number;
+}
+
 /**
- * Installer entrypoint. `args` is the post-script argv
- * (i.e. `process.argv.slice(2)`); pass `--force` to re-download.
+ * Install the gazetteer (shared by the CLI and the MCP `geocode_install` tool).
+ * Idempotent: when cities15000.txt is already present and non-empty it returns
+ * immediately with `alreadyInstalled: true` and performs NO network access;
+ * pass `force` to re-download. Throws on any failure (missing unzip, HTTP
+ * error, extraction failure) — callers decide how to surface it. `log`
+ * receives human-readable progress lines (the CLI prints them; the MCP tool
+ * stays silent so stdout never sees them).
  */
-export async function main(args: string[]): Promise<void> {
-  const force = args.includes("--force");
+export async function installGazetteer(
+  options: { force?: boolean; log?: (line: string) => void } = {},
+): Promise<GazetteerInstallResult> {
+  const log = options.log ?? (() => {});
   const dir = geonamesDir();
   const txtDest = gazetteerPath();
 
-  if (!force && existsSync(txtDest) && statSync(txtDest).size > 0) {
-    console.log(
-      `cities15000.txt already present (${fmtBytes(statSync(txtDest).size)}) at\n  ${txtDest}\n` +
-        "Nothing to do — pass --force to re-download.",
-    );
-    return;
+  if (!options.force && existsSync(txtDest) && statSync(txtDest).size > 0) {
+    return {
+      installed: true,
+      alreadyInstalled: true,
+      path: txtDest,
+      cities: countCities(txtDest),
+    };
   }
 
   if (!hasUnzip()) {
-    console.error(
-      "The system `unzip` command was not found, but the GeoNames dataset is a ZIP.\n" +
-        "Install it and re-run `pnpm geocode:install`:\n" +
+    throw new Error(
+      "the system `unzip` command was not found, but the GeoNames dataset is a ZIP.\n" +
+        "Install it and re-run the gazetteer install:\n" +
         "  • macOS:  unzip ships with the OS (check your PATH)\n" +
         "  • Debian/Ubuntu:  sudo apt-get install unzip\n" +
         "  • Fedora/RHEL:    sudo dnf install unzip\n" +
         "  • Alpine:         apk add unzip",
     );
-    process.exit(1);
   }
 
   mkdirSync(dir, { recursive: true });
   const zipDest = join(dir, ZIP_NAME);
 
-  console.log(`Downloading GeoNames cities15000 into ${dir}\n`);
-  process.stdout.write(`  • ${ZIP_NAME} … `);
+  log(`Downloading GeoNames cities15000 into ${dir}`);
   const res = await fetch(ZIP_URL);
   if (!res.ok) {
-    console.log(`FAILED (HTTP ${res.status})`);
-    console.error(`\nCould not download ${ZIP_URL}`);
-    process.exit(1);
+    throw new Error(`could not download ${ZIP_URL} (HTTP ${res.status})`);
   }
   const buf = Buffer.from(await res.arrayBuffer());
   await writeFile(zipDest, buf);
-  console.log(`ok (${fmtBytes(buf.length)})`);
+  log(`  • ${ZIP_NAME} ok (${fmtBytes(buf.length)})`);
 
-  process.stdout.write(`  • extracting ${TXT_NAME} … `);
   // -o overwrite, -j junk paths (flat), -d into dir. Restrict to the .txt we use.
   const unzip = spawnSync("unzip", ["-o", "-j", zipDest, TXT_NAME, "-d", dir], {
     stdio: ["ignore", "ignore", "pipe"],
   });
   if (unzip.status !== 0) {
-    console.log("FAILED");
-    console.error(`\nunzip failed: ${unzip.stderr?.toString().trim() || `exit ${unzip.status}`}`);
-    process.exit(1);
+    throw new Error(`unzip failed: ${unzip.stderr?.toString().trim() || `exit ${unzip.status}`}`);
   }
   if (!existsSync(txtDest) || statSync(txtDest).size === 0) {
-    console.log("FAILED");
-    console.error(`\nExtraction did not produce ${txtDest}`);
-    process.exit(1);
+    throw new Error(`extraction did not produce ${txtDest}`);
   }
-  console.log(`ok (${fmtBytes(statSync(txtDest).size)})`);
+  log(`  • extracted ${TXT_NAME} (${fmtBytes(statSync(txtDest).size)})`);
+  // The zip is only an intermediate; only the extracted .txt is ever read.
+  rmSync(zipDest, { force: true });
+
+  return {
+    installed: true,
+    alreadyInstalled: false,
+    path: txtDest,
+    cities: countCities(txtDest),
+  };
+}
+
+/**
+ * CLI entrypoint. `args` is the post-script argv
+ * (i.e. `process.argv.slice(2)`); pass `--force` to re-download.
+ */
+export async function main(args: string[]): Promise<void> {
+  const result = await installGazetteer({
+    force: args.includes("--force"),
+    log: (line) => console.log(line),
+  });
+
+  if (result.alreadyInstalled) {
+    console.log(
+      `cities15000.txt already present (${result.cities} cities) at\n  ${result.path}\n` +
+        "Nothing to do — pass --force to re-download.",
+    );
+    return;
+  }
 
   console.log(
-    `\nDone. Cached at\n  ${txtDest}\n` +
+    `\nDone. ${result.cities} cities cached at\n  ${result.path}\n` +
       "Query a city with:\n  pnpm -s geocode 'Tokyo'",
   );
 }
