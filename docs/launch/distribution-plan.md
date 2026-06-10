@@ -18,7 +18,7 @@ in-scope agreement. External channel processes were verified against live docs
 ```bash
 cd ~/Documents/Projects/kairos
 pnpm install
-pnpm lint && pnpm typecheck && pnpm test     # ALL tests must pass (278 at last audit; the corpus grows, so trust the live count)
+pnpm lint && pnpm typecheck && pnpm test     # ALL tests must pass (321 at last audit; the corpus grows, so trust the live count)
 pnpm build                                   # tsc -> dist/ (also runs as prepublishOnly)
 pnpm pack --dry                              # inspect the exact tarball contents
 grep -R '"version": "1.1.0"' package.json .claude-plugin/*.json   # 4 hits expected
