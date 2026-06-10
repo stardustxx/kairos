@@ -43,7 +43,9 @@ jobs:
 
       - name: Cold-install the tarball in an isolated project
         run: |
-          mkdir -p coldtest && cd coldtest
+          # OUTSIDE the repo tree: npm 11 (Node 24) walks up to the repo's
+          # package.json and hard-fails on its pnpm devEngines pin (EBADDEVENGINES).
+          mkdir -p "$RUNNER_TEMP/coldtest" && cd "$RUNNER_TEMP/coldtest"
           npm init -y >/dev/null 2>&1
           # Install the LOCAL tarball (not the registry name) so we exercise THIS build.
           npm install "${{ steps.pack.outputs.tarball }}" 2>&1 | tee install.log
@@ -51,7 +53,7 @@ jobs:
 
       - name: Assert the sweph prebuild resolved (no source compile)
         run: |
-          cd coldtest
+          cd "$RUNNER_TEMP/coldtest"
           if grep -Eiq 'node-gyp rebuild|gyp ERR!|cc1plus|node-gyp.*build' install.log; then
             echo "FAIL: native source compilation detected on ${{ runner.os }} — sweph prebuild did not resolve."
             exit 1
@@ -61,7 +63,7 @@ jobs:
 
       - name: Run a horary compute via the installed bin and assert a verdict
         run: |
-          cd coldtest
+          cd "$RUNNER_TEMP/coldtest"
           out=$(node node_modules/kairos-astrology/dist/src/bin.js compute '{"kind":"horary","quesitedHouse":10,"moment":{"datetimeLocal":"2026-06-08T14:30:00","latitude":40.7128,"longitude":-74.0060,"timezone":"America/New_York"}}')
           echo "$out"
           if echo "$out" | grep -q '"lean"'; then
