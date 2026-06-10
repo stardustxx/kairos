@@ -8,6 +8,7 @@ import {
   detectEnclosure,
   detectProhibition,
   detectRefranation,
+  prohibitsDelivery,
 } from "./perfection.js";
 import { estimateTiming } from "./timing.js";
 import type {
@@ -702,9 +703,31 @@ export function judgeHorary(
 
   // Soundness of each indirect-perfection carrier — a combust or besieged carrier
   // cannot deliver, so its positive testimony is suppressed downstream.
-  const translationCarrier = translationOfLight
+  let translationCarrier = translationOfLight
     ? carrierSoundness(translationOfLight.translator, classical)
     : null;
+  // A sound translator can still be PROHIBITED mid-carry: if a third planet's
+  // applying aspect with the carrier perfects before the carrier reaches the
+  // destination significator, the light is intercepted and never delivered (the
+  // "Moon-sequence" prohibition — verified against Warnock's 2004 marriage
+  // horary in the conformance corpus). Collection is left to the combust/
+  // besieged checks only: it has two converging legs and no verified corpus
+  // case yet, so we stay conservative there.
+  if (translationOfLight && translationCarrier && !translationCarrier.impeded) {
+    const intercepted = prohibitsDelivery(
+      translationOfLight.translator,
+      translationOfLight.to,
+      classical,
+    );
+    if (intercepted) {
+      translationCarrier = {
+        impeded: true,
+        reason:
+          `intercepted — ${intercepted.interceptor} perfects ${intercepted.aspect} with ` +
+          `${translationOfLight.translator} before the light reaches ${translationOfLight.to}`,
+      };
+    }
+  }
   const collectionCarrier = collectionOfLight
     ? carrierSoundness(collectionOfLight.collector, classical)
     : null;

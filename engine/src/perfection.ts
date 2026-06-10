@@ -50,6 +50,73 @@ function byName(planets: PlanetPosition[], name: string): PlanetPosition | undef
 }
 
 /**
+ * Prohibition of a DELIVERY LEG: a translation of light only completes when the
+ * carrier actually reaches the destination significator. If a third planet's
+ * applying aspect WITH THE CARRIER perfects before the carrier's own delivering
+ * aspect to the destination does, the intervening contact intercepts the light
+ * the carrier holds — the classical "Moon-sequence" prohibition (Lilly's
+ * prohibition applied to the translation chain; cf. Warnock/Louis on intervening
+ * lunar aspects). The light is diverted mid-carry and never arrives.
+ *
+ * Timing is the same relative-angular-velocity method as detectProhibition.
+ * Returns the soonest interceptor, or null when the delivery leg is clear (or
+ * when carrier and destination have no applying aspect at all — then there is
+ * no delivery to prohibit; findTranslation should not have fired).
+ *
+ * SCOPE — exactly what the corpus evidence supports, no further:
+ * - Only the MOON intercepts. The attested doctrine ("Moon-sequence"
+ *   prohibition, Warnock 2004 / Louis) is about the Moon's own order of
+ *   aspects: she strikes the carrier before the carrier delivers. A generic
+ *   any-interceptor race would kill virtually every slow-carrier translation
+ *   (Jupiter delivering to Saturn takes months — some fast body always perfects
+ *   a contact with it first), which contradicts classical practice.
+ * - Only a CORRUPTING RAY breaks the carry: the Moon striking the carrier by
+ *   square or opposition corrupts the light mid-transfer — the verified cases
+ *   are an OPPOSITION (Warnock 2004) and a SQUARE (Warnock 1999). A soft ray
+ *   perfecting first is read as assistance, not hindrance (consistent with
+ *   benefic enclosure). A bodily CONJUNCTION with the carrier is deliberately
+ *   NOT counted: classically ambiguous — the Moon conjoining a carrier can hand
+ *   her light along the relay rather than cut it (abscission-by-conjunction is
+ *   attested against significators, not carriers) — and no corpus case attests
+ *   either reading yet.
+ * Generalizing any restriction awaits corpus evidence.
+ */
+const CORRUPTING_RAYS = new Set(["square", "opposition"]);
+
+export function prohibitsDelivery(
+  carrier: string,
+  destination: string,
+  planets: PlanetPosition[],
+): { interceptor: string; aspect: string } | null {
+  const C = byName(planets, carrier);
+  const D = byName(planets, destination);
+  if (!C || !D || carrier === destination) return null;
+
+  const legAspects = computeAspects([C, D]).filter((a) => a.applying);
+  if (legAspects.length === 0) return null;
+  const leg = legAspects.sort((x, y) => x.orb - y.orb)[0];
+  const legDays = daysToPerfection(C.speed, D.speed, leg.orb);
+  if (!Number.isFinite(legDays)) return null;
+
+  let best: { interceptor: string; aspect: string } | null = null;
+  let bestDays = legDays;
+  const moon = byName(planets, "Moon");
+  if (moon && carrier !== "Moon" && destination !== "Moon") {
+    const contacts = computeAspects([moon, C]).filter(
+      (a) => a.applying && CORRUPTING_RAYS.has(a.type),
+    );
+    for (const asp of contacts) {
+      const days = daysToPerfection(moon.speed, C.speed, asp.orb);
+      if (Number.isFinite(days) && days < bestDays) {
+        bestDays = days;
+        best = { interceptor: "Moon", aspect: asp.type };
+      }
+    }
+  }
+  return best;
+}
+
+/**
  * Prohibition: a third planet perfects an aspect to sigA or sigB BEFORE the two
  * significators perfect with each other, cutting the matter off. Compares the
  * relative-speed time-to-perfection of each third-planet applying aspect against

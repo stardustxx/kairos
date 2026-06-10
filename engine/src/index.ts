@@ -52,7 +52,12 @@ export {
   saveProfile,
   setActive,
 } from "./memory.js";
-export { detectBesieging, detectProhibition, detectRefranation } from "./perfection.js";
+export {
+  detectBesieging,
+  detectProhibition,
+  detectRefranation,
+  prohibitsDelivery,
+} from "./perfection.js";
 export { annualProfection, completedYearsBetween } from "./profections.js";
 export type { TimingUnit } from "./timing.js";
 export { estimateTiming } from "./timing.js";

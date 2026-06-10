@@ -6,6 +6,7 @@ import {
   detectEnclosure,
   detectProhibition,
   detectRefranation,
+  prohibitsDelivery,
 } from "./perfection.js";
 import type { Chart, PlanetPosition } from "./types.js";
 
@@ -167,6 +168,74 @@ describe("detectBesieging", () => {
       planet("Saturn", 105, 0.03),
     ];
     expect(detectBesieging("Mars", planets)).toBeNull();
+  });
+});
+
+describe("prohibitsDelivery (Moon-sequence prohibition of a translation's carry)", () => {
+  // Verified doctrine (Warnock 2004 / 1999 corpus cases): the MOON striking the
+  // CARRIER by square/opposition before the carrier's delivering aspect perfects
+  // intercepts the light. Soft rays and conjunctions deliberately do not fire
+  // (see the scope note in perfection.ts).
+
+  it("fires when the Moon squares the carrier before delivery", () => {
+    // Carrier Mercury (100°, 1.2°/day) delivers a conjunction to Saturn (104°,
+    // 0.03): orb 4° / rel 1.17 ≈ 3.4 days. The Moon at 4° (separation 96°,
+    // closing through the 90° square: orb 6° / rel 11.8 ≈ 0.51 days — wide
+    // enough that the one-day applying step does not overshoot) strikes the
+    // carrier first.
+    const planets = [
+      planet("Mercury", 100, 1.2),
+      planet("Saturn", 104, 0.03),
+      planet("Moon", 4, 13.0),
+    ];
+    const hit = prohibitsDelivery("Mercury", "Saturn", planets);
+    expect(hit).toEqual({ interceptor: "Moon", aspect: "square" });
+  });
+
+  it("does NOT fire on a soft Moon contact (sextile/trine assist, not hinder)", () => {
+    // Moon at 34° (separation 66°, closing through the 60° sextile, orb 6°,
+    // genuinely applying) — perfects long before delivery, but a soft ray is
+    // assistance, not interception.
+    const planets = [
+      planet("Mercury", 100, 1.2),
+      planet("Saturn", 104, 0.03),
+      planet("Moon", 34, 13.0),
+    ];
+    expect(prohibitsDelivery("Mercury", "Saturn", planets)).toBeNull();
+  });
+
+  it("does NOT fire on a Moon CONJUNCTION with the carrier (deferred doctrine)", () => {
+    // Moon at 93° applies a conjunction to Mercury (orb 7°, ≈0.59d, well before
+    // the 3.4d delivery) — bodily union can hand light along the relay, so it is
+    // deliberately not counted until a corpus case attests either reading.
+    const planets = [
+      planet("Mercury", 100, 1.2),
+      planet("Saturn", 104, 0.03),
+      planet("Moon", 93, 13.0),
+    ];
+    expect(prohibitsDelivery("Mercury", "Saturn", planets)).toBeNull();
+  });
+
+  it("does NOT fire when the Moon's ray perfects only AFTER the delivery", () => {
+    // Delivery is fast: Mercury → Sun conjunction orb 0.2° / rel 0.5 = 0.4 days.
+    // The Moon's square (orb 6° / rel 11.5 ≈ 0.52 days) lands after the light
+    // has already arrived — no interception.
+    const planets = [
+      planet("Mercury", 100, 1.5),
+      planet("Sun", 100.2, 1.0),
+      planet("Moon", 4, 13.0),
+    ];
+    expect(prohibitsDelivery("Mercury", "Sun", planets)).toBeNull();
+  });
+
+  it("returns null when carrier and destination have no applying aspect", () => {
+    // Mercury ahead of Saturn and faster — pulling away, nothing to deliver.
+    const planets = [
+      planet("Mercury", 104, 1.2),
+      planet("Saturn", 100, 0.03),
+      planet("Moon", 12, 13.0),
+    ];
+    expect(prohibitsDelivery("Mercury", "Saturn", planets)).toBeNull();
   });
 });
 

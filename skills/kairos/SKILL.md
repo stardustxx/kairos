@@ -286,10 +286,13 @@ checkout can open `web/index.html` and paste the `compute` JSON into the input b
     `"besieging"`), in detection order; empty when nothing breaks the perfection.
   - `indirectPath` (string or `null`) — the carrying/gathering planet of a **sound**
     indirect perfection (translation or collection by an **unimpeded** carrier), or
-    `null` when no indirect path survives. **An impeded carrier — combust or
-    besieged — does NOT deliver**, so the engine reports `null` here even when a
-    translation/collection geometrically exists; do not promise an outcome through
-    a damaged carrier.
+    `null` when no indirect path survives. **An impeded carrier does NOT
+    deliver** — combust, besieged, or *intercepted* (the Moon strikes the
+    translator by square/opposition before its light reaches the destination:
+    the "Moon-sequence" prohibition) — so the engine reports `null` here even
+    when a translation/collection geometrically exists; do not promise an
+    outcome through a damaged carrier. The failed-translation testimony names
+    the reason.
   - `summary` — a plain-language one-line read of the whole picture.
 
   Open your judgment with this: state whether there's **direct perfection**, name

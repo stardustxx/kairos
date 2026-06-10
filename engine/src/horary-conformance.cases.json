@@ -30,10 +30,10 @@
       "quesitedHouse": 7,
       "lillyVerdict": "no",
       "expectedLean": "unfavorable",
-      "kairosLean": "uncertain",
+      "kairosLean": "unfavorable",
       "inScope": true,
       "gapReason": null,
-      "note": "Warnock read deterioration (boyfriend drifting to another); outcome confirmed. Kairos sees a translation carrier (Jupiter) but a void Moon nets it to a near-zero uncertain -- a denial/translation-weighting gap."
+      "note": "Warnock read deterioration (boyfriend drifting to another); outcome confirmed. Kairos sees a translation carrier (Jupiter) but a void Moon nets it to a near-zero uncertain -- a denial/translation-weighting gap. RE-BASELINED (Moon-sequence prohibition implemented): the Moon squares translator Jupiter (~0.6d) before Jupiter's delivery trine to a STATIONING Venus (relative speed ~0, delivery effectively never) — the translation FAILS, leaving the void Moon (-30) dominant: uncertain -> unfavorable. NOW AGREES with Warnock's no."
     },
     {
       "id": "warnock-job90-1999",
@@ -200,10 +200,10 @@
       "quesitedHouse": 7,
       "lillyVerdict": "no",
       "expectedLean": "unfavorable",
-      "kairosLean": "favorable",
+      "kairosLean": "uncertain",
       "inScope": true,
       "gapReason": null,
-      "note": "A CLASSICAL PROHIBITION denial: the Moon (in Cancer) must first sextile Venus and then oppose Mercury — and leave Cancer for Leo — before it can perfect its square to Mars (the 7th ruler); Venus and Mercury stand in the way, so the marriage is denied. Kairos instead reads the Moon's intervening contacts as an indirect translation path and leans FAVORABLE — the denial spine does not yet model Moon-sequence prohibition (aspects the Moon itself completes before reaching the quesited ruler). The first surviving-prohibition case in the corpus, and it exposes exactly the blind spot it was added to measure."
+      "note": "A CLASSICAL PROHIBITION denial: the Moon (in Cancer) must first sextile Venus and then oppose Mercury — and leave Cancer for Leo — before it can perfect its square to Mars (the 7th ruler); Venus and Mercury stand in the way, so the marriage is denied. Kairos instead reads the Moon's intervening contacts as an indirect translation path and leans FAVORABLE — the denial spine does not yet model Moon-sequence prohibition (aspects the Moon itself completes before reaching the quesited ruler). The first surviving-prohibition case in the corpus, and it exposes exactly the blind spot it was added to measure. RE-BASELINED (Moon-sequence prohibition implemented): the engine now detects the Moon perfecting an OPPOSITION with translator Mercury (~0.62d) before Mercury delivers its square to Mars (~6.1d), so the translation FAILS and the +18 is suppressed — score +28 -> +10, lean favorable -> uncertain. Still a miss vs Warnock's no (the chart's exalted-Venus reception positives keep it in the dead band), but the anti-correlated favorable is gone."
     },
     {
       "id": "warnock-fertility-2002",
