@@ -94,16 +94,38 @@ function computeRequest(c: ConformanceCase) {
   };
 }
 
-/** Run a corpus chart through Kairos and return its live lean. No journaling. */
-function liveLean(c: ConformanceCase): Lean {
+/** Run a corpus chart through Kairos FRESH (no cache). Only the determinism
+ *  test uses this directly — it deliberately computes twice and compares. */
+function freshLean(c: ConformanceCase): Lean {
   return runCompute(computeRequest(c)).horary!.lean;
+}
+
+/** Memoized judgment per case: runCompute is a pure function of the request
+ *  (asserted by the determinism test), and each full compute does ephemeris
+ *  root-finding — recomputing the same 16 charts dozens of times across the
+ *  pin/report/bucket tests blew vitest's 5s per-test budget on slow CI runners.
+ *  One compute per case, reused everywhere else. */
+const judgmentCache = new Map<string, ReturnType<typeof runCompute>["horary"]>();
+function liveJudgment(c: ConformanceCase): NonNullable<ReturnType<typeof runCompute>["horary"]> {
+  let j = judgmentCache.get(c.id);
+  if (!j) {
+    j = runCompute(computeRequest(c)).horary!;
+    judgmentCache.set(c.id, j);
+  }
+  // biome-ignore lint/style/noNonNullAssertion: set above when absent
+  return j!;
+}
+
+/** A corpus chart's live lean (cached — see liveJudgment). */
+function liveLean(c: ConformanceCase): Lean {
+  return liveJudgment(c).lean;
 }
 
 /** A condition bucket label for the DIAGNOSTIC-ONLY breakdown. Mutually exclusive,
  *  picked in classical priority order. Descriptive only -- N is far too small per
  *  bucket to gate on. */
 function conditionBucket(c: ConformanceCase): string {
-  const j = runCompute(computeRequest(c)).horary!;
+  const j = liveJudgment(c);
   if (j.perfection.broken.includes("prohibition")) return "prohibition";
   if (j.perfection.direct) return "direct perfection";
   if (j.perfection.indirectPath) return "translation/collection";
@@ -112,14 +134,22 @@ function conditionBucket(c: ConformanceCase): string {
 }
 
 describe("horary classical-conformance corpus", () => {
-  it("runs deterministically: every chart resolves to a lean (pure function of the request)", () => {
-    for (const c of CASES) {
-      const a = liveLean(c);
-      const b = liveLean(c);
-      expect(a, `${c.id} must be deterministic`).toBe(b);
-      expect(["favorable", "unfavorable", "uncertain"]).toContain(a);
-    }
-  });
+  it(
+    "runs deterministically: every chart resolves to a lean (pure function of the request)",
+    () => {
+      for (const c of CASES) {
+        // Deliberately FRESH computes (no cache) — this test is what licenses
+        // the memoization everywhere else.
+        const a = freshLean(c);
+        const b = freshLean(c);
+        expect(a, `${c.id} must be deterministic`).toBe(b);
+        expect(["favorable", "unfavorable", "uncertain"]).toContain(a);
+      }
+    },
+    // 32 full computes with ephemeris root-finding: comfortably under a second
+    // locally, but slow shared CI runners need headroom.
+    30_000,
+  );
 
   // The actual hard gate: a future code change that MOVES a Kairos lean must
   // re-baseline the pinned kairosLean in the JSON, per chart, on purpose. This is
@@ -131,7 +161,10 @@ describe("horary classical-conformance corpus", () => {
     },
   );
 
-  it("prints the conformance report (in-scope agreement segregated from known gaps)", () => {
+  // Cached judgments (filled by the pin tests above) make this cheap, but slow
+  // CI runners still get explicit headroom — this single test aggregates every
+  // chart and was the one that hit vitest's default 5s budget in CI.
+  it("prints the conformance report (in-scope agreement segregated from known gaps)", { timeout: 30_000 }, () => {
     const inScope = CASES.filter((c) => c.inScope);
     const outOfScope = CASES.filter((c) => !c.inScope);
 
