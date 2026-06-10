@@ -37,3 +37,6 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Doc claims
+        run: pnpm check:docs

@@ -41,6 +41,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "biome check engine",
+    "check:docs": "node scripts/check-doc-claims.mjs",
     "lint:fix": "biome check --write engine",
     "compute": "tsx engine/src/cli.ts",
     "memory": "tsx engine/src/memory-cli.ts",
