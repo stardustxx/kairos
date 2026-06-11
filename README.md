@@ -342,9 +342,11 @@ Kairos publishes to npm as `kairos-astrology`. The package ships:
 
 ### Maintainer publish checklist
 
-The repo is already public at `github.com/stardustxx/kairos`; the npm
-registry publish is the maintainer's remaining step (it needs their npm
-credentials). Everything up to it is done.
+v1.1.0 is published: [`kairos-astrology` on npm](https://www.npmjs.com/package/kairos-astrology),
+the `v1.1.0` tag is cut (release-check green on macOS, Linux, and Windows), and the
+MCP server is registered as `io.github.stardustxx/kairos` in the
+[official MCP registry](https://registry.modelcontextprotocol.io). The checklist
+below is the repeatable sequence for the next release; bump the versions first.
 
 ```bash
 # 1. Verify green
@@ -370,9 +372,9 @@ npx -y kairos-astrology@1.1.0 compute '{"kind":"horary","quesitedHouse":10,"mome
 # on Intel macOS this first run compiles sweph from source (needs Xcode CLT); see "Cold install" above
 ```
 
-Optional follow-ups: push a `v1.1.0` tag to cut a GitHub release, and register
-the MCP server in the official MCP registry (`server.json` / `mcpName` are
-already in place).
+Follow-ups for each release: push the version tag (fires the release-check CI,
+a three-OS cold-install of the packed tarball) and re-publish `server.json` to
+the MCP registry with `mcp-publisher publish` (login via GitHub device flow).
 
 ## License
 
