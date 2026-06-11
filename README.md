@@ -106,6 +106,10 @@ These were not cherry-picked to all say yes; example 2 is an honest no. Every
 file ends with a copy-paste command, and since the Swiss Ephemeris is
 deterministic, you get the same chart and the same verdict.
 
+Not sure what to ask? **[Sample questions](docs/sample-questions.md)** has
+ready-to-use openers for every chart kind, including turned-chart questions
+about other people.
+
 ## Calibration contract: Kairos keeps score
 
 Here is the thing no generic astrology tool will do: keep score against itself.
