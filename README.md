@@ -185,6 +185,22 @@ layer adds the judgment discipline: question classification, the house-mapping t
 output, falsifiability lines, and journal-by-default. If you are using the MCP server without
 the plugin, you are getting the engine without that calibration harness.
 
+### Alternative: skills CLI
+
+If you manage agent skills with the [skills CLI](https://skills.sh), it finds the
+Kairos skill in this repo, but you need BOTH commands. The skill is only the
+judgment layer; it calls MCP tools (`compute`, `geocode`, `memory_*`) that come
+from the engine, so installing the skill alone leaves it pointing at tools that
+do not exist:
+
+```bash
+npx skills add stardustxx/kairos                       # the skill (add -g for user-level)
+claude mcp add kairos -- npx -y kairos-astrology mcp   # required: the engine it calls
+```
+
+Together these are equivalent to the plugin install above, which does both in
+one step.
+
 ### Alternative: CLI Tool
 
 For direct command-line access:
